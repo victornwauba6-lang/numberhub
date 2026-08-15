@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NumberHub - OTP Platform</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f5f7fb;color:#172033}
+button{font:inherit;cursor:pointer}
+.app{display:flex;min-height:100vh}
+.sidebar{width:240px;background:#fff;border-right:1px solid #e5e7eb;padding:20px;position:fixed;top:0;bottom:0;overflow:auto}
+.brand{font-size:22px;font-weight:800;margin-bottom:25px}.brand span{color:#16a34a}
+.profile{padding:14px;background:#f8fafc;border-radius:12px;margin-bottom:20px}
+.profile b{display:block}.profile small{color:#64748b}
+.title{font-size:11px;color:#94a3b8;font-weight:bold;margin:18px 0 7px}
+.nav{display:block;width:100%;padding:11px;border:0;background:none;text-align:left;border-radius:8px;color:#334155}
+.nav:hover,.nav.active{background:#ecfdf5;color:#15803d}
+.main{margin-left:240px;padding:24px;width:calc(100% - 240px)}
+.top{display:flex;justify-content:space-between;gap:20px;align-items:flex-start}
+.green{color:#16a34a;font-size:12px;font-weight:bold}
+h1{margin:5px 0;font-size:30px}
+.wallet{background:#111827;color:white;padding:17px 20px;border-radius:14px;min-width:220px}
+.wallet small{color:#cbd5e1}.wallet strong{display:block;font-size:25px;margin:5px 0 10px}
+.fund,.buy,.confirm{background:#16a34a;color:white;border:0;border-radius:8px;padding:10px 14px;font-weight:bold}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:22px 0}
+.stat,.panel{background:white;border:1px solid #e5e7eb;border-radius:14px;padding:18px}
+.stat small{display:block;color:#64748b;margin-top:5px}.stat strong{font-size:22px}
+.panel{margin-bottom:20px}.panel h2{margin-top:0}
+.services{display:flex;gap:8px;flex-wrap:wrap}
+.service{padding:10px 14px;border:1px solid #dbe2ea;background:white;border-radius:8px}
+.service.active{background:#16a34a;color:white;border-color:#16a34a}
+.notice{background:#eff6ff;color:#1e40af;padding:11px;border-radius:8px;font-size:13px;margin-bottom:14px}
+.providers{display:grid;gap:10px}
+.provider{display:grid;grid-template-columns:1fr 170px 120px;gap:15px;align-items:center;border:1px solid #e5e7eb;border-radius:11px;padding:15px}
+.provider:hover{border-color:#86efac}
+.pname{font-weight:bold}.best{font-size:10px;background:#fef3c7;color:#92400e;padding:4px 6px;border-radius:5px;margin-left:6px}
+.avail{color:#16a34a;font-size:13px;margin-top:4px}.sub{font-size:12px;color:#64748b;margin-top:4px}
+.price{font-weight:bold;font-size:18px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.option{border:1px solid #e5e7eb;border-radius:9px;padding:13px;margin-top:8px}
+.modal{display:none;position:fixed;inset:0;background:#0008;align-items:center;justify-content:center;padding:20px}
+.modal.show{display:flex}.box{background:white;padding:22px;border-radius:14px;width:min(420px,100%)}
+.box button{width:100%;margin-top:8px}.cancel{padding:10px;border:0;border-radius:8px;background:#e5e7eb}
+@media(max-width:800px){.sidebar{display:none}.main{margin:0;width:100%;padding:15px}.top{display:block}.wallet{margin-top:15px}.stats{grid-template-columns:1fr}.provider{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar">
+<div class="brand">NUMBER<span>HUB</span></div>
+<div class="profile"><b>Victor</b><small>My Profile</small></div>
+<div class="title">MAIN</div>
+<button class="nav active">🏠 Dashboard</button>
+<button class="nav">📱 Buy Numbers</button>
+<button class="nav">🇺🇸 USA Numbers</button>
+<button class="nav">🌎 Other USA</button>
+<button class="nav">🌍 All Countries</button>
+<button class="nav">💳 Fund Wallet</button>
+<div class="title">ACCOUNT</div>
+<button class="nav">🚀 Boost Account</button>
+<button class="nav">❓ FAQs</button>
+<button class="nav">🧾 Numbers History</button>
+<button class="nav">💳 Transaction History</button>
+<div class="title">RESELLER</div>
+<button class="nav">🔌 Reseller Hub</button>
+<button class="nav">📚 API Docs</button>
+<button class="nav">👤 My Profile</button>
+</aside>
+
+<main class="main">
+<div class="top">
+<div><div class="green">WELCOME BACK</div><h1>Your Number Dashboard</h1><p>Select a service below to purchase a virtual number.</p></div>
+<div class="wallet"><small>Wallet Balance</small><strong>₦0.00</strong><button class="fund" onclick="fund()">+ Fund Wallet</button></div>
+</div>
+
+<div class="stats">
+<div class="stat">📱 <small>Available Numbers</small><strong>148,520</strong></div>
+<div class="stat">🛒 <small>Total Purchases</small><strong>0</strong></div>
+<div class="stat">💰 <small>Wallet Balance</small><strong>₦0.00</strong></div>
+</div>
+
+<section class="panel">
+<h2>Select Service</h2>
+<div class="services" id="services"></div>
+</section>
+
+<section class="panel">
+<div class="green">SELECT OPERATOR</div>
+<h2>Options for: <span id="serviceName">WhatsApp</span></h2>
+<div class="notice">Demo inventory. Real numbers and OTPs require an authorized provider API.</div>
+<div class="providers" id="providers"></div>
+</section>
+
+<div class="grid2">
+<section class="panel"><h2>Other USA Numbers</h2>
+<div class="option">🇺🇸 Other USA Numbers<br><b>₦498.07</b><div class="sub">₦407.36 locked</div></div>
+<div class="option">🌍 All Country Numbers<div class="sub">Global coverage · Choose your country</div></div>
+</section>
+<section class="panel"><h2>Choose a Server</h2>
+<div class="option">Server C<div class="sub">Global Coverage</div></div>
+<div class="option">Server D<div class="sub">Global Coverage</div></div>
+<div class="option">Server E<div class="sub">Global Coverage</div></div>
+<div class="option">Server F<div class="sub">Global Coverage</div></div>
+</section>
+</div>
+</main>
+</div>
+
+<div class="modal" id="modal">
+<div class="box">
+<h2 id="modalTitle">Confirm Purchase</h2>
+<p id="modalText"></p>
+<button class="confirm" onclick="closeModal()">Confirm Purchase</button>
+<button class="cancel" onclick="closeModal()">Cancel</button>
+</div>
+</div>
+
+<script>
+const data={
+WhatsApp:[
+["3330",205,6438.72,1],["3309",925,6022.24,0],["3393",1654,6022.24,0],
+["3418",754,6022.24,0],["3328",694,6022.24,0],["3441",754,6022.24,0],
+["2461",21736,4815.36,0],["2750",68,4128.32,0],["3160",61956,3800,0],
+["3451",99465,2331.68,0],["2262",90530,1976,0],["3154",697,1006.24,0],
+["3193",41136,638.40,0],["2430",4038,407.36,0],["2440",4881,407.36,0],
+["2441",3113,407.36,0],["2767",4676,407.36,0],["2748",3456,407.36,0],
+["2784",4392,407.36,0],["3420",9,364.80,0]],
+Facebook:[
+["3330",216,507.68,1],["3451",97415,425.60,0],["2858",50551,352.64,0],
+["3309",793,313.12,0],["3418",825,313.12,0],["3328",1182,313.12,0],
+["3441",825,313.12,0],["3193",20541,237.12,0],["2266",1,164.16,0],
+["3182",1,164.16,0],["2767",292,164.16,0],["2441",905,164.16,0],
+["2748",836,164.16,0],["2784",2841,164.16,0],["3209",95508,164.16,0],
+["2430",394,164.16,0],["2440",4205,164.16,0],["3212",1488,139.84,0],
+["2262",48264,118.56,0],["3140",200,106.40,0],["3160",27774,103.36,0],
+["3228",200,79.04,0],["3410",870,69.92,0]],
+Instagram:[["3330",520,850,1],["3451",12400,620,0],["3193",8500,410,0],["3160",42000,300,0]],
+Telegram:[["3330",800,1200,1],["3451",16000,850,0],["3193",30000,500,0],["3160",50000,400,0]],
+TikTok:[["3330",300,1500,1],["3451",8000,900,0],["3193",15000,600,0],["3160",35000,450,0]],
+Google:[["3330",120,2500,1],["3451",3000,1500,0],["3193",9000,800,0],["3160",18000,500,0]],
+X:[["3330",250,1800,1],["3451",5000,1000,0],["3193",12000,650,0],["3160",28000,420,0]]
+};
+
+const money=n=>"₦"+n.toLocaleString("en-NG",{minimumFractionDigits:2,maximumFractionDigits:2});
+const services=document.getElementById("services");
+
+Object.keys(data).forEach((s,i)=>{
+let b=document.createElement("button");
+b.className="service"+(i===0?" active":"");
+b.textContent=s;
+b.onclick=()=>selectService(s,b);
+services.appendChild(b);
+});
+
+function selectService(s,b){
+document.querySelectorAll(".service").forEach(x=>x.classList.remove("active"));
+b.classList.add("active");
+document.getElementById("serviceName").textContent=s;
+render(s);
+}
+
+function render(s){
+let box=document.getElementById("providers");
+box.innerHTML="";
+data[s].forEach(x=>{
+let id=x[0],available=x[1],price=x[2],best=x[3];
+let card=document.createElement("div");
+card.className="provider";
+card.innerHTML=
+'<div><div class="pname">Provider '+id+
+(best?'<span class="best">★ BEST</span>':'')+
+'</div><div class="avail">'+available.toLocaleString()+
+' available</div><div class="sub">'+available.toLocaleString()+
+' numbers</div></div><div><div class="price">'+money(price)+
+'</div><div class="sub">Base: '+money(price)+
+' + ₦0.00 escrow</div></div><button class="buy">Buy Number</button>';
+card.querySelector(".buy").onclick=()=>buy(s,id,price);
+box.appendChild(card);
+});
+}
+
+function buy(service,provider,price){
+document.getElementById("modalTitle").textContent="Confirm Purchase";
+document.getElementById("modalText").innerHTML=
+"Service: <b>"+service+"</b><br>Provider: <b>"+provider+
+"</b><br>Price: <b>"+money(price)+"</b><br><br>"+
+"Wallet balance: <b>₦0.00</b>";
+document.getElementById("modal").classList.add("show");
+}
+
+function fund(){
+document.getElementById("modalTitle").textContent="Fund Wallet";
+document.getElementById("modalText").innerHTML=
+'<b>Nigerian Payment</b><br><br>
+<div style="background:#f8fafc;padding:14px;border-radius:10px">
+<label><b>Amount (₦)</b></label>
+<input id="amount" type="number" min="100" placeholder="Enter amount"
+style="width:100%;padding:12px;margin-top:7px;border:1px solid #ddd;border-radius:8px">
+<br><br>
+<b>Select Payment Method</b>
+<div style="display:grid;gap:8px;margin-top:8px">
+<button type="button" style="padding:12px;border:1px solid #ddd;border-radius:8px;background:white;text-align:left">🟢 OPay</button>
+<button type="button" style="padding:12px;border:1px solid #ddd;border-radius:8px;background:white;text-align:left">🏦 Bank Transfer</button>
+</div>
+</div><br>'+
+'Enter the amount you want to fund your wallet with.<br><br>'+
+'<input id="amount" type="number" placeholder="Amount in ₦" '+
+'style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px">'+
+'<br><br><b>Payment method:</b> OPay / Bank Transfer / Card<br><br>'+
+'<small>Payment processing must be connected to a legitimate payment gateway before real money is accepted.</small>';
+document.getElementById("modal").classList.add("show");
+}
+
+function closeModal(){document.getElementById("modal").classList.remove("show")}
+render("WhatsApp");
+</script>
+<script src="script.js"></script>
+<div class="panel" style="margin-top:20px"><h2>Create Account</h2><p>Register to use NumberHub.</p><form id="signupForm"><input id="signupName" type="text" placeholder="Your name" required style="width:100%;padding:12px;margin:6px 0;border:1px solid #ddd;border-radius:8px"><input id="signupEmail" type="email" placeholder="Email address" required style="width:100%;padding:12px;margin:6px 0;border:1px solid #ddd;border-radius:8px"><button type="submit" class="fund">Create Account</button></form><p id="signupMessage"></p></div><script>document.getElementById("signupForm").addEventListener("submit",async e=>{e.preventDefault();const message=document.getElementById("signupMessage");try{const r=await fetch("/api/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:document.getElementById("signupName").value,email:document.getElementById("signupEmail").value})});const d=await r.json();message.textContent=d.message||d.error}catch(err){message.textContent="Could not connect to the server."}});</script></body>
+</html>
