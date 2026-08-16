@@ -251,24 +251,53 @@ document.getElementById("modal").classList.add("show");
 function fund(){
 document.getElementById("modalTitle").textContent="Fund Wallet";
 document.getElementById("modalText").innerHTML=
-'<b>Nigerian Payment</b><br><br>
-<div style="background:#f8fafc;padding:14px;border-radius:10px">
-<label><b>Amount (₦)</b></label>
-<input id="amount" type="number" min="100" placeholder="Enter amount"
-style="width:100%;padding:12px;margin-top:7px;border:1px solid #ddd;border-radius:8px">
-<br><br>
-<b>Select Payment Method</b>
-<div style="display:grid;gap:8px;margin-top:8px">
-<button type="button" style="padding:12px;border:1px solid #ddd;border-radius:8px;background:white;text-align:left">🟢 OPay</button>
-<button type="button" style="padding:12px;border:1px solid #ddd;border-radius:8px;background:white;text-align:left">🏦 Bank Transfer</button>
-</div>
-</div><br>'+
-'Enter the amount you want to fund your wallet with.<br><br>'+
-'<input id="amount" type="number" placeholder="Amount in ₦" '+
-'style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px">'+
-'<br><br><b>Payment method:</b> OPay / Bank Transfer / Card<br><br>'+
-'<small>Payment processing must be connected to a legitimate payment gateway before real money is accepted.</small>';
+'<b>Nigerian Payment</b><br><br>'+
+'<label><b>Amount (₦)</b></label>'+
+'<input id="fundAmount" type="number" min="100" placeholder="Enter amount" '+
+'style="width:100%;padding:12px;margin-top:7px;border:1px solid #ddd;border-radius:8px">'+
+'<br><br><b>Select Payment Method</b>'+
+'<div style="display:grid;gap:8px;margin-top:8px">'+
+'<button type="button" class="payment-option" onclick="selectPayment(this, \'OPay\')" '+
+'style="padding:12px;border:1px solid #ddd;border-radius:8px;background:white;text-align:left">🟢 OPay</button>'+
+'<button type="button" class="payment-option" onclick="selectPayment(this, \'Bank Transfer\')" '+
+'style="padding:12px;border:1px solid #ddd;border-radius:8px;background:white;text-align:left">🏦 Bank Transfer</button>'+
+'</div>'+
+'<p id="paymentChoice" style="font-size:13px;color:#64748b">Select a payment method.</p>'+
+'<button type="button" class="confirm" onclick="startFunding()">Continue</button>'+
+'<br><br><small>Payment processing is not connected yet. No real payment will be charged.</small>';
 document.getElementById("modal").classList.add("show");
+}
+
+function selectPayment(button, method){
+document.querySelectorAll(".payment-option").forEach(b=>{
+b.style.borderColor="#ddd";
+b.style.background="white";
+});
+button.style.borderColor="#16a34a";
+button.style.background="#ecfdf5";
+document.getElementById("paymentChoice").textContent="Selected: "+method;
+button.dataset.selected="true";
+}
+
+function startFunding(){
+const amount=document.getElementById("fundAmount");
+const selected=document.querySelector('.payment-option[data-selected="true"]');
+
+if(!amount || Number(amount.value)<100){
+alert("Please enter an amount of at least ₦100.");
+return;
+}
+
+if(!selected){
+alert("Please select a payment method.");
+return;
+}
+
+document.getElementById("modalTitle").textContent="Payment Not Connected";
+document.getElementById("modalText").innerHTML=
+"Your funding request is ready for <b>₦"+Number(amount.value).toFixed(2)+"</b> using <b>"+
+selected.textContent.trim()+"</b>.<br><br>"+
+"Real payment processing has not been connected yet, so no money has been charged and your wallet has not been credited.";
 }
 
 function closeModal(){document.getElementById("modal").classList.remove("show")}
