@@ -216,5 +216,46 @@ function closeModal(){document.getElementById("modal").classList.remove("show")}
 render("WhatsApp");
 </script>
 <script src="script.js"></script>
-<div class="panel" style="margin-top:20px"><h2>Create Account</h2><p>Register to use NumberHub.</p><form id="signupForm"><input id="signupName" type="text" placeholder="Your name" required style="width:100%;padding:12px;margin:6px 0;border:1px solid #ddd;border-radius:8px"><input id="signupEmail" type="email" placeholder="Email address" required style="width:100%;padding:12px;margin:6px 0;border:1px solid #ddd;border-radius:8px"><button type="submit" class="fund">Create Account</button></form><p id="signupMessage"></p></div><script>document.getElementById("signupForm").addEventListener("submit",async e=>{e.preventDefault();const message=document.getElementById("signupMessage");try{const r=await fetch("/api/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:document.getElementById("signupName").value,email:document.getElementById("signupEmail").value})});const d=await r.json();message.textContent=d.message||d.error}catch(err){message.textContent="Could not connect to the server."}});</script></body>
+<div class="panel" style="margin-top:20px">
+<h2>Create Account</h2>
+<p>Register to use NumberHub.</p>
+
+<form id="signupForm">
+<input id="signupName" type="text" placeholder="Your name" required style="width:100%;padding:12px;margin:6px 0;border:1px solid #ddd;border-radius:8px">
+
+<input id="signupEmail" type="email" placeholder="Email address" required style="width:100%;padding:12px;margin:6px 0;border:1px solid #ddd;border-radius:8px">
+
+<input id="signupPassword" type="password" placeholder="Password (minimum 8 characters)" minlength="8" required style="width:100%;padding:12px;margin:6px 0;border:1px solid #ddd;border-radius:8px">
+
+<button type="submit" class="fund">Create Account</button>
+</form>
+
+<p id="signupMessage"></p>
+</div>
+
+<script>
+document.getElementById("signupForm").addEventListener("submit", async e => {
+  e.preventDefault();
+
+  const message = document.getElementById("signupMessage");
+
+  try {
+    const r = await fetch("/api/register", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        name: document.getElementById("signupName").value,
+        email: document.getElementById("signupEmail").value,
+        password: document.getElementById("signupPassword").value
+      })
+    });
+
+    const d = await r.json();
+    message.textContent = d.message || d.error;
+  } catch (err) {
+    message.textContent = "Could not connect to the server.";
+  }
+});
+</script>
+</body>
 </html>
