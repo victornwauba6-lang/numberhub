@@ -111,7 +111,7 @@ h1{margin:5px 0;font-size:30px}
 <div class="profile"><b id="profileName">Loading...</b><small>My Profile</small></div>
 <div class="title">MAIN</div>
 <button class="nav active">🏠 Dashboard</button>
-<button class="nav">📱 Buy Numbers</button>
+<button class="nav" onclick="goToSection('serviceSection')">📱 Buy Numbers</button>
 <button class="nav">🇺🇸 USA Numbers</button>
 <button class="nav">🌎 Other USA</button>
 <button class="nav">🌍 All Countries</button>
@@ -276,6 +276,14 @@ render("WhatsApp");
 </script>
 <script src="script.js"></script>
 <script>
+function goToSection(id) {
+  const section = document.getElementById(id);
+  if (section) {
+    section.scrollIntoView({ behavior: "smooth", block: "start" });
+    toggleSidebar();
+  }
+}
+
 function toggleSidebar() {
   const sidebar = document.querySelector(".sidebar");
   if (sidebar) sidebar.classList.toggle("open");
