@@ -275,6 +275,11 @@ document.getElementById("loginForm").addEventListener("submit", async e => {
 
     if (r.ok) {
       message.textContent = "Login successful. Welcome back, " + d.user.name + "!";
+
+      const profileName = document.getElementById("profileName");
+      if (profileName && d.user) {
+        profileName.textContent = d.user.name;
+      }
     } else {
       message.textContent = d.error || "Login failed.";
     }
