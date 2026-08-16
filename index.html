@@ -49,7 +49,7 @@ h1{margin:5px 0;font-size:30px}
 <div class="app">
 <aside class="sidebar">
 <div class="brand">NUMBER<span>HUB</span></div>
-<div class="profile"><b>Victor</b><small>My Profile</small></div>
+<div class="profile"><b id="profileName">Loading...</b><small>My Profile</small></div>
 <div class="title">MAIN</div>
 <button class="nav active">🏠 Dashboard</button>
 <button class="nav">📱 Buy Numbers</button>
@@ -216,6 +216,28 @@ function closeModal(){document.getElementById("modal").classList.remove("show")}
 render("WhatsApp");
 </script>
 <script src="script.js"></script>
+<script>
+async function loadCurrentUser() {
+  try {
+    const r = await fetch("/api/me", {
+      credentials: "include"
+    });
+
+    if (!r.ok) return;
+
+    const d = await r.json();
+
+    if (d.authenticated && d.user) {
+      document.getElementById("profileName").textContent = d.user.name;
+    }
+  } catch (err) {
+    console.error("Could not load current user:", err);
+  }
+}
+
+loadCurrentUser();
+</script>
+
 
 
 <div class="panel" style="margin-top:20px">
