@@ -217,6 +217,39 @@ render("WhatsApp");
 </script>
 <script src="script.js"></script>
 <script>
+function applyUserToDashboard(user) {
+  if (!user) return;
+
+  const profileName = document.getElementById("profileName");
+  if (profileName) {
+    profileName.textContent = user.name;
+  }
+
+  const walletTop = document.querySelector(".wallet strong");
+  if (walletTop) {
+    walletTop.textContent = "₦" + Number(user.wallet || 0).toFixed(2);
+  }
+
+  const stats = document.querySelectorAll(".stat strong");
+  if (stats[1]) {
+    stats[1].textContent = user.purchases || 0;
+  }
+
+  if (stats[2]) {
+    stats[2].textContent = "₦" + Number(user.wallet || 0).toFixed(2);
+  }
+
+  const loginForm = document.getElementById("loginForm");
+  if (loginForm) {
+    loginForm.closest(".panel").style.display = "none";
+  }
+
+  const signupForm = document.getElementById("signupForm");
+  if (signupForm) {
+    signupForm.closest(".panel").style.display = "none";
+  }
+}
+
 async function loadCurrentUser() {
   try {
     const r = await fetch("/api/me", {
@@ -228,7 +261,7 @@ async function loadCurrentUser() {
     const d = await r.json();
 
     if (d.authenticated && d.user) {
-      document.getElementById("profileName").textContent = d.user.name;
+      applyUserToDashboard(d.user);
     }
   } catch (err) {
     console.error("Could not load current user:", err);
@@ -276,10 +309,7 @@ document.getElementById("loginForm").addEventListener("submit", async e => {
     if (r.ok) {
       message.textContent = "Login successful. Welcome back, " + d.user.name + "!";
 
-      const profileName = document.getElementById("profileName");
-      if (profileName && d.user) {
-        profileName.textContent = d.user.name;
-      }
+      applyUserToDashboard(d.user);
     } else {
       message.textContent = d.error || "Login failed.";
     }
