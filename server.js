@@ -82,6 +82,14 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (req.method === "GET" && req.url === "/api/clear-sessions") {
+      await pool.query("DELETE FROM sessions");
+      sendJSON(res, 200, {
+        message: "All sessions invalidated"
+      });
+      return;
+    }
+
     if (req.method === "GET" && req.url === "/api/me") {
       const cookies = String(req.headers.cookie || "");
       const match = cookies.match(/(?:^|;\\s*)session=([^;]+)/);
