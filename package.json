@@ -18,5 +18,8 @@
   "bugs": {
     "url": "https://github.com/victornwauba6-lang/numberhub/issues"
   },
-  "homepage": "https://github.com/victornwauba6-lang/numberhub#readme"
+  "homepage": "https://github.com/victornwauba6-lang/numberhub#readme",
+  "dependencies": {
+    "pg": "^8.23.0"
+  }
 }

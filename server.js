@@ -1,20 +1,30 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
+const { Pool } = require("pg");
 
 const PORT = process.env.PORT || 3001;
-const DATA_FILE = path.join(__dirname, "users.json");
 
-if (!fs.existsSync(DATA_FILE)) {
-  fs.writeFileSync(DATA_FILE, "[]");
-}
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL
+    ? { rejectUnauthorized: false }
+    : false
+});
 
-function getUsers() {
-  return JSON.parse(fs.readFileSync(DATA_FILE, "utf8"));
-}
+async function initDatabase() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id BIGSERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      email TEXT UNIQUE NOT NULL,
+      wallet NUMERIC(12,2) DEFAULT 0,
+      purchases INTEGER DEFAULT 0,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
 
-function saveUsers(users) {
-  fs.writeFileSync(DATA_FILE, JSON.stringify(users, null, 2));
+  console.log("PostgreSQL database ready");
 }
 
 const server = http.createServer((req, res) => {
@@ -37,10 +47,11 @@ const server = http.createServer((req, res) => {
       body += chunk;
     });
 
-    req.on("end", () => {
+    req.on("end", async () => {
       try {
         const data = JSON.parse(body);
-        const { name, email } = data;
+        const name = String(data.name || "").trim();
+        const email = String(data.email || "").trim().toLowerCase();
 
         if (!name || !email) {
           res.writeHead(400);
@@ -50,9 +61,21 @@ const server = http.createServer((req, res) => {
           return;
         }
 
-        const users = getUsers();
+        const result = await pool.query(
+          `INSERT INTO users (name, email)
+           VALUES ($1, $2)
+           RETURNING id, name, email, wallet, purchases, created_at`,
+          [name, email]
+        );
 
-        if (users.some(user => user.email === email)) {
+        res.writeHead(201);
+        res.end(JSON.stringify({
+          message: "Account created successfully",
+          user: result.rows[0]
+        }));
+
+      } catch (error) {
+        if (error.code === "23505") {
           res.writeHead(409);
           res.end(JSON.stringify({
             error: "Email already registered"
@@ -60,28 +83,10 @@ const server = http.createServer((req, res) => {
           return;
         }
 
-        const user = {
-          id: Date.now(),
-          name,
-          email,
-          wallet: 0,
-          purchases: 0,
-          createdAt: new Date().toISOString()
-        };
-
-        users.push(user);
-        saveUsers(users);
-
-        res.writeHead(201);
+        console.error(error);
+        res.writeHead(500);
         res.end(JSON.stringify({
-          message: "Account created successfully",
-          user
-        }));
-
-      } catch (error) {
-        res.writeHead(400);
-        res.end(JSON.stringify({
-          error: "Invalid request"
+          error: "Could not create account"
         }));
       }
     });
@@ -89,9 +94,18 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  if (req.method === "GET" && (req.url === "/" || req.url === "/index.html")) {
-    res.writeHead(200, {"Content-Type": "text/html"});
-    fs.createReadStream(path.join(__dirname, "index.html")).pipe(res);
+  if (
+    req.method === "GET" &&
+    (req.url === "/" || req.url === "/index.html")
+  ) {
+    res.writeHead(200, {
+      "Content-Type": "text/html"
+    });
+
+    fs.createReadStream(
+      path.join(__dirname, "index.html")
+    ).pipe(res);
+
     return;
   }
 
@@ -101,6 +115,13 @@ const server = http.createServer((req, res) => {
   }));
 });
 
-server.listen(PORT, "0.0.0.0", () => {
-  console.log(`NumberHub backend running on port ${PORT}`);
-});
+initDatabase()
+  .then(() => {
+    server.listen(PORT, "0.0.0.0", () => {
+      console.log(`NumberHub backend running on port ${PORT}`);
+    });
+  })
+  .catch(error => {
+    console.error("Database initialization failed:", error);
+    process.exit(1);
+  });
