@@ -216,6 +216,23 @@ function closeModal(){document.getElementById("modal").classList.remove("show")}
 render("WhatsApp");
 </script>
 <script src="script.js"></script>
+
+
+<div class="panel" style="margin-top:20px">
+<h2>Login</h2>
+<p>Login to your NumberHub account.</p>
+
+<form id="loginForm">
+<input id="loginEmail" type="email" placeholder="Email address" required style="width:100%;padding:12px;margin:6px 0;border:1px solid #ddd;border-radius:8px">
+
+<input id="loginPassword" type="password" placeholder="Password" required style="width:100%;padding:12px;margin:6px 0;border:1px solid #ddd;border-radius:8px">
+
+<button type="submit" class="fund">Login</button>
+</form>
+
+<p id="loginMessage"></p>
+</div>
+
 <script>
 document.getElementById("loginForm").addEventListener("submit", async e => {
   e.preventDefault();
@@ -244,21 +261,6 @@ document.getElementById("loginForm").addEventListener("submit", async e => {
   }
 });
 </script>
-
-<div class="panel" style="margin-top:20px">
-<h2>Login</h2>
-<p>Login to your NumberHub account.</p>
-
-<form id="loginForm">
-<input id="loginEmail" type="email" placeholder="Email address" required style="width:100%;padding:12px;margin:6px 0;border:1px solid #ddd;border-radius:8px">
-
-<input id="loginPassword" type="password" placeholder="Password" required style="width:100%;padding:12px;margin:6px 0;border:1px solid #ddd;border-radius:8px">
-
-<button type="submit" class="fund">Login</button>
-</form>
-
-<p id="loginMessage"></p>
-</div>
 
 <div class="panel" style="margin-top:20px">
 <h2>Create Account</h2>
