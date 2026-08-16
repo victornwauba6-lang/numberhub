@@ -112,9 +112,9 @@ h1{margin:5px 0;font-size:30px}
 <div class="title">MAIN</div>
 <button class="nav active">🏠 Dashboard</button>
 <button class="nav" onclick="goToSection('serviceSection')">📱 Buy Numbers</button>
-<button class="nav">🇺🇸 USA Numbers</button>
-<button class="nav">🌎 Other USA</button>
-<button class="nav">🌍 All Countries</button>
+<button class="nav" onclick="goToSection('usaNumbersSection')">🇺🇸 USA Numbers</button>
+<button class="nav" onclick="goToSection('usaNumbersSection')">🌎 Other USA</button>
+<button class="nav" onclick="goToSection('allCountriesSection')">🌍 All Countries</button>
 <button class="nav">💳 Fund Wallet</button>
 <div class="title">ACCOUNT</div>
 <button class="nav">🚀 Boost Account</button>
@@ -153,8 +153,8 @@ h1{margin:5px 0;font-size:30px}
 
 <div class="grid2">
 <section class="panel"><h2>Other USA Numbers</h2>
-<div class="option">🇺🇸 Other USA Numbers<br><b>₦498.07</b><div class="sub">₦407.36 locked</div></div>
-<div class="option">🌍 All Country Numbers<div class="sub">Global coverage · Choose your country</div></div>
+<div class="option" id="usaNumbersSection">🇺🇸 Other USA Numbers<br><b>₦498.07</b><div class="sub">₦407.36 locked</div></div>
+<div class="option" id="allCountriesSection">🌍 All Country Numbers<div class="sub">Global coverage · Choose your country</div></div>
 </section>
 <section class="panel"><h2>Choose a Server</h2>
 <div class="option">Server C<div class="sub">Global Coverage</div></div>
