@@ -56,7 +56,16 @@ async function initDatabase() {
       wallet NUMERIC(12,2) DEFAULT 0,
       purchases INTEGER DEFAULT 0,
       created_at TIMESTAMPTZ DEFAULT NOW()
-    )
+    );
+
+    CREATE TABLE IF NOT EXISTS sessions (
+      token_hash TEXT PRIMARY KEY,
+      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      expires_at TIMESTAMPTZ NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS sessions_expires_at_idx
+      ON sessions(expires_at);
   `);
 
   console.log("PostgreSQL database ready");
@@ -70,6 +79,48 @@ const server = http.createServer(async (req, res) => {
         service: "NumberHub",
         message: "Backend is working"
       });
+      return;
+    }
+
+    if (req.method === "GET" && req.url === "/api/me") {
+      const cookies = String(req.headers.cookie || "");
+      const match = cookies.match(/(?:^|;\\s*)session=([^;]+)/);
+
+      if (!match) {
+        sendJSON(res, 401, {
+          error: "Not authenticated"
+        });
+        return;
+      }
+
+      const sessionToken = match[1];
+
+      const tokenHash = crypto
+        .createHash("sha256")
+        .update(sessionToken)
+        .digest("hex");
+
+      const result = await pool.query(
+        `SELECT u.id, u.name, u.email, u.wallet, u.purchases, u.created_at
+         FROM sessions s
+         JOIN users u ON u.id = s.user_id
+         WHERE s.token_hash = $1
+           AND s.expires_at > NOW()`,
+        [tokenHash]
+      );
+
+      if (result.rows.length === 0) {
+        sendJSON(res, 401, {
+          error: "Session expired or invalid"
+        });
+        return;
+      }
+
+      sendJSON(res, 200, {
+        authenticated: true,
+        user: result.rows[0]
+      });
+
       return;
     }
 
@@ -155,10 +206,29 @@ const server = http.createServer(async (req, res) => {
 
       delete user.password_hash;
 
-      sendJSON(res, 200, {
+      const sessionToken = crypto.randomBytes(32).toString("hex");
+      const tokenHash = crypto
+        .createHash("sha256")
+        .update(sessionToken)
+        .digest("hex");
+
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+      await pool.query(
+        `INSERT INTO sessions (token_hash, user_id, expires_at)
+         VALUES ($1, $2, $3)`,
+        [tokenHash, user.id, expiresAt]
+      );
+
+      res.writeHead(200, {
+        "Content-Type": "application/json",
+        "Set-Cookie": `session=${sessionToken}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=604800`
+      });
+
+      res.end(JSON.stringify({
         message: "Login successful",
         user
-      });
+      }));
 
       return;
     }
