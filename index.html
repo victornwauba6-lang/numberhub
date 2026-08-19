@@ -492,6 +492,7 @@ document.getElementById("loginForm").addEventListener("submit", async e => {
   try {
     const r = await fetch("https://numberhub.onrender.com/api/login", {
       method: "POST",
+      credentials: "include",
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({
         email: document.getElementById("loginEmail").value,
