@@ -88,6 +88,26 @@ async function initDatabase() {
 
     CREATE INDEX IF NOT EXISTS wallet_transactions_created_at_idx
       ON wallet_transactions(created_at);
+
+    CREATE TABLE IF NOT EXISTS number_purchases (
+      id BIGSERIAL PRIMARY KEY,
+      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      phone_number TEXT NOT NULL,
+      country TEXT NOT NULL,
+      service TEXT NOT NULL,
+      provider TEXT,
+      price NUMERIC(12,2) NOT NULL CHECK (price > 0),
+      status TEXT NOT NULL DEFAULT 'active',
+      sms_code TEXT,
+      reference TEXT UNIQUE NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS number_purchases_user_id_idx
+      ON number_purchases(user_id);
+
+    CREATE INDEX IF NOT EXISTS number_purchases_created_at_idx
+      ON number_purchases(created_at);
   `);
 
   console.log("PostgreSQL database ready");
@@ -247,6 +267,44 @@ const server = http.createServer(async (req, res) => {
         transactions: result.rows
       });
 
+      return;
+    }
+
+    if (req.method === "GET" && req.url === "/api/numbers/history") {
+      const cookies = String(req.headers.cookie || "");
+      const match = cookies.match(/(?:^|;\s*)session=([^;]+)/);
+
+      if (!match) {
+        sendJSON(res, 401, { error: "Not authenticated" });
+        return;
+      }
+
+      const tokenHash = crypto.createHash("sha256")
+        .update(match[1])
+        .digest("hex");
+
+      const sessionResult = await pool.query(
+        `SELECT user_id FROM sessions
+         WHERE token_hash = $1 AND expires_at > NOW()`,
+        [tokenHash]
+      );
+
+      if (sessionResult.rows.length === 0) {
+        sendJSON(res, 401, { error: "Session expired or invalid" });
+        return;
+      }
+
+      const result = await pool.query(
+        `SELECT id, phone_number, country, service, provider,
+                price, status, sms_code, reference, created_at
+         FROM number_purchases
+         WHERE user_id = $1
+         ORDER BY created_at DESC
+         LIMIT 100`,
+        [sessionResult.rows[0].user_id]
+      );
+
+      sendJSON(res, 200, { purchases: result.rows });
       return;
     }
 
