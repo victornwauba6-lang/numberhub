@@ -340,7 +340,7 @@ document.getElementById("paymentChoice").textContent="Selected: "+method;
 button.dataset.selected="true";
 }
 
-function startFunding(){
+async function startFunding(){
 const amount=document.getElementById("fundAmount");
 const selected=document.querySelector('.payment-option[data-selected="true"]');
 
@@ -354,11 +354,43 @@ alert("Please select a payment method.");
 return;
 }
 
-document.getElementById("modalTitle").textContent="Payment Not Connected";
+const value=Number(amount.value);
+const method=selected.textContent.trim().includes("OPay") ? "OPay" : "Bank Transfer";
+
+document.getElementById("modalTitle").textContent="Creating Funding Request...";
+document.getElementById("modalText").textContent="Please wait...";
+
+try {
+const r=await fetch("https://numberhub.onrender.com/api/wallet/deposit",{
+method:"POST",
+credentials:"include",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+amount:value,
+method:method
+})
+});
+
+const d=await r.json();
+
+if(!r.ok){
+document.getElementById("modalTitle").textContent="Funding Request Failed";
+document.getElementById("modalText").textContent=d.error || "Could not create funding request.";
+return;
+}
+
+document.getElementById("modalTitle").textContent="Funding Request Created";
 document.getElementById("modalText").innerHTML=
-"Your funding request is ready for <b>₦"+Number(amount.value).toFixed(2)+"</b> using <b>"+
-selected.textContent.trim()+"</b>.<br><br>"+
-"Real payment processing has not been connected yet, so no money has been charged and your wallet has not been credited.";
+"Your funding request for <b>₦"+value.toFixed(2)+"</b> using <b>"+method+
+"</b> has been created.<br><br>"+
+"<b>Reference:</b> "+d.transaction.reference+
+"<br><br>Status: <b>"+d.transaction.status+"</b>"+
+"<br><br>Your wallet has not been credited yet. Payment confirmation is still required.";
+} catch(err) {
+console.error(err);
+document.getElementById("modalTitle").textContent="Connection Error";
+document.getElementById("modalText").textContent="Could not connect to the payment server.";
+}
 }
 
 function closeModal(){document.getElementById("modal").classList.remove("show")}
