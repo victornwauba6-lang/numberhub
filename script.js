@@ -14,3 +14,27 @@ async function checkBackend() {
 }
 
 checkBackend();
+
+function toggleUSA() {
+  const servers = document.getElementById("usaServers");
+  if (!servers) return;
+
+  const isHidden = servers.style.display === "none";
+  servers.style.display = isHidden ? "grid" : "none";
+}
+
+function selectUSA(serverName, card) {
+  document.querySelectorAll(".usa-server").forEach(item => {
+    item.classList.remove("selected");
+  });
+
+  card.classList.add("selected");
+
+  window.selectedNumberType = "usa";
+  window.selectedServer = serverName;
+
+  const selected = document.getElementById("selectedServer");
+  if (selected) {
+    selected.innerHTML = `<span>✓ ${serverName} selected</span>`;
+  }
+}

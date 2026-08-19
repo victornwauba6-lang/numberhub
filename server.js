@@ -16,7 +16,9 @@ const pool = new Pool({
 
 function sendJSON(res, status, data) {
   res.writeHead(status, {
-    "Content-Type": "application/json"
+    "Content-Type": "application/json",
+    "Access-Control-Allow-Origin": "http://localhost:3000",
+    "Access-Control-Allow-Credentials": "true"
   });
   res.end(JSON.stringify(data));
 }
@@ -66,6 +68,26 @@ async function initDatabase() {
 
     CREATE INDEX IF NOT EXISTS sessions_expires_at_idx
       ON sessions(expires_at);
+
+
+    CREATE TABLE IF NOT EXISTS wallet_transactions (
+      id BIGSERIAL PRIMARY KEY,
+      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      type TEXT NOT NULL CHECK (type IN ('deposit', 'purchase', 'refund')),
+      amount NUMERIC(12,2) NOT NULL CHECK (amount > 0),
+      method TEXT,
+      status TEXT NOT NULL DEFAULT 'pending'
+        CHECK (status IN ('pending', 'successful', 'failed', 'cancelled')),
+      reference TEXT UNIQUE NOT NULL,
+      description TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS wallet_transactions_user_id_idx
+      ON wallet_transactions(user_id);
+
+    CREATE INDEX IF NOT EXISTS wallet_transactions_created_at_idx
+      ON wallet_transactions(created_at);
   `);
 
   console.log("PostgreSQL database ready");
@@ -79,6 +101,89 @@ const server = http.createServer(async (req, res) => {
         service: "NumberHub",
         message: "Backend is working"
       });
+      return;
+    }
+
+    if (req.method === "POST" && req.url === "/api/wallet/deposit") {
+      const cookies = String(req.headers.cookie || "");
+      const match = cookies.match(/(?:^|;\s*)session=([^;]+)/);
+
+      if (!match) {
+        sendJSON(res, 401, {
+          error: "Not authenticated"
+        });
+        return;
+      }
+
+      const sessionToken = match[1];
+
+      const tokenHash = crypto
+        .createHash("sha256")
+        .update(sessionToken)
+        .digest("hex");
+
+      const sessionResult = await pool.query(
+        `SELECT user_id
+         FROM sessions
+         WHERE token_hash = $1
+           AND expires_at > NOW()`,
+        [tokenHash]
+      );
+
+      if (sessionResult.rows.length === 0) {
+        sendJSON(res, 401, {
+          error: "Session expired or invalid"
+        });
+        return;
+      }
+
+      const userId = sessionResult.rows[0].user_id;
+      const data = await getBody(req);
+
+      const amount = Number(data.amount);
+      const method = String(data.method || "").trim();
+
+      const allowedMethods = ["OPay", "Bank Transfer"];
+
+      if (!Number.isFinite(amount) || amount < 100) {
+        sendJSON(res, 400, {
+          error: "Minimum deposit amount is ₦100"
+        });
+        return;
+      }
+
+      if (!allowedMethods.includes(method)) {
+        sendJSON(res, 400, {
+          error: "Invalid payment method"
+        });
+        return;
+      }
+
+      const reference =
+        "NH-" +
+        Date.now().toString(36).toUpperCase() +
+        "-" +
+        crypto.randomBytes(4).toString("hex").toUpperCase();
+
+      const result = await pool.query(
+        `INSERT INTO wallet_transactions
+          (user_id, type, amount, method, status, reference, description)
+         VALUES ($1, 'deposit', $2, $3, 'pending', $4, $5)
+         RETURNING id, amount, method, status, reference, description, created_at`,
+        [
+          userId,
+          amount.toFixed(2),
+          method,
+          reference,
+          "Wallet funding request awaiting payment confirmation"
+        ]
+      );
+
+      sendJSON(res, 201, {
+        message: "Deposit request created",
+        transaction: result.rows[0]
+      });
+
       return;
     }
 

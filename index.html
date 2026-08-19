@@ -96,11 +96,12 @@ h1{margin:5px 0;font-size:30px}
 
   .top{display:block}
   .wallet{margin-top:15px}
-  .stats{grid-template-columns:1fr}
+  .stats{grid-template-columns:repeat(3,1fr);gap:8px}
   .provider{grid-template-columns:1fr}
   .grid2{grid-template-columns:1fr}
 }
 </style>
+<link rel="stylesheet" href="redesign.css">
 </head>
 <body>
 <div class="app">
@@ -116,9 +117,10 @@ h1{margin:5px 0;font-size:30px}
 <button class="nav" onclick="goToSection('usaNumbersSection')">🌎 Other USA</button>
 <button class="nav" onclick="goToSection('allCountriesSection')">🌍 All Countries</button>
 <button class="nav">💳 Fund Wallet</button>
-<div class="title">ACCOUNT</div>
+<div class="title">COMMUNITY</div><button class="nav" onclick="window.open('https://whatsapp.com/channel/0029VbDRxIfD38CSw1z02m3H','_blank')">📢 WhatsApp Channel</button><div class="title">ACCOUNT</div>
 <button class="nav">🚀 Boost Account</button>
 <button class="nav">❓ FAQs</button>
+<button class="nav" onclick="window.open('https://t.me/Numberhubsupport','_blank')">💬 Telegram Support</button>
 <button class="nav">🧾 Numbers History</button>
 <button class="nav">💳 Transaction History</button>
 <div class="title">RESELLER</div>
@@ -133,15 +135,79 @@ h1{margin:5px 0;font-size:30px}
 <div class="wallet"><small>Wallet Balance</small><strong>₦0.00</strong><button class="fund" onclick="fund()">+ Fund Wallet</button></div>
 </div>
 
-<div class="stats">
-<div class="stat">📱 <small>Available Numbers</small><strong>148,520</strong></div>
-<div class="stat">🛒 <small>Total Purchases</small><strong>0</strong></div>
-<div class="stat">💰 <small>Wallet Balance</small><strong>₦0.00</strong></div>
+<section class="panel quick-otp">
+<div class="green">QUICK OTP</div>
+<h2>Choose a Service</h2>
+<div class="quick-services">
+<button class="quick-service" onclick="selectServiceFromQuick('WhatsApp')">💬<strong>WhatsApp</strong><small>Buy Number →</small></button>
+<button class="quick-service" onclick="selectServiceFromQuick('Facebook')">📘<strong>Facebook</strong><small>Buy Number →</small></button>
+<button class="quick-service" onclick="selectServiceFromQuick('Instagram')">📸<strong>Instagram</strong><small>Buy Number →</small></button>
+<button class="quick-service" onclick="selectServiceFromQuick('Telegram')">✈️<strong>Telegram</strong><small>Buy Number →</small></button>
+</div>
+</section>
+
+<section class="panel buy-numbers">
+
+<div class="green">BUY NUMBERS</div>
+<h2>Choose Number Type</h2>
+<div class="buy-options">
+
+<div class="buy-option usa-container">
+<button class="buy-option-main" type="button" onclick="toggleUSA()">
+🇺🇸<strong>USA</strong><small>Numbers →</small>
+</button>
+
+<div class="usa-servers" id="usaServers" style="display:none">
+
+<button class="dynamic-server usa-server" type="button" onclick="selectUSA('Server A', this)">
+<div class="server-card-top">
+<span class="server-online"><span class="online-dot"></span> ONLINE</span>
+<span class="server-badge">⭐ BEST</span>
+</div>
+<div class="server-name">Server A</div>
+<div class="server-feature">⚡ Quick OTP</div>
+<div class="server-success-row">
+<span>24H SUCCESS</span>
+<strong>100%</strong>
+</div>
+<div class="server-progress"><span style="width:100%"></span></div>
+<div class="server-card-bottom">
+<span>Available</span>
+<span class="server-select">Select Server →</span>
+</div>
+</button>
+
+<button class="dynamic-server usa-server" type="button" onclick="selectUSA('Server B', this)">
+<div class="server-card-top">
+<span class="server-online"><span class="online-dot"></span> ONLINE</span>
+<span class="server-badge">Quick OTP</span>
+</div>
+<div class="server-name">Server B</div>
+<div class="server-feature">⚡ Fast Verification</div>
+<div class="server-success-row">
+<span>24H SUCCESS</span>
+<strong>100%</strong>
+</div>
+<div class="server-progress"><span style="width:100%"></span></div>
+<div class="server-card-bottom">
+<span>Available</span>
+<span class="server-select">Select Server →</span>
+</div>
+</button>
+
+</div>
 </div>
 
+<button class="buy-option" onclick="showServers('otherUSA')">🇺🇸<strong>Other USA</strong><small>Numbers →</small></button>
+<button class="buy-option" onclick="showServers('allCountries')">🌍<strong>All Countries</strong><small>Numbers →</small></button>
+<button class="buy-option" onclick="showServers('moreCountries')">🌐<strong>More Countries</strong><small>Numbers →</small></button>
+</div>
+<div class="panel server-selection" id="serverSelection" style="display:none"><div class="green">CHOOSE SERVER</div><h2 id="serverTitle">Choose Server</h2><div id="dynamicServers"></div><p id="selectedServer" style="color:#16a34a;font-weight:bold"></p></div>
+</section>
+
 <section class="panel">
-<h2 id="serviceSection">Select Service</h2>
-<div class="services" id="services"></div>
+<h2 id="serviceSection">Available Numbers</h2>
+<div class="services" id="services" style="display:none"></div>
 </section>
 
 <section class="panel">
@@ -156,11 +222,6 @@ h1{margin:5px 0;font-size:30px}
 <div class="option" id="usaNumbersSection">🇺🇸 Other USA Numbers<br><b>₦498.07</b><div class="sub">₦407.36 locked</div></div>
 <div class="option" id="allCountriesSection">🌍 All Country Numbers<div class="sub">Global coverage · Choose your country</div></div>
 </section>
-<section class="panel"><h2>Choose a Server</h2>
-<div class="option">Server C<div class="sub">Global Coverage</div></div>
-<div class="option">Server D<div class="sub">Global Coverage</div></div>
-<div class="option">Server E<div class="sub">Global Coverage</div></div>
-<div class="option">Server F<div class="sub">Global Coverage</div></div>
 </section>
 </div>
 </main>
@@ -354,7 +415,7 @@ function applyUserToDashboard(user) {
 
 async function loadCurrentUser() {
   try {
-    const r = await fetch("/api/me", {
+    const r = await fetch("https://numberhub.onrender.com/api/me", {
       credentials: "include"
     });
 
@@ -397,7 +458,7 @@ document.getElementById("loginForm").addEventListener("submit", async e => {
   const message = document.getElementById("loginMessage");
 
   try {
-    const r = await fetch("/api/login", {
+    const r = await fetch("https://numberhub.onrender.com/api/login", {
       method: "POST",
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({
@@ -445,7 +506,7 @@ document.getElementById("signupForm").addEventListener("submit", async e => {
   const message = document.getElementById("signupMessage");
 
   try {
-    const r = await fetch("/api/register", {
+    const r = await fetch("https://numberhub.onrender.com/api/register", {
       method: "POST",
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({
@@ -462,5 +523,9 @@ document.getElementById("signupForm").addEventListener("submit", async e => {
   }
 });
 </script>
+<script src="server-selection.js"></script>
+<script src="number-type-selector.js"></script>
+<script src="whatsapp-float.js"></script>
 </body>
 </html>
+
