@@ -33,7 +33,7 @@ h1{margin:5px 0;font-size:30px}
 .notice{background:#eff6ff;color:#1e40af;padding:11px;border-radius:8px;font-size:13px;margin-bottom:14px}
 .providers{display:grid;gap:10px}
 .provider{display:grid;grid-template-columns:1fr 170px 120px;gap:15px;align-items:center;border:1px solid #e5e7eb;border-radius:11px;padding:15px}
-.provider:hover{border-color:#86efac}
+.provider:hover{border-color:#86efac}.success-rate{font-size:12px;margin-top:6px;color:#16a34a;font-weight:600}
 .pname{font-weight:bold}.best{font-size:10px;background:#fef3c7;color:#92400e;padding:4px 6px;border-radius:5px;margin-left:6px}
 .avail{color:#16a34a;font-size:13px;margin-top:4px}.sub{font-size:12px;color:#64748b;margin-top:4px}
 .price{font-weight:bold;font-size:18px}
@@ -233,7 +233,7 @@ card.innerHTML=
 ' available</div><div class="sub">'+available.toLocaleString()+
 ' numbers</div></div><div><div class="price">'+money(price)+
 '</div><div class="sub">Base: '+money(price)+
-' + ₦0.00 escrow</div></div><button class="buy">Buy Number</button>';
+' + ₦0.00 escrow</div><div class="success-rate">📊 Success rate: Awaiting provider data</div></div><button class="buy">Buy Number</button>';
 card.querySelector(".buy").onclick=()=>buy(s,id,price);
 box.appendChild(card);
 });
