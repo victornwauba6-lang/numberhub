@@ -103,6 +103,7 @@ h1{margin:5px 0;font-size:30px}
 </style>
 <link rel="stylesheet" href="redesign.css">
 <script>async function showTransactionHistory(){const s=document.getElementById("transactionHistorySection"),m=document.getElementById("transactionHistoryMessage"),l=document.getElementById("transactionHistoryList");s.style.display="block";m.textContent="Loading transactions...";l.innerHTML="";try{const r=await fetch("https://numberhub.onrender.com/api/wallet/transactions",{credentials:"include"}),d=await r.json();if(!r.ok){m.textContent=d.error||"Could not load transactions.";return}if(!d.transactions||!d.transactions.length){m.textContent="No transactions yet.";return}m.textContent="";l.innerHTML=d.transactions.map(t=>`<div style="border:1px solid #e5e7eb;border-radius:12px;padding:15px;margin:10px 0;background:#fff"><strong>₦${Number(t.amount).toFixed(2)}</strong> — <strong>${t.status}</strong><br>Method: ${t.method||"—"}<br>Type: ${t.type}<br>Reference: ${t.reference}<br><small>${new Date(t.created_at).toLocaleString()}</small></div>`).join("")}catch(e){console.error(e);m.textContent="Could not connect to the transaction server."}}</script>
+<script>async function showNumbersHistory(){const s=document.getElementById("numbersHistorySection"),m=document.getElementById("numbersHistoryMessage"),l=document.getElementById("numbersHistoryList");s.style.display="block";m.textContent="Loading numbers...";l.innerHTML="";s.scrollIntoView({behavior:"smooth",block:"start"});try{const r=await fetch("https://numberhub.onrender.com/api/numbers/history",{credentials:"include"}),d=await r.json();if(!r.ok){m.textContent=d.error||"Could not load numbers history.";return}if(!d.purchases||!d.purchases.length){m.textContent="No purchased numbers yet.";return}m.textContent="";l.innerHTML=d.purchases.map(t=>`<div style="border:1px solid #e5e7eb;border-radius:12px;padding:15px;margin:10px 0;background:#fff"><strong>${t.phone_number}</strong><br>Service: ${t.service}<br>Country: ${t.country}<br>Provider: ${t.provider||"—"}<br>Price: ₦${Number(t.price).toFixed(2)}<br>Status: <strong>${t.status}</strong><br>Reference: ${t.reference}<br><small>${new Date(t.created_at).toLocaleString()}</small></div>`).join("")}catch(e){console.error(e);m.textContent="Could not connect to the numbers history server."}}</script>
 </head>
 <body>
 <div class="app">
@@ -122,7 +123,7 @@ h1{margin:5px 0;font-size:30px}
 <button class="nav">🚀 Boost Account</button>
 <button class="nav">❓ FAQs</button>
 <button class="nav" onclick="window.open('https://t.me/Numberhubsupport','_blank')">💬 Telegram Support</button>
-<button class="nav">🧾 Numbers History</button>
+<button class="nav" onclick="showNumbersHistory()">🧾 Numbers History</button>
 <button class="nav" onclick="showTransactionHistory()">💳 Transaction History</button>
 <div class="title">RESELLER</div>
 <button class="nav">🔌 Reseller Hub</button>
@@ -136,6 +137,13 @@ h1{margin:5px 0;font-size:30px}
   <h2>Transaction History</h2>
   <p id="transactionHistoryMessage">Loading transactions...</p>
   <div id="transactionHistoryList"></div>
+</section>
+
+<section id="numbersHistorySection" class="panel" style="display:none;margin-bottom:20px">
+  <div class="green">ACCOUNT</div>
+  <h2>Numbers History</h2>
+  <p id="numbersHistoryMessage">Loading numbers...</p>
+  <div id="numbersHistoryList"></div>
 </section>
 
 <div class="top">
