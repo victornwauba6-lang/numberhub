@@ -330,11 +330,16 @@ const server = http.createServer(async (req, res) => {
 
       const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
-      await pool.query(
-        `INSERT INTO sessions (token_hash, user_id, expires_at)
-         VALUES ($1, $2, $3)`,
-        [tokenHash, user.id, expiresAt]
-      );
+      try {
+        await pool.query(
+          `INSERT INTO sessions (token_hash, user_id, expires_at)
+           VALUES ($1, $2, $3)`,
+          [tokenHash, user.id, expiresAt]
+        );
+      } catch (sessionError) {
+        console.error("LOGIN SESSION INSERT ERROR:", sessionError);
+        throw sessionError;
+      }
 
       res.writeHead(200, {
         "Content-Type": "application/json",
