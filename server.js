@@ -198,6 +198,58 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (req.method === "GET" && req.url === "/api/wallet/transactions") {
+      const cookies = String(req.headers.cookie || "");
+      const match = cookies.match(/(?:^|;\\s*)session=([^;]+)/);
+
+      if (!match) {
+        sendJSON(res, 401, {
+          error: "Not authenticated"
+        });
+        return;
+      }
+
+      const sessionToken = match[1];
+
+      const tokenHash = crypto
+        .createHash("sha256")
+        .update(sessionToken)
+        .digest("hex");
+
+      const sessionResult = await pool.query(
+        `SELECT user_id
+         FROM sessions
+         WHERE token_hash = $1
+           AND expires_at > NOW()`,
+        [tokenHash]
+      );
+
+      if (sessionResult.rows.length === 0) {
+        sendJSON(res, 401, {
+          error: "Session expired or invalid"
+        });
+        return;
+      }
+
+      const userId = sessionResult.rows[0].user_id;
+
+      const result = await pool.query(
+        `SELECT id, type, amount, method, status, reference,
+                description, created_at
+         FROM wallet_transactions
+         WHERE user_id = $1
+         ORDER BY created_at DESC
+         LIMIT 100`,
+        [userId]
+      );
+
+      sendJSON(res, 200, {
+        transactions: result.rows
+      });
+
+      return;
+    }
+
     if (req.method === "GET" && req.url === "/api/me") {
       const cookies = String(req.headers.cookie || "");
       const match = cookies.match(/(?:^|;\\s*)session=([^;]+)/);
