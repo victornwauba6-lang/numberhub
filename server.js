@@ -343,7 +343,9 @@ const server = http.createServer(async (req, res) => {
 
       res.writeHead(200, {
         "Content-Type": "application/json",
-        "Set-Cookie": `session=${sessionToken}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=604800`
+        "Access-Control-Allow-Origin": "http://localhost:3000",
+        "Access-Control-Allow-Credentials": "true",
+        "Set-Cookie": `session=${sessionToken}; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=604800`
       });
 
       res.end(JSON.stringify({
