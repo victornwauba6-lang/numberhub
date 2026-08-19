@@ -102,6 +102,7 @@ h1{margin:5px 0;font-size:30px}
 }
 </style>
 <link rel="stylesheet" href="redesign.css">
+<script>async function showTransactionHistory(){const s=document.getElementById("transactionHistorySection"),m=document.getElementById("transactionHistoryMessage"),l=document.getElementById("transactionHistoryList");s.style.display="block";m.textContent="Loading transactions...";l.innerHTML="";try{const r=await fetch("https://numberhub.onrender.com/api/wallet/transactions",{credentials:"include"}),d=await r.json();if(!r.ok){m.textContent=d.error||"Could not load transactions.";return}if(!d.transactions||!d.transactions.length){m.textContent="No transactions yet.";return}m.textContent="";l.innerHTML=d.transactions.map(t=>`<div style="border:1px solid #e5e7eb;border-radius:12px;padding:15px;margin:10px 0;background:#fff"><strong>₦${Number(t.amount).toFixed(2)}</strong> — <strong>${t.status}</strong><br>Method: ${t.method||"—"}<br>Type: ${t.type}<br>Reference: ${t.reference}<br><small>${new Date(t.created_at).toLocaleString()}</small></div>`).join("")}catch(e){console.error(e);m.textContent="Could not connect to the transaction server."}}</script>
 </head>
 <body>
 <div class="app">
@@ -122,7 +123,7 @@ h1{margin:5px 0;font-size:30px}
 <button class="nav">❓ FAQs</button>
 <button class="nav" onclick="window.open('https://t.me/Numberhubsupport','_blank')">💬 Telegram Support</button>
 <button class="nav">🧾 Numbers History</button>
-<button class="nav">💳 Transaction History</button>
+<button class="nav" onclick="showTransactionHistory()">💳 Transaction History</button>
 <div class="title">RESELLER</div>
 <button class="nav">🔌 Reseller Hub</button>
 <button class="nav">📚 API Docs</button>
@@ -130,6 +131,13 @@ h1{margin:5px 0;font-size:30px}
 </aside>
 
 <main class="main">
+<section id="transactionHistorySection" class="panel" style="display:none;margin-bottom:20px">
+  <div class="green">ACCOUNT</div>
+  <h2>Transaction History</h2>
+  <p id="transactionHistoryMessage">Loading transactions...</p>
+  <div id="transactionHistoryList"></div>
+</section>
+
 <div class="top">
 <div><div class="green">WELCOME BACK</div><h1>Your Number Dashboard</h1><p>Select a service below to purchase a virtual number.</p></div>
 <div class="wallet"><small>Wallet Balance</small><strong>₦0.00</strong><button class="fund" onclick="fund()">+ Fund Wallet</button></div>
