@@ -174,7 +174,7 @@ const server = http.createServer(async (req, res) => {
       const amount = Number(data.amount);
       const method = String(data.method || "").trim();
 
-      const allowedMethods = ["OPay", "Bank Transfer"];
+      const allowedMethods = ["OPay", "Bank Transfer", "Kuda"];
 
       if (!Number.isFinite(amount) || amount < 100) {
         sendJSON(res, 400, {
@@ -268,6 +268,139 @@ const server = http.createServer(async (req, res) => {
       });
 
       return;
+    }
+
+    if (req.method === "POST" && req.url === "/api/numbers/purchase") {
+      const cookies = String(req.headers.cookie || "");
+      const match = cookies.match(/(?:^|;\s*)session=([^;]+)/);
+
+      if (!match) {
+        sendJSON(res, 401, { error: "Not authenticated" });
+        return;
+      }
+
+      const tokenHash = crypto.createHash("sha256")
+        .update(match[1])
+        .digest("hex");
+
+      const sessionResult = await pool.query(
+        `SELECT user_id
+         FROM sessions
+         WHERE token_hash = $1
+           AND expires_at > NOW()`,
+        [tokenHash]
+      );
+
+      if (sessionResult.rows.length === 0) {
+        sendJSON(res, 401, { error: "Session expired or invalid" });
+        return;
+      }
+
+      const userId = sessionResult.rows[0].user_id;
+      const data = await getBody(req);
+
+      const service = String(data.service || "").trim();
+      const provider = String(data.provider || "").trim();
+      const phoneNumber = String(data.phone_number || "").trim();
+      const country = String(data.country || "").trim();
+      const price = Number(data.price);
+
+      if (!service || !provider || !phoneNumber || !country ||
+          !Number.isFinite(price) || price <= 0) {
+        sendJSON(res, 400, {
+          error: "Invalid purchase details"
+        });
+        return;
+      }
+
+      const client = await pool.connect();
+
+      try {
+        await client.query("BEGIN");
+
+        const userResult = await client.query(
+          `SELECT wallet, purchases
+           FROM users
+           WHERE id = $1
+           FOR UPDATE`,
+          [userId]
+        );
+
+        if (userResult.rows.length === 0) {
+          await client.query("ROLLBACK");
+          sendJSON(res, 404, { error: "User not found" });
+          return;
+        }
+
+        const wallet = Number(userResult.rows[0].wallet || 0);
+
+        if (wallet < price) {
+          await client.query("ROLLBACK");
+          sendJSON(res, 400, {
+            error: "Insufficient wallet balance"
+          });
+          return;
+        }
+
+        const reference =
+          "NP-" +
+          Date.now().toString(36).toUpperCase() +
+          "-" +
+          crypto.randomBytes(4).toString("hex").toUpperCase();
+
+        const purchaseResult = await client.query(
+          `INSERT INTO number_purchases
+            (user_id, phone_number, country, service, provider,
+             price, status, reference)
+           VALUES ($1, $2, $3, $4, $5, $6, 'active', $7)
+           RETURNING id, phone_number, country, service, provider,
+                     price, status, reference, created_at`,
+          [
+            userId,
+            phoneNumber,
+            country,
+            service,
+            provider,
+            price.toFixed(2),
+            reference
+          ]
+        );
+
+        await client.query(
+          `UPDATE users
+           SET wallet = wallet - $1,
+               purchases = purchases + 1
+           WHERE id = $2`,
+          [price.toFixed(2), userId]
+        );
+
+        await client.query(
+          `INSERT INTO wallet_transactions
+            (user_id, type, amount, method, status, reference, description)
+           VALUES ($1, 'purchase', $2, 'Wallet', 'successful', $3, $4)`,
+          [
+            userId,
+            price.toFixed(2),
+            reference,
+            "Number purchase"
+          ]
+        );
+
+        await client.query("COMMIT");
+
+        sendJSON(res, 201, {
+          message: "Number purchased successfully",
+          purchase: purchaseResult.rows[0]
+        });
+
+        return;
+
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      } finally {
+        client.release();
+      }
     }
 
     if (req.method === "GET" && req.url === "/api/numbers/history") {

@@ -8,7 +8,7 @@
 *{box-sizing:border-box}
 body{margin:0;font-family:Arial,sans-serif;background:#f5f7fb;color:#172033}
 button{font:inherit;cursor:pointer}
-.app{display:flex;min-height:100vh}
+.app{display:none !important;min-height:100vh}
 .sidebar{width:240px;background:#fff;border-right:1px solid #e5e7eb;padding:20px;position:fixed;top:0;bottom:0;overflow:auto}
 .brand{font-size:22px;font-weight:800;margin-bottom:25px}.brand span{color:#16a34a}
 .profile{padding:14px;background:#f8fafc;border-radius:12px;margin-bottom:20px}
@@ -118,20 +118,21 @@ h1{margin:5px 0;font-size:30px}
 <button class="nav" onclick="goToSection('usaNumbersSection')">🇺🇸 USA Numbers</button>
 <button class="nav" onclick="goToSection('usaNumbersSection')">🌎 Other USA</button>
 <button class="nav" onclick="goToSection('allCountriesSection')">🌍 All Countries</button>
-<button class="nav">💳 Fund Wallet</button>
+<button class="nav" onclick="fund()">💳 Fund Wallet</button>
 <div class="title">COMMUNITY</div><button class="nav" onclick="window.open('https://whatsapp.com/channel/0029VbDRxIfD38CSw1z02m3H','_blank')">📢 WhatsApp Channel</button><div class="title">ACCOUNT</div>
 <button class="nav">🚀 Boost Account</button>
 <button class="nav">❓ FAQs</button>
 <button class="nav" onclick="window.open('https://t.me/Numberhubsupport','_blank')">💬 Telegram Support</button>
 <button class="nav" onclick="showNumbersHistory()">🧾 Numbers History</button>
 <button class="nav" onclick="showTransactionHistory()">💳 Transaction History</button>
+<button class="nav" type="button" onclick="logoutNumberHub()">🚪 Logout</button>
 <div class="title">RESELLER</div>
 <button class="nav">🔌 Reseller Hub</button>
 <button class="nav">📚 API Docs</button>
 <button class="nav">👤 My Profile</button>
 </aside>
 
-<main class="main">
+<main class="main" id="dashboardMain">
 <section id="transactionHistorySection" class="panel" style="display:none;margin-bottom:20px">
   <div class="green">ACCOUNT</div>
   <h2>Transaction History</h2>
@@ -182,15 +183,6 @@ h1{margin:5px 0;font-size:30px}
 </div>
 <div class="server-name">Server A</div>
 <div class="server-feature">⚡ Quick OTP</div>
-<div class="server-success-row">
-<span>24H SUCCESS</span>
-<strong>100%</strong>
-</div>
-<div class="server-progress"><span style="width:100%"></span></div>
-<div class="server-card-bottom">
-<span>Available</span>
-<span class="server-select">Select Server →</span>
-</div>
 </button>
 
 <button class="dynamic-server usa-server" type="button" onclick="selectUSA('Server B', this)">
@@ -200,15 +192,6 @@ h1{margin:5px 0;font-size:30px}
 </div>
 <div class="server-name">Server B</div>
 <div class="server-feature">⚡ Fast Verification</div>
-<div class="server-success-row">
-<span>24H SUCCESS</span>
-<strong>100%</strong>
-</div>
-<div class="server-progress"><span style="width:100%"></span></div>
-<div class="server-card-bottom">
-<span>Available</span>
-<span class="server-select">Select Server →</span>
-</div>
 </button>
 
 </div>
@@ -317,11 +300,21 @@ box.appendChild(card);
 }
 
 function buy(service,provider,price){
+const walletElement = document.querySelector(".wallet strong");
+const walletBalance = walletElement
+  ? Number(walletElement.textContent.replace(/[^0-9.-]/g,""))
+  : 0;
+
 document.getElementById("modalTitle").textContent="Confirm Purchase";
 document.getElementById("modalText").innerHTML=
-"Service: <b>"+service+"</b><br>Provider: <b>"+provider+
-"</b><br>Price: <b>"+money(price)+"</b><br><br>"+
-"Wallet balance: <b>₦0.00</b>";
+"Service: <b>"+service+"</b><br>"+
+"Provider: <b>"+provider+"</b><br>"+
+"Price: <b>"+money(price)+"</b><br><br>"+
+"Wallet balance: <b>₦"+walletBalance.toFixed(2)+"</b><br><br>"+
+"<div style='padding:12px;border-radius:8px;background:#fff7ed;color:#9a3412'>"+
+"Real number purchasing will be enabled after the authorized number provider is connected."+
+"</div>";
+
 document.getElementById("modal").classList.add("show");
 }
 
@@ -337,9 +330,14 @@ document.getElementById("modalText").innerHTML=
 '<button type="button" class="payment-option" onclick="selectPayment(this, \'OPay\')" '+
 'style="padding:12px;border:1px solid #ddd;border-radius:8px;background:white;text-align:left">🟢 OPay</button>'+
 '<button type="button" class="payment-option" onclick="selectPayment(this, \'Bank Transfer\')" '+
-'style="padding:12px;border:1px solid #ddd;border-radius:8px;background:white;text-align:left">🏦 Bank Transfer</button>'+
-'</div>'+
+'style="padding:12px;border:1px solid #ddd;border-radius:8px;background:white;text-align:left">🏦 Bank Transfer — Kuda</button>'+
 '<p id="paymentChoice" style="font-size:13px;color:#64748b">Select a payment method.</p>'+
+'<div id="kudaDetails" style="display:none;margin-top:12px;padding:14px;border:1px solid #ddd;border-radius:10px;background:#f8fafc">'+
+'<b>🏦 Kuda Bank Transfer</b><br><br>'+
+'Bank: <b>Kuda Microfinance Bank</b><br>'+
+'Account Name: <b>NWAUBA, CHINGOZIRIM VICTOR</b><br>'+
+'Account Number: <b>2085111808</b>'+
+'</div>'+
 '<button type="button" class="confirm" onclick="startFunding()">Continue</button>'+
 '<br><br><small>Payment processing is not connected yet. No real payment will be charged.</small>';
 document.getElementById("modal").classList.add("show");
@@ -353,6 +351,10 @@ b.style.background="white";
 button.style.borderColor="#16a34a";
 button.style.background="#ecfdf5";
 document.getElementById("paymentChoice").textContent="Selected: "+method;
+const kudaDetails = document.getElementById("kudaDetails");
+if (kudaDetails) {
+  kudaDetails.style.display = method === "Bank Transfer" ? "block" : "none";
+}
 button.dataset.selected="true";
 }
 
@@ -371,7 +373,7 @@ return;
 }
 
 const value=Number(amount.value);
-const method=selected.textContent.trim().includes("OPay") ? "OPay" : "Bank Transfer";
+const method=selected.textContent.trim().includes("OPay") ? "OPay" : selected.textContent.trim().includes("Kuda") ? "Kuda" : "Bank Transfer";
 
 document.getElementById("modalTitle").textContent="Creating Funding Request...";
 document.getElementById("modalText").textContent="Please wait...";
@@ -402,6 +404,7 @@ document.getElementById("modalText").innerHTML=
 "<b>Reference:</b> "+d.transaction.reference+
 "<br><br>Status: <b>"+d.transaction.status+"</b>"+
 "<br><br>Your wallet has not been credited yet. Payment confirmation is still required.";
+document.querySelector("#modal .confirm").textContent="Close";
 } catch(err) {
 console.error(err);
 document.getElementById("modalTitle").textContent="Connection Error";
@@ -430,6 +433,12 @@ function toggleSidebar() {
 <script>
 function applyUserToDashboard(user) {
   if (!user) return;
+
+  const app = document.querySelector(".app");
+  if (app) app.style.setProperty("display", "flex", "important");
+
+  const dashboard = document.getElementById("dashboardMain");
+  if (dashboard) dashboard.style.setProperty("display", "block", "important");
 
   const profileName = document.getElementById("profileName");
   if (profileName) {
@@ -464,42 +473,69 @@ function applyUserToDashboard(user) {
 async function loadCurrentUser() {
   try {
     const r = await fetch("https://numberhub.onrender.com/api/me", {
-      credentials: "include"
+      method: "GET",
+      credentials: "include",
+      cache: "no-store"
     });
-
-    if (!r.ok) return;
 
     const d = await r.json();
 
-    if (d.authenticated && d.user) {
+    if (r.ok && d.authenticated && d.user) {
+      const authScreen = document.getElementById("authScreen");
+      if (authScreen) authScreen.style.display = "none";
       applyUserToDashboard(d.user);
+      return true;
     }
+
+    return false;
   } catch (err) {
     console.error("Could not load current user:", err);
+    return false;
   }
 }
 
-loadCurrentUser();
-</script>
+loadCurrentUser();</script>
 
 
 
+<div id="authScreen" style="display:none;max-width:500px;margin:40px auto;padding:0 15px">
 <div class="panel" style="margin-top:20px">
-<h2>Login</h2>
-<p>Login to your NumberHub account.</p>
+<div style="text-align:center;margin-bottom:20px">
+<h1 style="font-size:32px;color:#16a34a">NUMBERHUB</h1>
+<p style="color:#64748b">Virtual numbers made simple</p>
+</div>
+
+<h2 style="text-align:center">Welcome back</h2>
+<p style="text-align:center;color:#64748b">Login to continue to your account</p>
 
 <form id="loginForm">
-<input id="loginEmail" type="email" placeholder="Email address" required style="width:100%;padding:12px;margin:6px 0;border:1px solid #ddd;border-radius:8px">
+<input id="loginEmail" type="email" placeholder="Email address" required style="width:100%;padding:14px;margin:8px 0;border:1px solid #ddd;border-radius:12px">
 
-<input id="loginPassword" type="password" placeholder="Password" required style="width:100%;padding:12px;margin:6px 0;border:1px solid #ddd;border-radius:8px">
+<input id="loginPassword" type="password" placeholder="Password" required style="width:100%;padding:14px;margin:8px 0;border:1px solid #ddd;border-radius:12px">
 
-<button type="submit" class="fund">Login</button>
+<button type="submit" class="fund" style="width:100%;padding:14px;border-radius:12px">
+Sign In
+</button>
 </form>
 
-<p id="loginMessage"></p>
+<p style="text-align:center;margin-top:15px">
+Don't have an account? <button type="button" onclick="showSignup()" style="border:0;background:none;color:#16a34a;font-weight:bold;padding:0;cursor:pointer">Create one</button>
+</p>
+
+<p style="text-align:center;color:#64748b">Forgot password?</p>
+
+<p id="loginMessage" style="text-align:center"></p>
 </div>
 
 <script>
+function showSignup() {
+  const loginPanel = document.getElementById("loginForm").closest(".panel");
+  const signupPanel = document.querySelector(".signup-panel");
+
+  if (loginPanel) loginPanel.style.display = "none";
+  if (signupPanel) signupPanel.style.display = "block";
+}
+
 document.getElementById("loginForm").addEventListener("submit", async e => {
   e.preventDefault();
 
@@ -519,6 +555,7 @@ document.getElementById("loginForm").addEventListener("submit", async e => {
     const d = await r.json();
 
     if (r.ok) {
+      sessionStorage.setItem("numberhubLoggedIn", "true");
       message.textContent = "Login successful. Welcome back, " + d.user.name + "!";
 
       applyUserToDashboard(d.user);
@@ -531,7 +568,8 @@ document.getElementById("loginForm").addEventListener("submit", async e => {
 });
 </script>
 
-<div class="panel" style="margin-top:20px">
+</div>
+<div class="panel signup-panel" style="margin-top:20px;display:none">
 <h2>Create Account</h2>
 <p>Register to use NumberHub.</p>
 
@@ -566,11 +604,70 @@ document.getElementById("signupForm").addEventListener("submit", async e => {
     });
 
     const d = await r.json();
-    message.textContent = d.message || d.error;
+
+    if (!r.ok) {
+      message.textContent = d.error || "Registration failed.";
+      return;
+    }
+
+    message.textContent = "Account created successfully. Logging you in...";
+
+    const loginResponse = await fetch("https://numberhub.onrender.com/api/login", {
+      method: "POST",
+      credentials: "include",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        email: document.getElementById("signupEmail").value,
+        password: document.getElementById("signupPassword").value
+      })
+    });
+
+    const loginData = await loginResponse.json();
+
+    if (!loginResponse.ok) {
+      message.textContent = loginData.error || "Account created, but automatic login failed.";
+      return;
+    }
+
+    sessionStorage.setItem("numberhubLoggedIn", "true");
+    message.textContent = "Account created successfully. Welcome, " + loginData.user.name + "!";
+    applyUserToDashboard(loginData.user);
+
   } catch (err) {
+    console.error(err);
     message.textContent = "Could not connect to the server.";
   }
 });
+</script>
+<script>
+async function logoutNumberHub() {
+  try {
+    const r = await fetch("https://numberhub.onrender.com/api/logout", {
+      method: "POST",
+      credentials: "include"
+    });
+
+    console.log("Logout response:", await r.text());
+  } catch (err) {
+    console.error("Logout request failed:", err);
+  }
+
+  sessionStorage.removeItem("numberhubLoggedIn");
+
+  const app = document.querySelector(".app");
+  if (app) app.style.setProperty("display", "none", "important");
+
+  const authScreen = document.getElementById("authScreen");
+  if (authScreen) authScreen.style.display = "block";
+
+  const loginPanel = document.getElementById("loginForm")?.closest(".panel");
+  if (loginPanel) loginPanel.style.display = "block";
+
+  const signupPanel = document.querySelector(".signup-panel");
+  if (signupPanel) signupPanel.style.display = "none";
+
+  window.scrollTo(0, 0);
+}
 </script>
 <script src="server-selection.js"></script>
 <script src="number-type-selector.js"></script>
