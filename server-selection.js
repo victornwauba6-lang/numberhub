@@ -3,30 +3,28 @@ const numberTypeServers = {
     title: "🇺🇸 USA Numbers — Cheap",
     description: "Affordable US numbers · Servers A & B",
     servers: [
-      { name: "Server A", badge: "⭐ BEST", feature: "Quick OTP", success: 100 },
-      { name: "Server B", badge: "Quick OTP", feature: "Fast Verification", success: 100 }
+      { name: "Server A", badge: "⭐ BEST", feature: "Quick OTP" },
+      { name: "Server B", badge: "Quick OTP", feature: "Fast Verification" }
     ]
   },
 
   otherUSA: {
     title: "🇺🇸 Other USA Numbers — Cheap",
-    description: "Budget-friendly US numbers · Servers C, D, E & F",
+    description: "Budget-friendly US numbers · Servers C, D & E",
     servers: [
-      { name: "Server C", badge: "⭐ BEST", feature: "Quick OTP", success: 100 },
-      { name: "Server D", badge: "Quick OTP", feature: "Fast Verification", success: 99 },
-      { name: "Server E", badge: "Quick OTP", feature: "Reliable OTP", success: 98 },
-      { name: "Server F", badge: "Quick OTP", feature: "Fast Verification", success: 97 }
+      { name: "Server C", badge: "⭐ BEST", feature: "Quick OTP" },
+      { name: "Server D", badge: "Quick OTP", feature: "Fast Verification" },
+      { name: "Server E", badge: "Quick OTP", feature: "Reliable OTP" },
     ]
   },
 
   allCountries: {
     title: "🌍 All Country Numbers",
-    description: "Global coverage · Servers B, C, D & F",
+    description: "Global coverage · Servers B, C & D",
     servers: [
-      { name: "Server B", badge: "⭐ BEST", feature: "Quick OTP", success: 100 },
-      { name: "Server C", badge: "Quick OTP", feature: "Global Coverage", success: 99 },
-      { name: "Server D", badge: "Quick OTP", feature: "Reliable OTP", success: 98 },
-      { name: "Server F", badge: "Quick OTP", feature: "Fast Verification", success: 97 }
+      { name: "Server B", badge: "⭐ BEST", feature: "Quick OTP" },
+      { name: "Server C", badge: "Quick OTP", feature: "Global Coverage" },
+      { name: "Server D", badge: "Quick OTP", feature: "Reliable OTP" },
     ]
   },
 
@@ -34,8 +32,8 @@ const numberTypeServers = {
     title: "🌐 More Country Numbers",
     description: "Extended global coverage · Servers C & E",
     servers: [
-      { name: "Server C", badge: "⭐ BEST", feature: "Global Coverage", success: 99 },
-      { name: "Server E", badge: "Quick OTP", feature: "Reliable OTP", success: 98 }
+      { name: "Server C", badge: "⭐ BEST", feature: "Global Coverage" },
+      { name: "Server E", badge: "Quick OTP", feature: "Reliable OTP" }
     ]
   }
 };
@@ -83,14 +81,7 @@ function showServers(type) {
         ⚡ ${server.feature}
       </div>
 
-      <div class="server-success-row">
-        <span>24H SUCCESS</span>
-        <strong>${server.success}%</strong>
-      </div>
 
-      <div class="server-progress">
-        <span style="width:${server.success}%"></span>
-      </div>
 
       <div class="server-card-bottom">
         <span>Available</span>
