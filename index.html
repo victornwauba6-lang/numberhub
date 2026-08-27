@@ -524,8 +524,10 @@ Don't have an account? <button type="button" onclick="showSignup()" style="borde
 
 <p style="text-align:center;color:#64748b"><button type="button" onclick="showForgotPassword()">Forgot password?</button></p>
 
-<p id="loginMessage" style="text-align:center"></p><div id="passwordResetPanel" class="panel" style="display:none;margin-top:20px"><h2 style="text-align:center">Reset Password</h2><p id="resetStepText" style="text-align:center;color:#64748b">Enter your email address and we will send you a verification code.</p><form id="forgotPasswordForm"><input id="resetEmail" type="email" placeholder="Email address" required style="width:100%;padding:14px;margin:8px 0;border:1px solid #ddd;border-radius:12px"><button type="submit" class="fund" style="width:100%;padding:14px;border-radius:12px">Send Verification Code</button></form><form id="verifyCodeForm" style="display:none"><input id="resetCode" type="text" inputmode="numeric" maxlength="6" placeholder="6-digit verification code" required style="width:100%;padding:14px;margin:8px 0;border:1px solid #ddd;border-radius:12px"><button type="submit" class="fund" style="width:100%;padding:14px;border-radius:12px">Verify Code</button></form><form id="newPasswordForm" style="display:none"><input id="newPassword" type="password" minlength="8" placeholder="New password (minimum 8 characters)" required style="width:100%;padding:14px;margin:8px 0;border:1px solid #ddd;border-radius:12px"><input id="confirmNewPassword" type="password" minlength="8" placeholder="Confirm new password" required style="width:100%;padding:14px;margin:8px 0;border:1px solid #ddd;border-radius:12px"><button type="submit" class="fund" style="width:100%;padding:14px;border-radius:12px">Change Password</button></form><p id="resetMessage" style="text-align:center"></p><p style="text-align:center;margin-top:15px"><button type="button" onclick="showLoginFromReset()" style="border:0;background:none;color:#16a34a;font-weight:bold;padding:0;cursor:pointer">Back to Login</button></p></div>
+<p id="loginMessage" style="text-align:center"></p>
 </div>
+
+<div id="passwordResetPanel" class="panel" style="display:none;margin-top:20px"><h2 style="text-align:center">Reset Password</h2><p id="resetStepText" style="text-align:center;color:#64748b">Enter your email address and we will send you a verification code.</p><form id="forgotPasswordForm"><input id="resetEmail" type="email" placeholder="Email address" required style="width:100%;padding:14px;margin:8px 0;border:1px solid #ddd;border-radius:12px"><button type="submit" class="fund" style="width:100%;padding:14px;border-radius:12px">Send Verification Code</button></form><form id="verifyCodeForm" style="display:none"><input id="resetCode" type="text" inputmode="numeric" maxlength="6" placeholder="6-digit verification code" required style="width:100%;padding:14px;margin:8px 0;border:1px solid #ddd;border-radius:12px"><button type="submit" class="fund" style="width:100%;padding:14px;border-radius:12px">Verify Code</button></form><form id="newPasswordForm" style="display:none"><input id="newPassword" type="password" minlength="8" placeholder="New password (minimum 8 characters)" required style="width:100%;padding:14px;margin:8px 0;border:1px solid #ddd;border-radius:12px"><input id="confirmNewPassword" type="password" minlength="8" placeholder="Confirm new password" required style="width:100%;padding:14px;margin:8px 0;border:1px solid #ddd;border-radius:12px"><button type="submit" class="fund" style="width:100%;padding:14px;border-radius:12px">Change Password</button></form><p id="resetMessage" style="text-align:center"></p><p style="text-align:center;margin-top:15px"><button type="button" onclick="showLoginFromReset()" style="border:0;background:none;color:#16a34a;font-weight:bold;padding:0;cursor:pointer">Back to Login</button></p></div>
 
 <script>
 let passwordResetToken = "";
@@ -540,8 +542,6 @@ function showForgotPassword() {
   if (authScreen) authScreen.style.display = "block";
   if (loginPanel) loginPanel.style.display = "none";
   if (resetPanel) resetPanel.style.display = "block";
-
-  window.scrollTo(0, 0);
 }
 
 function showLoginFromReset() {
