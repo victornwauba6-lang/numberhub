@@ -4,6 +4,30 @@ const path = require("path");
 const crypto = require("crypto");
 const { Pool } = require("pg");
 const bcrypt = require("bcryptjs");
+const nodemailer = require("nodemailer");
+
+const mailTransporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_APP_PASSWORD
+  }
+});
+
+async function sendPasswordResetEmail(to, code) {
+  await mailTransporter.sendMail({
+    from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+    to,
+    subject: "NumberHub Password Reset Code",
+    text: `Your NumberHub password reset code is: ${code}
+
+This code expires in 10 minutes. If you did not request a password reset, you can ignore this email.`,
+    html: `<p>Your NumberHub password reset code is:</p>
+           <h2>${code}</h2>
+           <p>This code expires in 10 minutes.</p>
+           <p>If you did not request a password reset, you can ignore this email.</p>`
+  });
+}
 
 const PORT = process.env.PORT || 3001;
 
@@ -65,6 +89,21 @@ async function initDatabase() {
       user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       expires_at TIMESTAMPTZ NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      id BIGSERIAL PRIMARY KEY,
+      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      token_hash TEXT UNIQUE NOT NULL,
+      code_hash TEXT NOT NULL,
+      expires_at TIMESTAMPTZ NOT NULL,
+      used_at TIMESTAMPTZ
+    );
+
+    CREATE INDEX IF NOT EXISTS password_reset_tokens_user_id_idx
+      ON password_reset_tokens(user_id);
+
+    CREATE INDEX IF NOT EXISTS password_reset_tokens_expires_at_idx
+      ON password_reset_tokens(expires_at);
 
     CREATE INDEX IF NOT EXISTS sessions_expires_at_idx
       ON sessions(expires_at);
@@ -517,6 +556,216 @@ const server = http.createServer(async (req, res) => {
       sendJSON(res, 201, {
         message: "Account created successfully",
         user: result.rows[0]
+      });
+
+      return;
+    }
+
+    if (req.method === "POST" && req.url === "/api/forgot-password") {
+      const data = await getBody(req);
+      const email = String(data.email || "").trim().toLowerCase();
+
+      if (!email) {
+        sendJSON(res, 400, { error: "Email is required" });
+        return;
+      }
+
+      const userResult = await pool.query(
+        `SELECT id, email FROM users WHERE email = $1`,
+        [email]
+      );
+
+      if (userResult.rows.length === 0) {
+        sendJSON(res, 200, {
+          message: "If an account exists for that email, a verification code has been sent."
+        });
+        return;
+      }
+
+      const user = userResult.rows[0];
+
+      await pool.query(
+        `UPDATE password_reset_tokens
+         SET used_at = NOW()
+         WHERE user_id = $1 AND used_at IS NULL`,
+        [user.id]
+      );
+
+      const code = String(crypto.randomInt(100000, 1000000));
+      const codeHash = await bcrypt.hash(code, 12);
+      const resetToken = crypto.randomBytes(32).toString("hex");
+      const tokenHash = crypto
+        .createHash("sha256")
+        .update(resetToken)
+        .digest("hex");
+
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+      await pool.query(
+        `INSERT INTO password_reset_tokens
+          (user_id, token_hash, code_hash, expires_at)
+         VALUES ($1, $2, $3, $4)`,
+        [user.id, tokenHash, codeHash, expiresAt]
+      );
+
+      try {
+        await sendPasswordResetEmail(user.email, code);
+      } catch (emailError) {
+        console.error("PASSWORD RESET EMAIL ERROR:", emailError);
+
+        await pool.query(
+          `UPDATE password_reset_tokens
+           SET used_at = NOW()
+           WHERE token_hash = $1`,
+          [tokenHash]
+        );
+
+        sendJSON(res, 500, {
+          error: "Unable to send the verification code. Please try again later."
+        });
+        return;
+      }
+
+      sendJSON(res, 200, {
+        message: "If an account exists for that email, a verification code has been sent.",
+        resetToken
+      });
+
+      return;
+    }
+
+    if (req.method === "POST" && req.url === "/api/verify-reset-code") {
+      const data = await getBody(req);
+
+      const resetToken = String(data.resetToken || "");
+      const code = String(data.code || "").trim();
+
+      if (!resetToken || !code) {
+        sendJSON(res, 400, {
+          error: "Reset token and verification code are required"
+        });
+        return;
+      }
+
+      const tokenHash = crypto
+        .createHash("sha256")
+        .update(resetToken)
+        .digest("hex");
+
+      const result = await pool.query(
+        `SELECT code_hash, expires_at, used_at
+         FROM password_reset_tokens
+         WHERE token_hash = $1`,
+        [tokenHash]
+      );
+
+      if (
+        result.rows.length === 0 ||
+        result.rows[0].used_at ||
+        new Date(result.rows[0].expires_at).getTime() <= Date.now()
+      ) {
+        sendJSON(res, 400, {
+          error: "Invalid or expired verification code"
+        });
+        return;
+      }
+
+      const codeMatch = await bcrypt.compare(
+        code,
+        result.rows[0].code_hash
+      );
+
+      if (!codeMatch) {
+        sendJSON(res, 400, {
+          error: "Invalid or expired verification code"
+        });
+        return;
+      }
+
+      sendJSON(res, 200, {
+        message: "Code verified successfully",
+        resetToken
+      });
+
+      return;
+    }
+
+    if (req.method === "POST" && req.url === "/api/reset-password") {
+      const data = await getBody(req);
+
+      const resetToken = String(data.resetToken || "");
+      const newPassword = String(data.newPassword || "");
+
+      if (!resetToken || !newPassword) {
+        sendJSON(res, 400, {
+          error: "Reset token and new password are required"
+        });
+        return;
+      }
+
+      if (newPassword.length < 8) {
+        sendJSON(res, 400, {
+          error: "Password must be at least 8 characters"
+        });
+        return;
+      }
+
+      const tokenHash = crypto
+        .createHash("sha256")
+        .update(resetToken)
+        .digest("hex");
+
+      const result = await pool.query(
+        `SELECT user_id, code_hash, expires_at, used_at
+         FROM password_reset_tokens
+         WHERE token_hash = $1`,
+        [tokenHash]
+      );
+
+      if (
+        result.rows.length === 0 ||
+        result.rows[0].used_at ||
+        new Date(result.rows[0].expires_at).getTime() <= Date.now()
+      ) {
+        sendJSON(res, 400, {
+          error: "Invalid or expired password reset request"
+        });
+        return;
+      }
+
+      const passwordHash = await bcrypt.hash(newPassword, 12);
+
+      await pool.query("BEGIN");
+
+      try {
+        await pool.query(
+          `UPDATE users
+           SET password_hash = $1
+           WHERE id = $2`,
+          [passwordHash, result.rows[0].user_id]
+        );
+
+        await pool.query(
+          `UPDATE password_reset_tokens
+           SET used_at = NOW()
+           WHERE token_hash = $1`,
+          [tokenHash]
+        );
+
+        await pool.query(
+          `DELETE FROM sessions
+           WHERE user_id = $1`,
+          [result.rows[0].user_id]
+        );
+
+        await pool.query("COMMIT");
+      } catch (resetError) {
+        await pool.query("ROLLBACK");
+        throw resetError;
+      }
+
+      sendJSON(res, 200, {
+        message: "Password changed successfully. Please log in with your new password."
       });
 
       return;

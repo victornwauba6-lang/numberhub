@@ -21,6 +21,7 @@
   "homepage": "https://github.com/victornwauba6-lang/numberhub#readme",
   "dependencies": {
     "bcryptjs": "^3.0.3",
+    "nodemailer": "^9.0.6",
     "pg": "^8.23.0"
   }
 }
