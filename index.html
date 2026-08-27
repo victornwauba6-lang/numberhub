@@ -531,10 +531,17 @@ Don't have an account? <button type="button" onclick="showSignup()" style="borde
 let passwordResetToken = "";
 
 function showForgotPassword() {
+  const app = document.querySelector(".app");
   const loginPanel = document.getElementById("loginForm")?.closest(".panel");
   const resetPanel = document.getElementById("passwordResetPanel");
+  const authScreen = document.getElementById("authScreen");
+
+  if (app) app.style.setProperty("display", "none", "important");
+  if (authScreen) authScreen.style.display = "block";
   if (loginPanel) loginPanel.style.display = "none";
   if (resetPanel) resetPanel.style.display = "block";
+
+  window.scrollTo(0, 0);
 }
 
 function showLoginFromReset() {
