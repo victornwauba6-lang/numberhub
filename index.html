@@ -622,7 +622,7 @@ document.getElementById("newPasswordForm").addEventListener("submit", async e =>
     const r = await fetch("https://numberhub.onrender.com/api/reset-password", {
       method: "POST",
       headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({resetToken: passwordResetToken, password})
+      body: JSON.stringify({resetToken: passwordResetToken, newPassword: password})
     });
     const d = await r.json();
 
