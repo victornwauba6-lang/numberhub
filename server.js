@@ -1212,14 +1212,23 @@ if (
     return;
   }
 
-  if (!SMSPOOL_API_KEY) {
-    sendJSON(res, 503, {
-      error:
-        "Number provider is not configured"
-    });
+if (Number(user.wallet) < price) {
+  sendJSON(res, 400, {
+    error:
+      "Insufficient wallet balance"
+  });
 
-    return;
-  }
+  return;
+}
+
+if (!SMSPOOL_API_KEY) {
+  sendJSON(res, 503, {
+    error:
+      "Number provider is not configured"
+  });
+
+  return;
+}
 
   let smsPoolOrder;
 
