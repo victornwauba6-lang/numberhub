@@ -660,7 +660,21 @@ async function startDatabase() {
 const server = http.createServer(
   async (req, res) => {
     try {
+      if (req.method === "GET" && req.url === "/") {
+        const fs = require("fs");
+        const path = require("path");
 
+        const filePath = path.join(__dirname, "index.html");
+
+        if (fs.existsSync(filePath)) {
+          res.writeHead(200, {
+            "Content-Type": "text/html; charset=utf-8"
+          });
+
+          res.end(fs.readFileSync(filePath));
+          return;
+        }
+      }
       /* ===================================================
          CORS
       =================================================== */
