@@ -1,6 +1,4 @@
 const http = require("http");
-const fs = require("fs");
-const path = require("path");
 const crypto = require("crypto");
 const { Pool } = require("pg");
 const bcrypt = require("bcryptjs");
@@ -12,16 +10,22 @@ const bcrypt = require("bcryptjs");
 const PORT = process.env.PORT || 3001;
 
 const FRONTEND_ORIGIN =
-  process.env.FRONTEND_ORIGIN || "http://localhost:3000";
+  process.env.FRONTEND_ORIGIN ||
+  "http://localhost:3000";
 
-const SMSPOOL_API_KEY = process.env.SMSPOOL_API_KEY;
+const SMSPOOL_API_KEY =
+  process.env.SMSPOOL_API_KEY;
 
 if (!SMSPOOL_API_KEY) {
-  console.warn("WARNING: SMSPOOL_API_KEY is not configured.");
+  console.warn(
+    "WARNING: SMSPOOL_API_KEY is not configured."
+  );
 }
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString:
+    process.env.DATABASE_URL,
+
   ssl: process.env.DATABASE_URL
     ? { rejectUnauthorized: false }
     : false
@@ -31,39 +35,62 @@ const pool = new Pool({
    SMSPOOL API
 ========================================================= */
 
-async function smsPoolRequest(endpoint, data = {}) {
+async function smsPoolRequest(
+  endpoint,
+  data = {}
+) {
   if (!SMSPOOL_API_KEY) {
-    throw new Error("SMSPOOL_API_KEY is not configured");
+    throw new Error(
+      "SMSPOOL_API_KEY is not configured"
+    );
   }
 
-  const form = new URLSearchParams();
+  const form =
+    new URLSearchParams();
 
-  form.append("key", SMSPOOL_API_KEY);
-
-  for (const [key, value] of Object.entries(data)) {
-    if (value !== undefined && value !== null) {
-      form.append(key, String(value));
-    }
-  }
-
-  const response = await fetch(
-    `https://api.smspool.net${endpoint}`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type":
-          "application/x-www-form-urlencoded"
-      },
-      body: form.toString()
-    }
+  form.append(
+    "key",
+    SMSPOOL_API_KEY
   );
 
-  const text = await response.text();
+  for (
+    const [key, value]
+    of Object.entries(data)
+  ) {
+    if (
+      value !== undefined &&
+      value !== null
+    ) {
+      form.append(
+        key,
+        String(value)
+      );
+    }
+  }
+
+  const response =
+    await fetch(
+      `https://api.smspool.net${endpoint}`,
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type":
+            "application/x-www-form-urlencoded"
+        },
+
+        body: form.toString()
+      }
+    );
+
+  const text =
+    await response.text();
 
   let result;
 
   try {
-    result = JSON.parse(text);
+    result =
+      JSON.parse(text);
   } catch {
     throw new Error(
       `SMSPool returned invalid JSON: ${text}`
@@ -83,8 +110,12 @@ async function smsPoolRequest(endpoint, data = {}) {
    PASSWORD RESET EMAIL
 ========================================================= */
 
-async function sendPasswordResetEmail(to, code) {
-  const apiKey = process.env.RESEND_API_KEY;
+async function sendPasswordResetEmail(
+  to,
+  code
+) {
+  const apiKey =
+    process.env.RESEND_API_KEY;
 
   if (!apiKey) {
     throw new Error(
@@ -102,32 +133,51 @@ async function sendPasswordResetEmail(to, code) {
     );
   }
 
-  const response = await fetch(
-    "https://api.resend.com/emails",
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        from,
-        to: [to],
-        subject:
-          "NumberHub Password Reset Code",
-        text:
-          `Your NumberHub password reset code is: ${code}\n\n` +
-          `This code expires in 10 minutes.\n\n` +
-          `If you did not request a password reset, you can ignore this email.`,
-        html: `
-          <p>Your NumberHub password reset code is:</p>
-          <h2>${code}</h2>
-          <p>This code expires in 10 minutes.</p>
-          <p>If you did not request a password reset, you can ignore this email.</p>
-        `
-      })
-    }
-  );
+  const response =
+    await fetch(
+      "https://api.resend.com/emails",
+      {
+        method: "POST",
+
+        headers: {
+          Authorization:
+            `Bearer ${apiKey}`,
+
+          "Content-Type":
+            "application/json"
+        },
+
+        body: JSON.stringify({
+          from,
+          to: [to],
+
+          subject:
+            "NumberHub Password Reset Code",
+
+          text:
+            `Your NumberHub password reset code is: ${code}\n\n` +
+            `This code expires in 10 minutes.\n\n` +
+            `If you did not request a password reset, you can ignore this email.`,
+
+          html: `
+            <p>
+              Your NumberHub password reset code is:
+            </p>
+
+            <h2>${code}</h2>
+
+            <p>
+              This code expires in 10 minutes.
+            </p>
+
+            <p>
+              If you did not request a password reset,
+              you can ignore this email.
+            </p>
+          `
+        })
+      }
+    );
 
   if (!response.ok) {
     const errorText =
@@ -137,9 +187,7 @@ async function sendPasswordResetEmail(to, code) {
       `Resend API error ${response.status}: ${errorText}`
     );
   }
-}
-
-/* =========================================================
+       }/* =========================================================
    HTTP HELPERS
 ========================================================= */
 
@@ -147,26 +195,36 @@ function sendJSON(res, status, data) {
   res.writeHead(status, {
     "Content-Type":
       "application/json; charset=utf-8",
+
     "Access-Control-Allow-Origin":
       FRONTEND_ORIGIN,
+
     "Access-Control-Allow-Credentials":
       "true",
+
     "Cache-Control":
       "no-store"
   });
 
-  res.end(JSON.stringify(data));
+  res.end(
+    JSON.stringify(data)
+  );
 }
 
 function getSessionToken(req) {
   const cookies =
-    String(req.headers.cookie || "");
+    String(
+      req.headers.cookie || ""
+    );
 
-  const match = cookies.match(
-    /(?:^|;\s*)session=([^;]+)/
-  );
+  const match =
+    cookies.match(
+      /(?:^|;\s*)session=([^;]+)/
+    );
 
-  return match ? match[1] : null;
+  return match
+    ? match[1]
+    : null;
 }
 
 function hashToken(token) {
@@ -199,7 +257,8 @@ function createReference(prefix) {
 
 function setSessionCookie(res, token) {
   const isProduction =
-    process.env.NODE_ENV === "production";
+    process.env.NODE_ENV ===
+    "production";
 
   const parts = [
     `session=${token}`,
@@ -227,304 +286,293 @@ function clearSessionCookie(res) {
 }
 
 function getBody(req) {
-  return new Promise((resolve, reject) => {
-    let body = "";
+  return new Promise(
+    (resolve, reject) => {
+      let body = "";
 
-    req.on("data", chunk => {
-      body += chunk;
+      req.on("data", chunk => {
+        body += chunk;
 
-      if (body.length > 1024 * 1024) {
-        reject(
-          new Error("Request too large")
-        );
-        req.destroy();
-      }
-    });
+        if (
+          body.length >
+          1024 * 1024
+        ) {
+          reject(
+            new Error(
+              "Request too large"
+            )
+          );
 
-    req.on("end", () => {
-      try {
-        resolve(
-          JSON.parse(body || "{}")
-        );
-      } catch {
-        reject(
-          new Error("Invalid JSON")
-        );
-      }
-    });
+          req.destroy();
+        }
+      });
 
-    req.on("error", reject);
-  });
-}
+      req.on("end", () => {
+        try {
+          resolve(
+            JSON.parse(
+              body || "{}"
+            )
+          );
+        } catch {
+          reject(
+            new Error(
+              "Invalid JSON"
+            )
+          );
+        }
+      });
 
-/* =========================================================
-   AUTHENTICATION
-========================================================= */
-
-async function getAuthenticatedUser(req) {
-  const sessionToken =
-    getSessionToken(req);
-
-  if (!sessionToken) {
-    return null;
-  }
-
-  const tokenHash =
-    hashToken(sessionToken);
-
-  const result = await pool.query(
-    `
-      SELECT
-        u.id,
-        u.name,
-        u.email,
-        u.wallet,
-        u.purchases,
-        u.created_at
-      FROM sessions s
-      JOIN users u
-        ON u.id = s.user_id
-      WHERE s.token_hash = $1
-        AND s.expires_at > NOW()
-    `,
-    [tokenHash]
+      req.on("error", reject);
+    }
   );
-
-  if (result.rows.length === 0) {
-    return null;
-  }
-
-  return result.rows[0];
-}
-
-/* =========================================================
-   DATABASE
-========================================================= */
-
-async function initDatabase() {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS users (
-      id BIGSERIAL PRIMARY KEY,
-      name TEXT NOT NULL,
-      email TEXT UNIQUE NOT NULL,
-      password_hash TEXT NOT NULL,
-      wallet NUMERIC(12,2) DEFAULT 0,
-      purchases INTEGER DEFAULT 0,
-      created_at TIMESTAMPTZ DEFAULT NOW()
-    );
-
-    CREATE TABLE IF NOT EXISTS sessions (
-      token_hash TEXT PRIMARY KEY,
-      user_id BIGINT NOT NULL
-        REFERENCES users(id)
-        ON DELETE CASCADE,
-      expires_at TIMESTAMPTZ NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS password_reset_tokens (
-      id BIGSERIAL PRIMARY KEY,
-      user_id BIGINT NOT NULL
-        REFERENCES users(id)
-        ON DELETE CASCADE,
-      token_hash TEXT UNIQUE NOT NULL,
-      code_hash TEXT NOT NULL,
-      expires_at TIMESTAMPTZ NOT NULL,
-      used_at TIMESTAMPTZ
-    );
-
-    CREATE INDEX IF NOT EXISTS
-      password_reset_tokens_user_id_idx
-      ON password_reset_tokens(user_id);
-
-    CREATE INDEX IF NOT EXISTS
-      password_reset_tokens_expires_at_idx
-      ON password_reset_tokens(expires_at);
-
-    CREATE INDEX IF NOT EXISTS
-      sessions_expires_at_idx
-      ON sessions(expires_at);
-
-    CREATE TABLE IF NOT EXISTS wallet_transactions (
-      id BIGSERIAL PRIMARY KEY,
-      user_id BIGINT NOT NULL
-        REFERENCES users(id)
-        ON DELETE CASCADE,
-      type TEXT NOT NULL
-        CHECK (
-          type IN (
-            'deposit',
-            'purchase',
-            'refund'
-          )
-        ),
-      amount NUMERIC(12,2) NOT NULL
-        CHECK (amount > 0),
-      method TEXT,
-      status TEXT NOT NULL DEFAULT 'pending'
-        CHECK (
-          status IN (
-            'pending',
-            'successful',
-            'failed',
-            'cancelled'
-          )
-        ),
-      reference TEXT UNIQUE NOT NULL,
-      description TEXT,
-      created_at TIMESTAMPTZ DEFAULT NOW()
-    );
-
-    CREATE INDEX IF NOT EXISTS
-      wallet_transactions_user_id_idx
-      ON wallet_transactions(user_id);
-
-    CREATE INDEX IF NOT EXISTS
-      wallet_transactions_created_at_idx
-      ON wallet_transactions(created_at);
-
-    CREATE TABLE IF NOT EXISTS number_purchases (
-      id BIGSERIAL PRIMARY KEY,
-      user_id BIGINT NOT NULL
-        REFERENCES users(id)
-        ON DELETE CASCADE,
-      phone_number TEXT NOT NULL,
-      country TEXT NOT NULL,
-      service TEXT NOT NULL,
-      provider TEXT,
-      price NUMERIC(12,2) NOT NULL
-        CHECK (price > 0),
-      status TEXT NOT NULL DEFAULT 'active',
-      sms_code TEXT,
-      reference TEXT UNIQUE NOT NULL,
-      smspool_order_id TEXT,
-      provider_cost NUMERIC(12,2),
-      created_at TIMESTAMPTZ DEFAULT NOW()
-    );
-
-    CREATE INDEX IF NOT EXISTS
-      number_purchases_user_id_idx
-      ON number_purchases(user_id);
-
-    CREATE INDEX IF NOT EXISTS
-      number_purchases_created_at_idx
-      ON number_purchases(created_at);
-
-    CREATE INDEX IF NOT EXISTS
-      number_purchases_smspool_order_idx
-      ON number_purchases(smspool_order_id);
-  `);
-
-  /*
-    Upgrade existing databases safely.
-  */
-
-  await pool.query(`
-    ALTER TABLE number_purchases
-    ADD COLUMN IF NOT EXISTS
-    smspool_order_id TEXT
-  `);
-
-  await pool.query(`
-    ALTER TABLE number_purchases
-    ADD COLUMN IF NOT EXISTS
-    provider_cost NUMERIC(12,2)
-  `);
-
-  console.log(
-    "PostgreSQL database ready"
-  );
-}
-
-/* =========================================================
-   SERVER
-========================================================= */
-
-const server = http.createServer(
-  async (req, res) => {
-    try {
-
-      /* ===================================================
-         CORS
-      =================================================== */
-
-      if (req.method === "OPTIONS") {
-        res.writeHead(204, {
-          "Access-Control-Allow-Origin":
-            FRONTEND_ORIGIN,
-          "Access-Control-Allow-Credentials":
-            "true",
-          "Access-Control-Allow-Methods":
-            "GET,POST,OPTIONS",
-          "Access-Control-Allow-Headers":
-            "Content-Type"
-        });
-
-        res.end();
-        return;
-      }
-
-      /* ===================================================
-         STATUS
-      =================================================== */
-
-      if (
-        req.method === "GET" &&
-        req.url === "/api/status"
-      ) {
-        sendJSON(res, 200, {
-          status: "online",
-          service: "NumberHub",
-          message:
-            "Backend is working",
-          smspool:
-            Boolean(SMSPOOL_API_KEY)
-        });
+}        });
 
         return;
       }
 
       /* ===================================================
-         REGISTER
+         FORGOT PASSWORD
       =================================================== */
 
       if (
         req.method === "POST" &&
-        req.url === "/api/register"
+        req.url === "/api/forgot-password"
       ) {
-        const data =
-          await getBody(req);
+        const data = await getBody(req);
 
-        const name =
-          String(
-            data.name || ""
-          ).trim();
+        const email = String(
+          data.email || ""
+        )
+          .trim()
+          .toLowerCase();
 
-        const email =
-          String(
-            data.email || ""
-          )
-            .trim()
-            .toLowerCase();
-
-        const password =
-          String(
-            data.password || ""
-          );
-
-        if (
-          !name ||
-          !email ||
-          !password
-        ) {
+        if (!email) {
           sendJSON(res, 400, {
-            error:
-              "Name, email and password are required"
+            error: "Email is required"
           });
 
           return;
         }
 
-        if (password.length < 8) {
+        const userResult = await pool.query(
+          `
+            SELECT id, email
+            FROM users
+            WHERE email = $1
+          `,
+          [email]
+        );
+
+        if (userResult.rows.length === 0) {
+          sendJSON(res, 200, {
+            message:
+              "If an account exists for that email, a verification code has been sent."
+          });
+
+          return;
+        }
+
+        const user = userResult.rows[0];
+
+        await pool.query(
+          `
+            UPDATE password_reset_tokens
+            SET used_at = NOW()
+            WHERE user_id = $1
+              AND used_at IS NULL
+          `,
+          [user.id]
+        );
+
+        const code = String(
+          crypto.randomInt(100000, 1000000)
+        );
+
+        const codeHash =
+          await bcrypt.hash(code, 12);
+
+        const resetToken =
+          crypto.randomBytes(32).toString("hex");
+
+        const tokenHash =
+          hashToken(resetToken);
+
+        const expiresAt =
+          new Date(
+            Date.now() +
+            10 * 60 * 1000
+          );
+
+        await pool.query(
+          `
+            INSERT INTO password_reset_tokens
+              (
+                user_id,
+                token_hash,
+                code_hash,
+                expires_at
+              )
+            VALUES
+              ($1, $2, $3, $4)
+          `,
+          [
+            user.id,
+            tokenHash,
+            codeHash,
+            expiresAt
+          ]
+        );
+
+        try {
+          await sendPasswordResetEmail(
+            user.email,
+            code
+          );
+        } catch (emailError) {
+          console.error(
+            "PASSWORD RESET EMAIL ERROR:",
+            emailError
+          );
+
+          await pool.query(
+            `
+              UPDATE password_reset_tokens
+              SET used_at = NOW()
+              WHERE token_hash = $1
+            `,
+            [tokenHash]
+          );
+
+          sendJSON(res, 500, {
+            error:
+              "Unable to send the verification code. Please try again later."
+          });
+
+          return;
+        }
+
+        sendJSON(res, 200, {
+          message:
+            "If an account exists for that email, a verification code has been sent.",
+          resetToken
+        });
+
+        return;
+      }
+
+      /* ===================================================
+         VERIFY RESET CODE
+      =================================================== */
+
+      if (
+        req.method === "POST" &&
+        req.url === "/api/verify-reset-code"
+      ) {
+        const data = await getBody(req);
+
+        const resetToken = String(
+          data.resetToken || ""
+        );
+
+        const code = String(
+          data.code || ""
+        ).trim();
+
+        if (!resetToken || !code) {
+          sendJSON(res, 400, {
+            error:
+              "Reset token and verification code are required"
+          });
+
+          return;
+        }
+
+        const tokenHash =
+          hashToken(resetToken);
+
+        const result = await pool.query(
+          `
+            SELECT
+              code_hash,
+              expires_at,
+              used_at
+            FROM password_reset_tokens
+            WHERE token_hash = $1
+          `,
+          [tokenHash]
+        );
+
+        if (
+          result.rows.length === 0 ||
+          result.rows[0].used_at ||
+          new Date(
+            result.rows[0].expires_at
+          ).getTime() <= Date.now()
+        ) {
+          sendJSON(res, 400, {
+            error:
+              "Invalid or expired verification code"
+          });
+
+          return;
+        }
+
+        const codeMatch =
+          await bcrypt.compare(
+            code,
+            result.rows[0].code_hash
+          );
+
+        if (!codeMatch) {
+          sendJSON(res, 400, {
+            error:
+              "Invalid or expired verification code"
+          });
+
+          return;
+        }
+
+        sendJSON(res, 200, {
+          message:
+            "Code verified successfully",
+          resetToken
+        });
+
+        return;
+      }
+
+      /* ===================================================
+         RESET PASSWORD
+      =================================================== */
+
+      if (
+        req.method === "POST" &&
+        req.url === "/api/reset-password"
+      ) {
+        const data = await getBody(req);
+
+        const resetToken = String(
+          data.resetToken || ""
+        );
+
+        const newPassword = String(
+          data.newPassword || ""
+        );
+
+        if (
+          !resetToken ||
+          !newPassword
+        ) {
+          sendJSON(res, 400, {
+            error:
+              "Reset token and new password are required"
+          });
+
+          return;
+        }
+
+        if (newPassword.length < 8) {
           sendJSON(res, 400, {
             error:
               "Password must be at least 8 characters"
@@ -533,49 +581,454 @@ const server = http.createServer(
           return;
         }
 
+        const tokenHash =
+          hashToken(resetToken);
+
+        const result = await pool.query(
+          `
+            SELECT
+              user_id,
+              code_hash,
+              expires_at,
+              used_at
+            FROM password_reset_tokens
+            WHERE token_hash = $1
+          `,
+          [tokenHash]
+        );
+
+        if (
+          result.rows.length === 0 ||
+          result.rows[0].used_at ||
+          new Date(
+            result.rows[0].expires_at
+          ).getTime() <= Date.now()
+        ) {
+          sendJSON(res, 400, {
+            error:
+              "Invalid or expired reset token"
+          });
+
+          return;
+        }
+
         const passwordHash =
           await bcrypt.hash(
-            password,
+            newPassword,
             12
           );
 
-        const result =
-          await pool.query(
-            `
-              INSERT INTO users
-                (
-                  name,
-                  email,
-                  password_hash
-                )
-              VALUES
-                ($1, $2, $3)
-              RETURNING
-                id,
-                name,
-                email,
-                wallet,
-                purchases,
-                created_at
-            `,
-            [
-              name,
-              email,
-              passwordHash
-            ]
-          );
+        await pool.query(
+          `
+            UPDATE users
+            SET password_hash = $1
+            WHERE id = $2
+          `,
+          [
+            passwordHash,
+            result.rows[0].user_id
+          ]
+        );
 
-        sendJSON(res, 201, {
+        await pool.query(
+          `
+            UPDATE password_reset_tokens
+            SET used_at = NOW()
+            WHERE token_hash = $1
+          `,
+          [tokenHash]
+        );
+
+        await pool.query(
+          `
+            DELETE FROM sessions
+            WHERE user_id = $1
+          `,
+          [result.rows[0].user_id]
+        );
+
+        sendJSON(res, 200, {
           message:
-            "Account created successfully",
-          user:
-            result.rows[0]
+            "Password reset successfully"
         });
 
         return;
       }
 
       /* ===================================================
+         SMSPOOL NUMBER PURCHASE
+      =================================================== */
+
+      if (
+        req.method === "POST" &&
+        req.url === "/api/numbers/purchase"
+      ) {
+        const user =
+          await getAuthenticatedUser(req);
+
+        if (!user) {
+          sendJSON(res, 401, {
+            error: "Not authenticated"
+          });
+
+          return;
+        }
+
+        const data = await getBody(req);
+
+        const country = String(
+          data.country || ""
+        ).trim();
+
+        const service = String(
+          data.service || ""
+        ).trim();
+
+        const provider = String(
+          data.provider || ""
+        ).trim();
+
+        const price = Number(
+          data.price
+        );
+
+        if (
+          !country ||
+          !service ||
+          !Number.isFinite(price) ||
+          price <= 0
+        ) {
+          sendJSON(res, 400, {
+            error:
+              "Invalid purchase details"
+          });
+
+          return;
+        }
+
+        if (!SMSPOOL_API_KEY) {
+          sendJSON(res, 503, {
+            error:
+              "SMSPool provider is not configured"
+          });
+
+          return;
+        }
+
+        /* -------------------------------------------------
+           CHECK CUSTOMER WALLET
+        ------------------------------------------------- */
+
+        if (
+          Number(user.wallet || 0) < price
+        ) {
+          sendJSON(res, 400, {
+            error:
+              "Insufficient wallet balance"
+          });
+
+          return;
+        }
+
+        /* -------------------------------------------------
+           REQUEST NUMBER FROM SMSPOOL
+        ------------------------------------------------- */
+
+        let smsPoolOrder;
+
+        try {
+          smsPoolOrder =
+            await smsPoolRequest(
+              "/purchase/sms",
+              {
+                country,
+                service
+              }
+            );
+        } catch (error) {
+          console.error(
+            "SMSPOOL PURCHASE ERROR:",
+            error
+          );
+
+          sendJSON(res, 502, {
+            error:
+              "Unable to contact the number provider. Please try again."
+          });
+
+          return;
+        }
+
+        const success =
+          String(
+            smsPoolOrder?.success
+          ) === "1";
+
+        if (!success) {
+          sendJSON(res, 400, {
+            error:
+              smsPoolOrder?.message ||
+              smsPoolOrder?.error ||
+              "SMSPool could not provide a number."
+          });
+
+          return;
+        }
+
+        const phoneNumber =
+          String(
+            smsPoolOrder?.phonenumber ||
+            smsPoolOrder?.phone_number ||
+            smsPoolOrder?.number ||
+            ""
+          ).trim();
+
+        const orderId =
+          String(
+            smsPoolOrder?.orderid ||
+            smsPoolOrder?.order_id ||
+            smsPoolOrder?.id ||
+            ""
+          ).trim();
+
+        const providerCost =
+          Number(
+            smsPoolOrder?.cost ||
+            smsPoolOrder?.price ||
+            0
+          );
+
+        if (!phoneNumber || !orderId) {
+          console.error(
+            "SMSPOOL INVALID PURCHASE RESPONSE:",
+            smsPoolOrder
+          );
+
+          sendJSON(res, 502, {
+            error:
+              "The provider returned an incomplete number order."
+          });
+
+          return;
+        }
+
+        /* -------------------------------------------------
+           SAVE PURCHASE + DEDUCT WALLET
+        ------------------------------------------------- */
+
+        const reference =
+          createReference("NP");
+
+        const client =
+          await pool.connect();
+
+        try {
+          await client.query("BEGIN");
+
+          const lockedUser =
+            await client.query(
+              `
+                SELECT
+                  wallet,
+                  purchases
+                FROM users
+                WHERE id = $1
+                FOR UPDATE
+              `,
+              [user.id]
+            );
+
+          if (
+            lockedUser.rows.length === 0
+          ) {
+            await client.query(
+              "ROLLBACK"
+            );
+
+            sendJSON(res, 404, {
+              error:
+                "User not found"
+            });
+
+            return;
+          }
+
+          const wallet =
+            Number(
+              lockedUser.rows[0].wallet ||
+              0
+            );
+
+          if (wallet < price) {
+            await client.query(
+              "ROLLBACK"
+            );
+
+            sendJSON(res, 400, {
+              error:
+                "Insufficient wallet balance"
+            });
+
+            return;
+          }
+
+          const purchaseResult =
+            await client.query(
+              `
+                INSERT INTO number_purchases
+                (
+                  user_id,
+                  phone_number,
+                  country,
+                  service,
+                  provider,
+                  price,
+                  status,
+                  reference,
+                  smspool_order_id,
+                  provider_cost
+                )
+                VALUES
+                (
+                  $1,
+                  $2,
+                  $3,
+                  $4,
+                  $5,
+                  $6,
+                  'active',
+                  $7,
+                  $8,
+                  $9
+                )
+                RETURNING
+                  id,
+                  phone_number,
+                  country,
+                  service,
+                  provider,
+                  price,
+                  status,
+                  reference,
+                  smspool_order_id,
+                  provider_cost,
+                  created_at
+              `,
+              [
+                user.id,
+                phoneNumber,
+                country,
+                service,
+                provider || "SMSPool",
+                price.toFixed(2),
+                reference,
+                orderId,
+                Number.isFinite(
+                  providerCost
+                )
+                  ? providerCost.toFixed(2)
+                  : null
+              ]
+            );
+
+          await client.query(
+            `
+              UPDATE users
+              SET
+                wallet = wallet - $1,
+                purchases = purchases + 1
+              WHERE id = $2
+            `,
+            [
+              price.toFixed(2),
+              user.id
+            ]
+          );
+
+          await client.query(
+            `
+              INSERT INTO wallet_transactions
+              (
+                user_id,
+                type,
+                amount,
+                method,
+                status,
+                reference,
+                description
+              )
+              VALUES
+              (
+                $1,
+                'purchase',
+                $2,
+                'Wallet',
+                'successful',
+                $3,
+                $4
+              )
+            `,
+            [
+              user.id,
+              price.toFixed(2),
+              reference,
+              "Number purchase"
+            ]
+          );
+
+          await client.query(
+            "COMMIT"
+          );
+
+          sendJSON(res, 201, {
+            message:
+              "Number purchased successfully",
+            purchase:
+              purchaseResult.rows[0]
+          });
+
+          return;
+
+        } catch (error) {
+          await client.query(
+            "ROLLBACK"
+          );
+
+          console.error(
+            "PURCHASE DATABASE ERROR:",
+            error
+          );
+
+          /*
+            IMPORTANT:
+            If the database fails after SMSPool
+            already supplied the number, the provider
+            order may remain active. The next section
+            of the server handles cancellation.
+          */
+
+          try {
+            await smsPoolRequest(
+              "/sms/cancel",
+              {
+                orderid: orderId
+              }
+            );
+          } catch (
+            cancelError
+          ) {
+            console.error(
+              "SMSPOOL ROLLBACK CANCEL ERROR:",
+              cancelError
+            );
+          }
+
+          throw error;
+
+        } finally {
+          client.release();
+        }
+}/* ===================================================
          LOGIN
       =================================================== */
 
@@ -583,60 +1036,51 @@ const server = http.createServer(
         req.method === "POST" &&
         req.url === "/api/login"
       ) {
-        const data =
-          await getBody(req);
+        const data = await getBody(req);
 
-        const email =
-          String(
-            data.email || ""
-          )
-            .trim()
-            .toLowerCase();
+        const email = String(
+          data.email || ""
+        )
+          .trim()
+          .toLowerCase();
 
-        const password =
-          String(
-            data.password || ""
-          );
+        const password = String(
+          data.password || ""
+        );
 
         if (!email || !password) {
           sendJSON(res, 400, {
             error:
               "Email and password are required"
           });
-
           return;
         }
 
-        const result =
-          await pool.query(
-            `
-              SELECT
-                id,
-                name,
-                email,
-                password_hash,
-                wallet,
-                purchases,
-                created_at
-              FROM users
-              WHERE email = $1
-            `,
-            [email]
-          );
+        const result = await pool.query(
+          `
+            SELECT
+              id,
+              name,
+              email,
+              password_hash,
+              wallet,
+              purchases,
+              created_at
+            FROM users
+            WHERE email = $1
+          `,
+          [email]
+        );
 
-        if (
-          result.rows.length === 0
-        ) {
+        if (result.rows.length === 0) {
           sendJSON(res, 401, {
             error:
               "Invalid email or password"
           });
-
           return;
         }
 
-        const user =
-          result.rows[0];
+        const user = result.rows[0];
 
         const passwordMatch =
           await bcrypt.compare(
@@ -649,7 +1093,6 @@ const server = http.createServer(
             error:
               "Invalid email or password"
           });
-
           return;
         }
 
@@ -657,19 +1100,12 @@ const server = http.createServer(
           createSessionToken();
 
         const tokenHash =
-          hashToken(
-            sessionToken
-          );
+          hashToken(sessionToken);
 
-        const expiresAt =
-          new Date(
-            Date.now() +
-            7 *
-              24 *
-              60 *
-              60 *
-              1000
-          );
+        const expiresAt = new Date(
+          Date.now() +
+            7 * 24 * 60 * 60 * 1000
+        );
 
         await pool.query(
           `
@@ -749,16 +1185,13 @@ const server = http.createServer(
         req.url === "/api/me"
       ) {
         const user =
-          await getAuthenticatedUser(
-            req
-          );
+          await getAuthenticatedUser(req);
 
         if (!user) {
           sendJSON(res, 401, {
             error:
               "Not authenticated"
           });
-
           return;
         }
 
@@ -768,41 +1201,31 @@ const server = http.createServer(
         });
 
         return;
-      }
-
-      /* ===================================================
+      }/* ===================================================
          WALLET DEPOSIT
       =================================================== */
 
       if (
         req.method === "POST" &&
-        req.url ===
-          "/api/wallet/deposit"
+        req.url === "/api/wallet/deposit"
       ) {
         const user =
-          await getAuthenticatedUser(
-            req
-          );
+          await getAuthenticatedUser(req);
 
         if (!user) {
           sendJSON(res, 401, {
-            error:
-              "Not authenticated"
+            error: "Not authenticated"
           });
-
           return;
         }
 
-        const data =
-          await getBody(req);
+        const data = await getBody(req);
 
         const amount =
           Number(data.amount);
 
         const method =
-          String(
-            data.method || ""
-          ).trim();
+          String(data.method || "").trim();
 
         const allowedMethods = [
           "OPay",
@@ -818,20 +1241,16 @@ const server = http.createServer(
             error:
               "Minimum deposit amount is ₦100"
           });
-
           return;
         }
 
         if (
-          !allowedMethods.includes(
-            method
-          )
+          !allowedMethods.includes(method)
         ) {
           sendJSON(res, 400, {
             error:
               "Invalid payment method"
           });
-
           return;
         }
 
@@ -841,8 +1260,7 @@ const server = http.createServer(
         const result =
           await pool.query(
             `
-              INSERT INTO
-                wallet_transactions
+              INSERT INTO wallet_transactions
               (
                 user_id,
                 type,
@@ -896,20 +1314,15 @@ const server = http.createServer(
 
       if (
         req.method === "GET" &&
-        req.url ===
-          "/api/wallet/transactions"
+        req.url === "/api/wallet/transactions"
       ) {
         const user =
-          await getAuthenticatedUser(
-            req
-          );
+          await getAuthenticatedUser(req);
 
         if (!user) {
           sendJSON(res, 401, {
-            error:
-              "Not authenticated"
+            error: "Not authenticated"
           });
-
           return;
         }
 
@@ -927,8 +1340,7 @@ const server = http.createServer(
                 created_at
               FROM wallet_transactions
               WHERE user_id = $1
-              ORDER BY
-                created_at DESC
+              ORDER BY created_at DESC
               LIMIT 100
             `,
             [user.id]
@@ -939,4 +1351,1389 @@ const server = http.createServer(
             result.rows
         });
 
-        
+        return;
+}/* ===================================================
+         SMSPOOL PURCHASE
+      =================================================== */
+
+      if (
+        req.method === "POST" &&
+        req.url === "/api/numbers/purchase"
+      ) {
+        const user =
+          await getAuthenticatedUser(req);
+
+        if (!user) {
+          sendJSON(res, 401, {
+            error: "Not authenticated"
+          });
+          return;
+        }
+
+        const data = await getBody(req);
+
+        const country =
+          String(data.country || "").trim();
+
+        const service =
+          String(data.service || "").trim();
+
+        const provider =
+          String(data.provider || "").trim();
+
+        const price =
+          Number(data.price);
+
+        if (
+          !country ||
+          !service ||
+          !Number.isFinite(price) ||
+          price <= 0
+        ) {
+          sendJSON(res, 400, {
+            error:
+              "Invalid purchase details"
+          });
+          return;
+        }
+
+        if (!SMSPOOL_API_KEY) {
+          sendJSON(res, 503, {
+            error:
+              "Number provider is not configured yet."
+          });
+          return;
+        }
+
+        /*
+          Request a real number from SMSPool.
+        */
+
+        let smsPoolOrder;
+
+        try {
+          smsPoolOrder =
+            await smsPoolRequest(
+              "/purchase/sms",
+              {
+                country,
+                service
+              }
+            );
+        } catch (error) {
+          console.error(
+            "SMSPOOL PURCHASE ERROR:",
+            error
+          );
+
+          sendJSON(res, 502, {
+            error:
+              "Unable to contact the number provider. Please try again."
+          });
+
+          return;
+        }
+
+        /*
+          SMSPool must return a successful
+          order before we charge the customer.
+        */
+
+        if (
+          !smsPoolOrder ||
+          String(
+            smsPoolOrder.success
+          ) !== "1"
+        ) {
+          sendJSON(res, 400, {
+            error:
+              smsPoolOrder?.message ||
+              "SMSPool could not provide a number."
+          });
+
+          return;
+        }
+
+        const phoneNumber =
+          String(
+            smsPoolOrder.phonenumber ||
+            smsPoolOrder.phone_number ||
+            ""
+          ).trim();
+
+        const orderId =
+          String(
+            smsPoolOrder.order_id ||
+            smsPoolOrder.orderid ||
+            smsPoolOrder.id ||
+            ""
+          ).trim();
+
+        const providerCost =
+          Number(
+            smsPoolOrder.cost ||
+            smsPoolOrder.price ||
+            0
+          );
+
+        if (
+          !phoneNumber ||
+          !orderId
+        ) {
+          console.error(
+            "INVALID SMSPOOL RESPONSE:",
+            smsPoolOrder
+          );
+
+          sendJSON(res, 502, {
+            error:
+              "The provider returned an incomplete order."
+          });
+
+          return;
+        }
+
+        /*
+          Lock the user's wallet before
+          completing the NumberHub purchase.
+        */
+
+        const client =
+          await pool.connect();
+
+        try {
+          await client.query("BEGIN");
+
+          const userResult =
+            await client.query(
+              `
+                SELECT
+                  wallet,
+                  purchases
+                FROM users
+                WHERE id = $1
+                FOR UPDATE
+              `,
+              [user.id]
+            );
+
+          if (
+            userResult.rows.length === 0
+          ) {
+            await client.query(
+              "ROLLBACK"
+            );
+
+            sendJSON(res, 404, {
+              error:
+                "User not found"
+            });
+
+            return;
+          }
+
+          const wallet =
+            Number(
+              userResult.rows[0].wallet || 0
+            );
+
+          if (wallet < price) {
+            await client.query(
+              "ROLLBACK"
+            );
+
+            /*
+              Customer cannot afford the number.
+              Try to cancel the provider order
+              so the provider number is not wasted.
+            */
+
+            try {
+              await smsPoolRequest(
+                "/sms/cancel",
+                {
+                  orderid: orderId
+                }
+              );
+            } catch (cancelError) {
+              console.error(
+                "SMSPOOL AUTO-CANCEL ERROR:",
+                cancelError
+              );
+            }
+
+            sendJSON(res, 400, {
+              error:
+                "Insufficient wallet balance"
+            });
+
+            return;
+          }
+
+          const reference =
+            createReference("NP");
+
+          const purchaseResult =
+            await client.query(
+              `
+                INSERT INTO number_purchases
+                (
+                  user_id,
+                  phone_number,
+                  country,
+                  service,
+                  provider,
+                  price,
+                  status,
+                  sms_code,
+                  reference,
+                  smspool_order_id,
+                  provider_cost
+                )
+                VALUES
+                (
+                  $1,
+                  $2,
+                  $3,
+                  $4,
+                  $5,
+                  $6,
+                  'active',
+                  NULL,
+                  $7,
+                  $8,
+                  $9
+                )
+                RETURNING
+                  id,
+                  phone_number,
+                  country,
+                  service,
+                  provider,
+                  price,
+                  status,
+                  sms_code,
+                  reference,
+                  smspool_order_id,
+                  provider_cost,
+                  created_at
+              `,
+              [
+                user.id,
+                phoneNumber,
+                country,
+                service,
+                provider,
+                price.toFixed(2),
+                reference,
+                orderId,
+                Number.isFinite(
+                  providerCost
+                )
+                  ? providerCost.toFixed(2)
+                  : null
+              ]
+            );
+
+          await client.query(
+            `
+              UPDATE users
+              SET
+                wallet = wallet - $1,
+                purchases = purchases + 1
+              WHERE id = $2
+            `,
+            [
+              price.toFixed(2),
+              user.id
+            ]
+          );
+
+          await client.query(
+            `
+              INSERT INTO wallet_transactions
+              (
+                user_id,
+                type,
+                amount,
+                method,
+                status,
+                reference,
+                description
+              )
+              VALUES
+              (
+                $1,
+                'purchase',
+                $2,
+                'Wallet',
+                'successful',
+                $3,
+                $4
+              )
+            `,
+            [
+              user.id,
+              price.toFixed(2),
+              reference,
+              "Number purchase through SMSPool"
+            ]
+          );
+
+          await client.query(
+            "COMMIT"
+          );
+
+          sendJSON(res, 201, {
+            message:
+              "Number purchased successfully",
+            purchase:
+              purchaseResult.rows[0]
+          });
+
+          return;
+
+        } catch (error) {
+          await client.query(
+            "ROLLBACK"
+          );
+
+          /*
+            If our database transaction fails
+            after SMSPool supplied a number,
+            attempt to cancel the provider order.
+          */
+
+          try {
+            await smsPoolRequest(
+              "/sms/cancel",
+              {
+                orderid: orderId
+              }
+            );
+          } catch (cancelError) {
+            console.error(
+              "SMSPOOL ROLLBACK CANCEL ERROR:",
+              cancelError
+            );
+          }
+
+          throw error;
+
+        } finally {
+          client.release();
+        }
+          }/* ===================================================
+         NUMBER PURCHASE HISTORY
+      =================================================== */
+
+      if (
+        req.method === "GET" &&
+        req.url === "/api/numbers/history"
+      ) {
+        const user =
+          await getAuthenticatedUser(req);
+
+        if (!user) {
+          sendJSON(res, 401, {
+            error: "Not authenticated"
+          });
+          return;
+        }
+
+        const result =
+          await pool.query(
+            `
+              SELECT
+                id,
+                phone_number,
+                country,
+                service,
+                provider,
+                price,
+                status,
+                sms_code,
+                reference,
+                smspool_order_id,
+                provider_cost,
+                created_at
+              FROM number_purchases
+              WHERE user_id = $1
+              ORDER BY created_at DESC
+              LIMIT 100
+            `,
+            [user.id]
+          );
+
+        sendJSON(res, 200, {
+          purchases: result.rows
+        });
+
+        return;
+      }
+
+      /* ===================================================
+         GET SMSPOOL ORDER STATUS
+      =================================================== */
+
+      if (
+        req.method === "GET" &&
+        req.url.startsWith(
+          "/api/numbers/status/"
+        )
+      ) {
+        const user =
+          await getAuthenticatedUser(req);
+
+        if (!user) {
+          sendJSON(res, 401, {
+            error: "Not authenticated"
+          });
+          return;
+        }
+
+        const purchaseId =
+          req.url
+            .split("/")
+            .pop();
+
+        if (!/^\d+$/.test(purchaseId)) {
+          sendJSON(res, 400, {
+            error:
+              "Invalid purchase ID"
+          });
+          return;
+        }
+
+        const purchaseResult =
+          await pool.query(
+            `
+              SELECT
+                id,
+                user_id,
+                phone_number,
+                country,
+                service,
+                provider,
+                price,
+                status,
+                sms_code,
+                reference,
+                smspool_order_id,
+                created_at
+              FROM number_purchases
+              WHERE id = $1
+                AND user_id = $2
+            `,
+            [
+              purchaseId,
+              user.id
+            ]
+          );
+
+        if (
+          purchaseResult.rows.length === 0
+        ) {
+          sendJSON(res, 404, {
+            error:
+              "Purchase not found"
+          });
+          return;
+        }
+
+        const purchase =
+          purchaseResult.rows[0];
+
+        if (
+          !purchase.smspool_order_id
+        ) {
+          sendJSON(res, 400, {
+            error:
+              "This purchase has no provider order ID."
+          });
+          return;
+        }
+
+        let statusResult;
+
+        try {
+          statusResult =
+            await smsPoolRequest(
+              "/sms/check",
+              {
+                orderid:
+                  purchase.smspool_order_id
+              }
+            );
+        } catch (error) {
+          console.error(
+            "SMSPOOL STATUS ERROR:",
+            error
+          );
+
+          sendJSON(res, 502, {
+            error:
+              "Unable to check SMS status right now."
+          });
+
+          return;
+        }
+
+        /*
+          Save the SMS code if SMSPool
+          has received one.
+        */
+
+        const smsCode =
+          String(
+            statusResult?.sms_code ||
+            statusResult?.code ||
+            statusResult?.sms ||
+            ""
+          ).trim();
+
+        const providerStatus =
+          String(
+            statusResult?.status ||
+            ""
+          ).toLowerCase();
+
+        if (smsCode) {
+          await pool.query(
+            `
+              UPDATE number_purchases
+              SET
+                sms_code = $1,
+                status = 'completed'
+              WHERE id = $2
+                AND user_id = $3
+            `,
+            [
+              smsCode,
+              purchase.id,
+              user.id
+            ]
+          );
+        } else if (
+          providerStatus === "cancelled" ||
+          providerStatus === "canceled"
+        ) {
+          await pool.query(
+            `
+              UPDATE number_purchases
+              SET status = 'cancelled'
+              WHERE id = $1
+                AND user_id = $2
+            `,
+            [
+              purchase.id,
+              user.id
+            ]
+          );
+        }
+
+        sendJSON(res, 200, {
+          purchase: {
+            ...purchase,
+            sms_code:
+              smsCode ||
+              purchase.sms_code,
+            provider_status:
+              statusResult
+          }
+        });
+
+        return;
+      }
+
+      /* ===================================================
+         CANCEL NUMBER PURCHASE
+      =================================================== */
+
+      if (
+        req.method === "POST" &&
+        req.url === "/api/numbers/cancel"
+      ) {
+        const user =
+          await getAuthenticatedUser(req);
+
+        if (!user) {
+          sendJSON(res, 401, {
+            error:
+              "Not authenticated"
+          });
+          return;
+        }
+
+        const data =
+          await getBody(req);
+
+        const purchaseId =
+          Number(data.purchaseId);
+
+        if (
+          !Number.isInteger(
+            purchaseId
+          ) ||
+          purchaseId <= 0
+        ) {
+          sendJSON(res, 400, {
+            error:
+              "Invalid purchase ID"
+          });
+          return;
+        }
+
+        const result =
+          await pool.query(
+            `
+              SELECT
+                id,
+                user_id,
+                price,
+                status,
+                smspool_order_id
+              FROM number_purchases
+              WHERE id = $1
+                AND user_id = $2
+            `,
+            [
+              purchaseId,
+              user.id
+            ]
+          );
+
+        if (
+          result.rows.length === 0
+        ) {
+          sendJSON(res, 404, {
+            error:
+              "Purchase not found"
+          });
+          return;
+        }
+
+        const purchase =
+          result.rows[0];
+
+        if (
+          purchase.status !== "active"
+        ) {
+          sendJSON(res, 400, {
+            error:
+              "This number is no longer active."
+          });
+          return;
+        }
+
+        if (
+          !purchase.smspool_order_id
+        ) {
+          sendJSON(res, 400, {
+            error:
+              "Provider order ID is missing."
+          });
+          return;
+        }
+
+        let cancelResult;
+
+        try {
+          cancelResult =
+            await smsPoolRequest(
+              "/sms/cancel",
+              {
+                orderid:
+                  purchase.smspool_order_id
+              }
+            );
+        } catch (error) {
+          console.error(
+            "SMSPOOL CANCEL ERROR:",
+            error
+          );
+
+          sendJSON(res, 502, {
+            error:
+              "Unable to cancel the provider order right now."
+          });
+
+          return;
+        }
+
+        if (
+          String(
+            cancelResult?.success
+          ) !== "1"
+        ) {
+          sendJSON(res, 400, {
+            error:
+              cancelResult?.message ||
+              "The provider could not cancel this order."
+          });
+          return;
+           }/* =================================================
+           REFUND CUSTOMER AFTER SUCCESSFUL CANCELLATION
+        ================================================= */
+
+        const client =
+          await pool.connect();
+
+        try {
+          await client.query("BEGIN");
+
+          const lockedPurchase =
+            await client.query(
+              `
+                SELECT
+                  id,
+                  user_id,
+                  price,
+                  status,
+                  reference
+                FROM number_purchases
+                WHERE id = $1
+                FOR UPDATE
+              `,
+              [purchase.id]
+            );
+
+          if (
+            lockedPurchase.rows.length === 0
+          ) {
+            await client.query(
+              "ROLLBACK"
+            );
+
+            sendJSON(res, 404, {
+              error:
+                "Purchase no longer exists"
+            });
+
+            return;
+          }
+
+          const locked =
+            lockedPurchase.rows[0];
+
+          if (
+            locked.status !== "active"
+          ) {
+            await client.query(
+              "ROLLBACK"
+            );
+
+            sendJSON(res, 400, {
+              error:
+                "This number has already been processed."
+            });
+
+            return;
+          }
+
+          await client.query(
+            `
+              UPDATE users
+              SET wallet =
+                wallet + $1
+              WHERE id = $2
+            `,
+            [
+              locked.price,
+              user.id
+            ]
+          );
+
+          await client.query(
+            `
+              UPDATE number_purchases
+              SET status = 'cancelled'
+              WHERE id = $1
+            `,
+            [locked.id]
+          );
+
+          const refundReference =
+            createReference("RF");
+
+          await client.query(
+            `
+              INSERT INTO wallet_transactions
+              (
+                user_id,
+                type,
+                amount,
+                method,
+                status,
+                reference,
+                description
+              )
+              VALUES
+              (
+                $1,
+                'refund',
+                $2,
+                'Wallet',
+                'successful',
+                $3,
+                $4
+              )
+            `,
+            [
+              user.id,
+              locked.price,
+              refundReference,
+              "Refund for cancelled number purchase"
+            ]
+          );
+
+          await client.query(
+            "COMMIT"
+          );
+
+          sendJSON(res, 200, {
+            message:
+              "Number cancelled and wallet refunded successfully.",
+            refund:
+              Number(locked.price)
+          });
+
+          return;
+
+        } catch (error) {
+          await client.query(
+            "ROLLBACK"
+          );
+
+          throw error;
+
+        } finally {
+          client.release();
+        }
+      }
+
+      /* =================================================
+         FORGOT PASSWORD
+      ================================================= */
+
+      if (
+        req.method === "POST" &&
+        req.url ===
+          "/api/forgot-password"
+      ) {
+        const data =
+          await getBody(req);
+
+        const email =
+          String(
+            data.email || ""
+          )
+            .trim()
+            .toLowerCase();
+
+        if (!email) {
+          sendJSON(res, 400, {
+            error:
+              "Email is required"
+          });
+
+          return;
+        }
+
+        const userResult =
+          await pool.query(
+            `
+              SELECT
+                id,
+                email
+              FROM users
+              WHERE email = $1
+            `,
+            [email]
+          );
+
+        /*
+          Do not reveal whether an email
+          exists in the database.
+        */
+
+        if (
+          userResult.rows.length === 0
+        ) {
+          sendJSON(res, 200, {
+            message:
+              "If an account exists for that email, a verification code has been sent."
+          });
+
+          return;
+        }
+
+        const resetUser =
+          userResult.rows[0];
+
+        await pool.query(
+          `
+            UPDATE password_reset_tokens
+            SET used_at = NOW()
+            WHERE user_id = $1
+              AND used_at IS NULL
+          `,
+          [resetUser.id]
+        );
+
+        const code =
+          String(
+            crypto.randomInt(
+              100000,
+              1000000
+            )
+          );
+
+        const codeHash =
+          await bcrypt.hash(
+            code,
+            12
+          );
+
+        const resetToken =
+          crypto
+            .randomBytes(32)
+            .toString("hex");
+
+        const tokenHash =
+          hashToken(resetToken);
+
+        const expiresAt =
+          new Date(
+            Date.now() +
+              10 * 60 * 1000
+          );
+
+        await pool.query(
+          `
+            INSERT INTO password_reset_tokens
+            (
+              user_id,
+              token_hash,
+              code_hash,
+              expires_at
+            )
+            VALUES
+            ($1, $2, $3, $4)
+          `,
+          [
+            resetUser.id,
+            tokenHash,
+            codeHash,
+            expiresAt
+          ]
+        );
+
+        try {
+          await sendPasswordResetEmail(
+            resetUser.email,
+            code
+          );
+        } catch (emailError) {
+          console.error(
+            "PASSWORD RESET EMAIL ERROR:",
+            emailError
+          );
+
+          await pool.query(
+            `
+              UPDATE password_reset_tokens
+              SET used_at = NOW()
+              WHERE token_hash = $1
+            `,
+            [tokenHash]
+          );
+
+          sendJSON(res, 500, {
+            error:
+              "Unable to send the verification code. Please try again later."
+          });
+
+          return;
+        }
+
+        sendJSON(res, 200, {
+          message:
+            "If an account exists for that email, a verification code has been sent.",
+          resetToken
+        });
+
+        return;
+      }/* ===================================================
+         VERIFY PASSWORD RESET CODE
+      =================================================== */
+
+      if (
+        req.method === "POST" &&
+        req.url === "/api/verify-reset-code"
+      ) {
+        const data =
+          await getBody(req);
+
+        const resetToken =
+          String(
+            data.resetToken || ""
+          ).trim();
+
+        const code =
+          String(
+            data.code || ""
+          ).trim();
+
+        if (
+          !resetToken ||
+          !code
+        ) {
+          sendJSON(res, 400, {
+            error:
+              "Reset token and verification code are required"
+          });
+
+          return;
+        }
+
+        const tokenHash =
+          hashToken(resetToken);
+
+        const result =
+          await pool.query(
+            `
+              SELECT
+                code_hash,
+                expires_at,
+                used_at
+              FROM password_reset_tokens
+              WHERE token_hash = $1
+            `,
+            [tokenHash]
+          );
+
+        if (
+          result.rows.length === 0 ||
+          result.rows[0].used_at ||
+          new Date(
+            result.rows[0].expires_at
+          ).getTime() <= Date.now()
+        ) {
+          sendJSON(res, 400, {
+            error:
+              "Invalid or expired verification code"
+          });
+
+          return;
+        }
+
+        const codeMatch =
+          await bcrypt.compare(
+            code,
+            result.rows[0].code_hash
+          );
+
+        if (!codeMatch) {
+          sendJSON(res, 400, {
+            error:
+              "Invalid or expired verification code"
+          });
+
+          return;
+        }
+
+        sendJSON(res, 200, {
+          message:
+            "Code verified successfully",
+          resetToken
+        });
+
+        return;
+      }
+
+      /* ===================================================
+         RESET PASSWORD
+      =================================================== */
+
+      if (
+        req.method === "POST" &&
+        req.url === "/api/reset-password"
+      ) {
+        const data =
+          await getBody(req);
+
+        const resetToken =
+          String(
+            data.resetToken || ""
+          ).trim();
+
+        const newPassword =
+          String(
+            data.newPassword || ""
+          );
+
+        if (
+          !resetToken ||
+          !newPassword
+        ) {
+          sendJSON(res, 400, {
+            error:
+              "Reset token and new password are required"
+          });
+
+          return;
+        }
+
+        if (
+          newPassword.length < 8
+        ) {
+          sendJSON(res, 400, {
+            error:
+              "Password must be at least 8 characters"
+          });
+
+          return;
+        }
+
+        const tokenHash =
+          hashToken(resetToken);
+
+        const result =
+          await pool.query(
+            `
+              SELECT
+                user_id,
+                code_hash,
+                expires_at,
+                used_at
+              FROM password_reset_tokens
+              WHERE token_hash = $1
+            `,
+            [tokenHash]
+          );
+
+        if (
+          result.rows.length === 0 ||
+          result.rows[0].used_at ||
+          new Date(
+            result.rows[0].expires_at
+          ).getTime() <= Date.now()
+        ) {
+          sendJSON(res, 400, {
+            error:
+              "Invalid or expired reset token"
+          });
+
+          return;
+        }
+
+        const passwordHash =
+          await bcrypt.hash(
+            newPassword,
+            12
+          );
+
+        await pool.query(
+          `
+            UPDATE users
+            SET password_hash = $1
+            WHERE id = $2
+          `,
+          [
+            passwordHash,
+            result.rows[0].user_id
+          ]
+        );
+
+        await pool.query(
+          `
+            UPDATE password_reset_tokens
+            SET used_at = NOW()
+            WHERE token_hash = $1
+          `,
+          [tokenHash]
+        );
+
+        /*
+          Invalidate existing login sessions
+          after a successful password reset.
+        */
+
+        await pool.query(
+          `
+            DELETE FROM sessions
+            WHERE user_id = $1
+          `,
+          [result.rows[0].user_id]
+        );
+
+        sendJSON(res, 200, {
+          message:
+            "Password reset successfully. Please log in again."
+        });
+
+        return;
+      }
+
+      /* ===================================================
+         UNKNOWN API ROUTE
+      =================================================== */
+
+      if (
+        req.url.startsWith("/api/")
+      ) {
+        sendJSON(res, 404, {
+          error:
+            "API endpoint not found"
+        });
+
+        return;
+      }
+
+      /* ===================================================
+         STATIC FILES
+      =================================================== */
+
+      let filePath =
+        req.url.split("?")[0];
+
+      if (
+        filePath === "/" ||
+        filePath === ""
+      ) {
+        filePath = "/index.html";
+      }
+
+      /*
+        Prevent path traversal.
+      */
+
+      const publicRoot =
+        path.join(
+          __dirname,
+          "public"
+        );
+
+      const requestedPath =
+        path.normalize(
+          path.join(
+            publicRoot,
+            filePath
+          )
+        );
+
+      if (
+        !requestedPath.startsWith(
+          publicRoot
+        )
+      ) {
+        sendJSON(res, 403, {
+          error: "Forbidden"
+        });
+
+        return;
+      }
+
+      fs.readFile(
+        requestedPath,
+        (error, content) => {
+          if (error) {
+            sendJSON(res, 404, {
+              error:
+                "File not found"
+            });
+
+            return;
+          }
+
+          const ext =
+            path.extname(
+              requestedPath
+            ).toLowerCase();
+
+          const contentTypes = {
+            ".html":
+              "text/html; charset=utf-8",
+            ".css":
+              "text/css; charset=utf-8",
+            ".js":
+              "application/javascript; charset=utf-8",
+            ".json":
+              "application/json; charset=utf-8",
+            ".png":
+              "image/png",
+            ".jpg":
+              "image/jpeg",
+            ".jpeg":
+              "image/jpeg",
+            ".svg":
+              "image/svg+xml",
+            ".webp":
+              "image/webp",
+            ".ico":
+              "image/x-icon"
+          };
+
+          res.writeHead(200, {
+            "Content-Type":
+              contentTypes[ext] ||
+              "application/octet-stream"
+          });
+
+          res.end(content);
+        }
+      );
+
+      return;
+
+    } catch (error) {
+      console.error(
+        "SERVER ERROR:",
+        error
+      );
+
+      if (!res.headersSent) {
+        sendJSON(res, 500, {
+          error:
+            "Internal server error"
+        });
+      }
+    }
+  }
+);
+
+/* =========================================================
+   START SERVER
+========================================================= */
+
+async function startServer() {
+  try {
+    await initDatabase();
+
+    server.listen(
+      PORT,
+      "0.0.0.0",
+      () => {
+        console.log(
+          `NumberHub backend running on port ${PORT}`
+        );
+
+        console.log(
+          `SMSPool configured: ${Boolean(
+            SMSPOOL_API_KEY
+          )}`
+        );
+      }
+    );
+  } catch (error) {
+    console.error(
+      "FAILED TO START SERVER:",
+      error
+    );
+
+    process.exit(1);
+  }
+}
+
+startServer();
