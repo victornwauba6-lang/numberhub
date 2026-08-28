@@ -4,32 +4,31 @@ const path = require("path");
 const crypto = require("crypto");
 const { Pool } = require("pg");
 const bcrypt = require("bcryptjs");
-const nodemailer = require("nodemailer");
-
-const mailTransporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
-  requireTLS: true,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_APP_PASSWORD
-  }
-});
-
 async function sendPasswordResetEmail(to, code) {
-  await mailTransporter.sendMail({
-    from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
-    to,
-    subject: "NumberHub Password Reset Code",
-    text: `Your NumberHub password reset code is: ${code}
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+      to: [to],
+      subject: "NumberHub Password Reset Code",
+      text: `Your NumberHub password reset code is: ${code}
 
 This code expires in 10 minutes. If you did not request a password reset, you can ignore this email.`,
-    html: `<p>Your NumberHub password reset code is:</p>
-           <h2>${code}</h2>
-           <p>This code expires in 10 minutes.</p>
-           <p>If you did not request a password reset, you can ignore this email.</p>`
+      html: `<p>Your NumberHub password reset code is:</p>
+             <h2>${code}</h2>
+             <p>This code expires in 10 minutes.</p>
+             <p>If you did not request a password reset, you can ignore this email.</p>`
+    })
   });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Resend API error ${response.status}: ${errorText}`);
+  }
 }
 
 const PORT = process.env.PORT || 3001;
