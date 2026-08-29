@@ -299,24 +299,82 @@ box.appendChild(card);
 });
 }
 
-function buy(service,provider,price){
-const walletElement = document.querySelector(".wallet strong");
-const walletBalance = walletElement
-  ? Number(walletElement.textContent.replace(/[^0-9.-]/g,""))
-  : 0;
+async function buy(service, provider, price) {
+  const walletElement = document.querySelector(".wallet strong");
 
-document.getElementById("modalTitle").textContent="Confirm Purchase";
-document.getElementById("modalText").innerHTML=
-"Service: <b>"+service+"</b><br>"+
-"Provider: <b>"+provider+"</b><br>"+
-"Price: <b>"+money(price)+"</b><br><br>"+
-"Wallet balance: <b>₦"+walletBalance.toFixed(2)+"</b><br><br>"+
-"<div style='padding:12px;border-radius:8px;background:#fff7ed;color:#9a3412'>"+
-"Real number purchasing will be enabled after the authorized number provider is connected."+
-"</div>";
+  const walletBalance = walletElement
+    ? Number(walletElement.textContent.replace(/[^0-9.-]/g, ""))
+    : 0;
 
-document.getElementById("modal").classList.add("show");
-}
+  document.getElementById("modalTitle").textContent =
+    "Confirm Purchase";
+
+  document.getElementById("modalText").innerHTML =
+    "Service: <b>" + service + "</b><br>" +
+    "Provider: <b>" + provider + "</b><br>" +
+    "Price: <b>" + money(price) + "</b><br><br>" +
+    "Wallet balance: <b>₦" + walletBalance.toFixed(2) + "</b>";
+
+  const confirmButton =
+    document.querySelector("#modal .confirm");
+
+  confirmButton.textContent = "Confirm Purchase";
+
+  confirmButton.onclick = async function () {
+    confirmButton.disabled = true;
+    confirmButton.textContent = "Processing...";
+
+    try {
+      const response = await fetch(
+        "https://numberhub.onrender.com/api/numbers/purchase",
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            country: "US",
+            service: service,
+            provider: provider,
+            price: price
+          })
+        }
+      );
+
+      const data = await response.json();
+
+      document.getElementById("modalTitle").textContent =
+        response.ok
+          ? "Purchase Successful"
+          : "Purchase Failed";
+
+      document.getElementById("modalText").innerHTML =
+        "<b>" +
+        (data.error || data.message || "Purchase completed.") +
+        "</b>";
+
+      confirmButton.disabled = false;
+      confirmButton.textContent = "Close";
+      confirmButton.onclick = closeModal;
+
+    } catch (error) {
+      console.error(error);
+
+      document.getElementById("modalTitle").textContent =
+        "Connection Error";
+
+      document.getElementById("modalText").textContent =
+        "Could not connect to the purchase server.";
+
+      confirmButton.disabled = false;
+      confirmButton.textContent = "Close";
+      confirmButton.onclick = closeModal;
+    }
+  };
+
+  document.getElementById("modal").classList.add("show");
+  }
 
 function fund(){
 document.getElementById("modalTitle").textContent="Fund Wallet";
