@@ -1170,10 +1170,8 @@ if (
 
   if (!user) {
     sendJSON(res, 401, {
-      error:
-        "Not authenticated"
+      error: "Not authenticated"
     });
-
     return;
   }
 
@@ -1181,19 +1179,13 @@ if (
     await getBody(req);
 
   const country =
-    String(
-      data.country || ""
-    ).trim();
+    String(data.country || "").trim();
 
   const service =
-    String(
-      data.service || ""
-    ).trim();
+    String(data.service || "").trim();
 
   const provider =
-    String(
-      data.provider || ""
-    ).trim();
+    String(data.provider || "").trim();
 
   const price =
     Number(data.price);
@@ -1205,120 +1197,43 @@ if (
     price <= 0
   ) {
     sendJSON(res, 400, {
-      error:
-        "Invalid purchase details"
+      error: "Invalid purchase details"
     });
-
     return;
   }
 
-
-
-if (!SMSPOOL_API_KEY) {
-  sendJSON(res, 503, {
-    error:
-      "Number provider is not configured"
-  });
-
-  return;
-}
-
-  let smsPoolOrder;
-
-  try {
-    smsPoolOrder =
-      await smsPoolRequest(
-        "/purchase/sms",
-        {
-          country,
-          service
-        }
-      );
-  } catch (error) {
-    console.error(
-      "SMSPOOL PURCHASE ERROR:",
-      error
-    );
-
-    sendJSON(res, 502, {
+  if (!SMSPOOL_API_KEY) {
+    sendJSON(res, 503, {
       error:
-        "Unable to contact the number provider. Please try again."
+        "Number provider is not configured"
     });
-
-    return;
-  }
-
-  const providerResponse =
-    normalizeProviderResponse(
-      smsPoolOrder
-    );
-
-  const success =
-    String(
-      providerResponse.success
-    ) === "1";
-
-  if (!success) {
-    sendJSON(res, 400, {
-      error:
-        providerResponse.message ||
-        providerResponse.msg ||
-        "SMSPool could not provide a number."
-    });
-
-    return;
-  }
-
-  const orderId =
-    getSMSPoolOrderId(
-      providerResponse
-    );
-
-  const phoneNumber =
-    getSMSPoolPhoneNumber(
-      providerResponse
-    );
-
-  const providerCost =
-    getSMSPoolCost(
-      providerResponse
-    );
-
-  if (!orderId || !phoneNumber) {
-    sendJSON(res, 502, {
-      error:
-        "SMSPool returned an incomplete purchase response."
-    });
-
-    return;
-  }
-
-  if (Number(user.wallet) < price) {
-    sendJSON(res, 400, {
-      error:
-        "Insufficient wallet balance"
-    });
-
     return;
   }
 
   const reference =
-    createReference("NP");
+    createReference("NUM");
 
   const client =
     await pool.connect();
 
-  try {
-    await client.query(
-      "BEGIN"
-    );
+  let providerOrderId = null;
 
-    const lockedUser =
+  try {
+    /*
+      Lock the user's wallet before
+      checking the balance.
+
+      This prevents two simultaneous
+      purchases from spending the same
+      wallet balance.
+    */
+    await client.query("BEGIN");
+
+    const walletResult =
       await client.query(
         `
           SELECT
-            wallet,
-            purchases
+            wallet
           FROM users
           WHERE id = $1
           FOR UPDATE
@@ -1327,38 +1242,139 @@ if (!SMSPOOL_API_KEY) {
       );
 
     if (
-      lockedUser.rows.length === 0
+      walletResult.rows.length === 0
     ) {
-      await client.query(
-        "ROLLBACK"
-      );
+      await client.query("ROLLBACK");
 
       sendJSON(res, 404, {
-        error:
-          "User not found"
+        error: "User account not found"
       });
-
       return;
     }
 
     const wallet =
       Number(
-        lockedUser.rows[0].wallet || 0
+        walletResult.rows[0].wallet || 0
       );
 
+    /*
+      IMPORTANT:
+      Check wallet BEFORE contacting
+      SMSPool.
+    */
     if (wallet < price) {
-      await client.query(
-        "ROLLBACK"
-      );
+      await client.query("ROLLBACK");
 
       sendJSON(res, 400, {
         error:
           "Insufficient wallet balance"
       });
-
       return;
     }
 
+    /*
+      Wallet is locked and has enough
+      balance, so now request the number.
+    */
+    let smsPoolOrder;
+
+    try {
+      smsPoolOrder =
+        await smsPoolRequest(
+          "/purchase/sms",
+          {
+            country,
+            service
+          }
+        );
+    } catch (error) {
+      console.error(
+        "SMSPOOL PURCHASE ERROR:",
+        error
+      );
+
+      await client.query("ROLLBACK");
+
+      sendJSON(res, 502, {
+        error:
+          "Unable to contact the number provider. Please try again."
+      });
+      return;
+    }
+
+    if (
+      !smsPoolOrder ||
+      String(smsPoolOrder.success) !== "1"
+    ) {
+      await client.query("ROLLBACK");
+
+      sendJSON(res, 400, {
+        error:
+          smsPoolOrder?.message ||
+          "SMSPool could not provide a number."
+      });
+      return;
+    }
+
+    const phoneNumber =
+      smsPoolOrder.phonenumber ||
+      smsPoolOrder.phone_number ||
+      smsPoolOrder.number;
+
+    providerOrderId =
+      smsPoolOrder.orderid ||
+      smsPoolOrder.order_id;
+
+    const providerCost =
+      Number(
+        smsPoolOrder.cost ||
+        smsPoolOrder.price ||
+        0
+      );
+
+    if (
+      !phoneNumber ||
+      !providerOrderId
+    ) {
+      console.error(
+        "INVALID SMSPOOL RESPONSE:",
+        smsPoolOrder
+      );
+
+      /*
+        SMSPool created an order but
+        returned incomplete information.
+        Try to cancel it.
+      */
+      try {
+        if (providerOrderId) {
+          await smsPoolRequest(
+            "/sms/cancel",
+            {
+              orderid:
+                String(providerOrderId)
+            }
+          );
+        }
+      } catch (cancelError) {
+        console.error(
+          "SMSPOOL INVALID ORDER CANCEL ERROR:",
+          cancelError
+        );
+      }
+
+      await client.query("ROLLBACK");
+
+      sendJSON(res, 502, {
+        error:
+          "Provider returned an incomplete order."
+      });
+      return;
+    }
+
+    /*
+      Save the purchase.
+    */
     const purchaseResult =
       await client.query(
         `
@@ -1405,14 +1421,21 @@ if (!SMSPOOL_API_KEY) {
           phoneNumber,
           country,
           service,
-          provider,
+          provider || null,
           price.toFixed(2),
           reference,
-          String(orderId),
-          providerCost
+          String(providerOrderId),
+          Number.isFinite(providerCost)
+            ? providerCost
+            : null
         ]
       );
 
+    /*
+      Deduct the customer's wallet only
+      after SMSPool successfully supplied
+      the number.
+    */
     await client.query(
       `
         UPDATE users
@@ -1427,6 +1450,9 @@ if (!SMSPOOL_API_KEY) {
       ]
     );
 
+    /*
+      Record the successful purchase.
+    */
     await client.query(
       `
         INSERT INTO wallet_transactions
@@ -1458,9 +1484,7 @@ if (!SMSPOOL_API_KEY) {
       ]
     );
 
-    await client.query(
-      "COMMIT"
-    );
+    await client.query("COMMIT");
 
     sendJSON(res, 201, {
       message:
@@ -1472,9 +1496,14 @@ if (!SMSPOOL_API_KEY) {
     return;
 
   } catch (error) {
-    await client.query(
-      "ROLLBACK"
-    );
+    try {
+      await client.query("ROLLBACK");
+    } catch (rollbackError) {
+      console.error(
+        "PURCHASE ROLLBACK ERROR:",
+        rollbackError
+      );
+    }
 
     console.error(
       "PURCHASE DATABASE ERROR:",
@@ -1482,14 +1511,30 @@ if (!SMSPOOL_API_KEY) {
     );
 
     /*
-      The provider order was already created.
-      We deliberately do not pretend the customer
-      was successfully charged if our database failed.
+      If SMSPool created the number but
+      our database operation failed,
+      try to cancel the provider order.
     */
+    if (providerOrderId) {
+      try {
+        await smsPoolRequest(
+          "/sms/cancel",
+          {
+            orderid:
+              String(providerOrderId)
+          }
+        );
+      } catch (cancelError) {
+        console.error(
+          "SMSPOOL ROLLBACK CANCEL ERROR:",
+          cancelError
+        );
+      }
+    }
 
     sendJSON(res, 500, {
       error:
-        "Purchase could not be completed. Please contact support."
+        "Purchase could not be completed. Please try again."
     });
 
     return;
@@ -1497,7 +1542,7 @@ if (!SMSPOOL_API_KEY) {
   } finally {
     client.release();
   }
-       }      if (
+   if (
         req.method === "GET" &&
         req.url === "/api/wallet/transactions"
       ) {
