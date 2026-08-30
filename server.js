@@ -260,7 +260,7 @@ async function sendPasswordResetEmail(to, code) {
     }
   );
 
-    if (!response.ok) {
+  if (!response.ok) {
     const errorText =
       await response.text();
 
@@ -269,6 +269,7 @@ async function sendPasswordResetEmail(to, code) {
     );
   }
 }
+
 
 /* =========================================================
    SESSION / AUTH HELPERS
@@ -448,10 +449,12 @@ async function initDatabase() {
     provider_cost NUMERIC(12,2)
   `);
 
-  console.log(
+    console.log(
     "PostgreSQL database ready"
   );
-     }/* =========================================================
+}
+
+/* =========================================================
    CREATE TABLE INDEXES
 ========================================================= */
 
@@ -554,10 +557,11 @@ function getSMSPoolCost(result) {
 async function startDatabase() {
   await initDatabase();
   await createDatabaseIndexes();
-}/* =========================================================
+}
+
+/* =========================================================
    SERVER
 ========================================================= */
-
 const server = http.createServer(
   async (req, res) => {
     try {
