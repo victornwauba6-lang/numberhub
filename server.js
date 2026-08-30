@@ -208,57 +208,8 @@ function createSessionToken() {
   return crypto
     .randomBytes(32)
     .toString("hex");
-     }/* =========================================================
-   SMSPOOL API
-========================================================= */
+     }
 
-async function smsPoolRequest(endpoint, data = {}) {
-  if (!SMSPOOL_API_KEY) {
-    throw new Error("SMSPOOL_API_KEY is not configured");
-  }
-
-  const form = new URLSearchParams();
-
-  form.append("key", SMSPOOL_API_KEY);
-
-  for (const [key, value] of Object.entries(data)) {
-    if (value !== undefined && value !== null) {
-      form.append(key, String(value));
-    }
-  }
-
-  const response = await fetch(
-    `https://api.smspool.net${endpoint}`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type":
-          "application/x-www-form-urlencoded"
-      },
-      body: form.toString()
-    }
-  );
-
-  const text = await response.text();
-
-  let result;
-
-  try {
-    result = JSON.parse(text);
-  } catch {
-    throw new Error(
-      `SMSPool returned invalid JSON: ${text}`
-    );
-  }
-
-  if (!response.ok) {
-    throw new Error(
-      `SMSPool HTTP ${response.status}: ${JSON.stringify(result)}`
-    );
-  }
-
-  return result;
-}
 
 /* =========================================================
    PASSWORD RESET EMAIL
