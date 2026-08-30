@@ -36,10 +36,7 @@ if (SMSPOOL_API_KEY) {
    SMSPOOL API HELPER
 ========================================================= */
 
-async function smsPoolRequest(
-  endpoint,
-  data = {}
-) {
+async function smsPoolRequest(endpoint, data = {}) {
   if (!SMSPOOL_API_KEY) {
     throw new Error(
       "SMSPOOL_API_KEY is not configured"
@@ -435,37 +432,7 @@ function sendJSON(res, status, data) {
   res.end(JSON.stringify(data));
 }
 
-function getBody(req) {
-  return new Promise((resolve, reject) => {
-    let body = "";
 
-    req.on("data", chunk => {
-      body += chunk;
-
-      if (body.length > 1024 * 1024) {
-        reject(
-          new Error("Request too large")
-        );
-
-        req.destroy();
-      }
-    });
-
-    req.on("end", () => {
-      try {
-        resolve(
-          JSON.parse(body || "{}")
-        );
-      } catch {
-        reject(
-          new Error("Invalid JSON")
-        );
-      }
-    });
-
-    req.on("error", reject);
-  });
-}
 
 /* =========================================================
    DATABASE INITIALIZATION
