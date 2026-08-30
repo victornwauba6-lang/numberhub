@@ -208,8 +208,7 @@ function createSessionToken() {
   return crypto
     .randomBytes(32)
     .toString("hex");
-     }
-
+}
 
 /* =========================================================
    PASSWORD RESET EMAIL
@@ -261,7 +260,7 @@ async function sendPasswordResetEmail(to, code) {
     }
   );
 
-  if (!response.ok) {
+    if (!response.ok) {
     const errorText =
       await response.text();
 
@@ -269,7 +268,9 @@ async function sendPasswordResetEmail(to, code) {
       `Resend API error ${response.status}: ${errorText}`
     );
   }
-     }/* =========================================================
+}
+
+/* =========================================================
    SESSION / AUTH HELPERS
 ========================================================= */
 
@@ -362,32 +363,14 @@ function createResetCode() {
     crypto.randomInt(
       100000,
       1000000
-    )
+        )
   );
-   }/* =========================================================
-   HTTP HELPERS
-========================================================= */
-
-function sendJSON(res, status, data) {
-  res.writeHead(status, {
-    "Content-Type":
-      "application/json; charset=utf-8",
-    "Access-Control-Allow-Origin":
-      FRONTEND_ORIGIN,
-    "Access-Control-Allow-Credentials":
-      "true",
-    "Cache-Control":
-      "no-store"
-  });
-
-  res.end(JSON.stringify(data));
 }
-
-
 
 /* =========================================================
    DATABASE INITIALIZATION
 ========================================================= */
+
 
 async function initDatabase() {
   await pool.query(`
