@@ -132,7 +132,7 @@ h1{margin:5px 0;font-size:30px}
 <button class="nav">👤 My Profile</button>
 </aside>
 
-<main class="main" id="dashboardMain">
+<main class="main" id="dashboardMain" style="display:none;">
 <section id="transactionHistorySection" class="panel" style="display:none;margin-bottom:20px">
   <div class="green">ACCOUNT</div>
   <h2>Transaction History</h2>
@@ -545,9 +545,35 @@ async function loadCurrentUser() {
       return true;
     }
 
+    // User is not authenticated — show login screen
+    const app = document.querySelector(".app");
+    if (app) app.style.setProperty("display", "none", "important");
+
+    const dashboard = document.getElementById("dashboardMain");
+    if (dashboard) dashboard.style.setProperty("display", "none", "important");
+
+    const authScreen = document.getElementById("authScreen");
+    if (authScreen) authScreen.style.display = "block";
+
+    const loginPanel = document.getElementById("loginForm")?.closest(".panel");
+    if (loginPanel) loginPanel.style.display = "block";
+
     return false;
   } catch (err) {
     console.error("Could not load current user:", err);
+
+    const app = document.querySelector(".app");
+    if (app) app.style.setProperty("display", "none", "important");
+
+    const dashboard = document.getElementById("dashboardMain");
+    if (dashboard) dashboard.style.setProperty("display", "none", "important");
+
+    const authScreen = document.getElementById("authScreen");
+    if (authScreen) authScreen.style.display = "block";
+
+    const loginPanel = document.getElementById("loginForm")?.closest(".panel");
+    if (loginPanel) loginPanel.style.display = "block";
+
     return false;
   }
 }
