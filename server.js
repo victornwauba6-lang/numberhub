@@ -850,6 +850,37 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (req.method === "POST" && req.url === "/api/logout") {
+      const cookies = req.headers.cookie || "";
+      const match = cookies.match(/(?:^|;\s*)session=([^;]+)/);
+
+      if (match) {
+        const sessionToken = match[1];
+        const tokenHash = crypto
+          .createHash("sha256")
+          .update(sessionToken)
+          .digest("hex");
+
+        await pool.query(
+          `DELETE FROM sessions WHERE token_hash = $1`,
+          [tokenHash]
+        );
+      }
+
+      res.writeHead(200, {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "http://localhost:3000",
+        "Access-Control-Allow-Credentials": "true",
+        "Set-Cookie": "session=; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=0"
+      });
+
+      res.end(JSON.stringify({
+        message: "Logout successful"
+      }));
+
+      return;
+    }
+
     if (
       req.method === "GET" &&
       (req.url === "/" || req.url === "/index.html")
