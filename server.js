@@ -773,6 +773,82 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
+    if (req.method === "POST" && /^\/api\/admin\/deposits\/\d+\/reject$/.test(req.url)) {
+      const admin = await getAdminUserId(req);
+
+      if (admin.error) {
+        sendJSON(res, admin.status, { error: admin.error });
+        return;
+      }
+
+      const depositId = Number(req.url.split("/")[4]);
+
+      const client = await pool.connect();
+
+      try {
+        await client.query("BEGIN");
+
+        const depositResult = await client.query(
+          `SELECT id, user_id, amount, status, reference
+           FROM wallet_transactions
+           WHERE id = $1
+             AND type = 'deposit'
+           FOR UPDATE`,
+          [depositId]
+        );
+
+        if (depositResult.rows.length === 0) {
+          await client.query("ROLLBACK");
+          sendJSON(res, 404, { error: "Deposit not found" });
+          return;
+        }
+
+        const deposit = depositResult.rows[0];
+
+        if (deposit.status !== "pending") {
+          await client.query("ROLLBACK");
+          sendJSON(res, 409, {
+            error: "Deposit has already been processed",
+            status: deposit.status
+          });
+          return;
+        }
+
+        await client.query(
+          `UPDATE wallet_transactions
+           SET status = 'failed',
+               description = $2
+           WHERE id = $1`,
+          [
+            deposit.id,
+            "Wallet funding rejected by admin"
+          ]
+        );
+
+        await client.query("COMMIT");
+
+        sendJSON(res, 200, {
+          message: "Deposit rejected",
+          transaction: {
+            id: deposit.id,
+            reference: deposit.reference,
+            amount: deposit.amount,
+            status: "failed"
+          }
+        });
+
+        return;
+      } catch (error) {
+        try {
+          await client.query("ROLLBACK");
+        } catch (_) {}
+
+        throw error;
+      } finally {
+        client.release();
+      }
+    }
+
     if (req.method === "GET" && req.url === "/api/wallet/transactions") {
       const cookies = String(req.headers.cookie || "");
       const match = cookies.match(/(?:^|;\\s*)session=([^;]+)/);

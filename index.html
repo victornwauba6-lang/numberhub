@@ -135,6 +135,7 @@ window.addEventListener("error", function(e) {
 <button class="nav" onclick="window.open('https://t.me/Numberhubsupport','_blank')">💬 Telegram Support</button>
 <button class="nav" onclick="showNumbersHistory()">🧾 Numbers History</button>
 <button class="nav" onclick="showTransactionHistory()">💳 Transaction History</button>
+<button class="nav" id="adminPanelNav" type="button" onclick="openAdminPanel(); toggleSidebar()" style="display:none;">🛡️ Admin Panel</button>
 <button class="nav" type="button" onclick="logoutNumberHub()">🚪 Logout</button>
 <div class="title">RESELLER</div>
 <button class="nav">🔌 Reseller Hub</button>
@@ -471,6 +472,13 @@ window.addEventListener("error", function(e) {
 </div>
 
 <main class="main" id="dashboardMain" style="display:none;">
+<section id="adminPanelSection" class="panel" style="display:none;margin-bottom:20px">
+  <div class="green">ADMIN</div>
+  <h2>Wallet Funding Requests</h2>
+  <p id="adminDepositsMessage">Loading pending funding requests...</p>
+  <div id="adminDepositsList"></div>
+</section>
+
 <section id="transactionHistorySection" class="panel" style="display:none;margin-bottom:20px">
   <div class="green">ACCOUNT</div>
   <h2>Transaction History</h2>
@@ -742,8 +750,8 @@ document.getElementById("modalText").innerHTML=
 '<div id="kudaDetails" style="display:none;margin-top:12px;padding:14px;border:1px solid #ddd;border-radius:10px;background:#f8fafc">'+
 '<b>🏦 Kuda Bank Transfer</b><br><br>'+
 'Bank: <b>Kuda Microfinance Bank</b><br>'+
-'Account Name: <b>NWAUBA, CHINGOZIRIM VICTOR</b><br>'+
-'Account Number: <b>2085111808</b>'+
+'Account Name: <b>NUMBERBRIDGE TECHNOLOGIES</b><br>'+ 
+'Account Number: <b>3004234965</b>'+ 
 '</div>'+
 '<button type="button" class="confirm" onclick="startFunding()">Continue</button>'+
 '<br><br><small>Payment processing is not connected yet. No real payment will be charged.</small>';
@@ -979,6 +987,196 @@ function closeFAQs() {
   });
 }
 
+function closeAdminPanel() {
+  const admin = document.getElementById("adminPanelSection");
+  const dashboard = document.getElementById("dashboardMain");
+
+  if (admin) admin.style.display = "none";
+
+  if (dashboard) {
+    dashboard.style.setProperty("display", "block", "important");
+  }
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
+}
+
+async function openAdminPanel() {
+  const admin = document.getElementById("adminPanelSection");
+  const dashboard = document.getElementById("dashboardMain");
+  const message = document.getElementById("adminDepositsMessage");
+  const list = document.getElementById("adminDepositsList");
+
+  if (!admin) {
+    alert("Admin Panel could not be found.");
+    return;
+  }
+
+  if (dashboard) {
+    dashboard.style.setProperty("display", "none", "important");
+  }
+
+  admin.style.setProperty("display", "block", "important");
+
+  if (message) {
+    message.textContent = "Loading pending funding requests...";
+  }
+
+  if (list) {
+    list.innerHTML = "";
+  }
+
+  await loadAdminDeposits();
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
+}
+
+async function loadAdminDeposits() {
+  const message = document.getElementById("adminDepositsMessage");
+  const list = document.getElementById("adminDepositsList");
+
+  try {
+    const r = await fetch("https://numberhub.onrender.com/api/admin/deposits", {
+      method: "GET",
+      credentials: "include"
+    });
+
+    const data = await r.json().catch(() => ({}));
+
+    if (!r.ok) {
+      throw new Error(data.error || "Could not load funding requests.");
+    }
+
+    const deposits = Array.isArray(data.deposits) ? data.deposits : [];
+
+    if (message) {
+      message.textContent =
+        deposits.length === 0
+          ? "No pending wallet funding requests."
+          : deposits.length + " pending funding request(s).";
+    }
+
+    if (!list) return;
+
+    list.innerHTML = "";
+
+    deposits.forEach((deposit) => {
+      const card = document.createElement("div");
+
+      card.style.cssText =
+        "border:1px solid #e2e8f0;border-radius:14px;padding:16px;margin-top:12px;background:#fff;";
+
+      const amount = Number(deposit.amount || 0).toFixed(2);
+
+      card.innerHTML = `
+        <div style="font-weight:700;font-size:18px;margin-bottom:8px;">
+          ₦${amount}
+        </div>
+
+        <div style="line-height:1.7;color:#475569;">
+          <div><strong>Customer:</strong> ${escapeHTML(deposit.name || "")}</div>
+          <div><strong>Username:</strong> ${escapeHTML(deposit.username || "Not set")}</div>
+          <div><strong>Email:</strong> ${escapeHTML(deposit.email || "")}</div>
+          <div><strong>Method:</strong> ${escapeHTML(deposit.method || "")}</div>
+          <div><strong>Reference:</strong> ${escapeHTML(deposit.reference || "")}</div>
+          <div><strong>Status:</strong> ${escapeHTML(deposit.status || "")}</div>
+          <div><strong>Date:</strong> ${escapeHTML(deposit.created_at || "")}</div>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;">
+          <button
+            type="button"
+            onclick="approveAdminDeposit(${Number(deposit.id)})"
+            style="border:0;border-radius:10px;padding:11px 16px;background:#16a34a;color:#fff;font-weight:700;cursor:pointer;"
+          >
+            Approve
+          </button>
+
+          <button
+            type="button"
+            onclick="rejectAdminDeposit(${Number(deposit.id)})"
+            style="border:0;border-radius:10px;padding:11px 16px;background:#dc2626;color:#fff;font-weight:700;cursor:pointer;"
+          >
+            Reject
+          </button>
+        </div>
+      `;
+
+      list.appendChild(card);
+    });
+  } catch (error) {
+    if (message) {
+      message.textContent =
+        error.message || "Could not load funding requests.";
+    }
+  }
+}
+
+async function approveAdminDeposit(id) {
+  if (!confirm("Approve this deposit and credit the customer's wallet?")) {
+    return;
+  }
+
+  try {
+    const r = await fetch(
+      "https://numberhub.onrender.com/api/admin/deposits/" + encodeURIComponent(id) + "/approve",
+      {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json"
+        }
+      }
+    );
+
+    const data = await r.json().catch(() => ({}));
+
+    if (!r.ok) {
+      throw new Error(data.error || "Could not approve deposit.");
+    }
+
+    alert("Deposit approved and wallet credited.");
+    await loadAdminDeposits();
+  } catch (error) {
+    alert(error.message || "Could not approve deposit.");
+  }
+}
+
+async function rejectAdminDeposit(id) {
+  if (!confirm("Reject this deposit without crediting the customer's wallet?")) {
+    return;
+  }
+
+  try {
+    const r = await fetch(
+      "https://numberhub.onrender.com/api/admin/deposits/" + encodeURIComponent(id) + "/reject",
+      {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json"
+        }
+      }
+    );
+
+    const data = await r.json().catch(() => ({}));
+
+    if (!r.ok) {
+      throw new Error(data.error || "Could not reject deposit.");
+    }
+
+    alert("Deposit rejected.");
+    await loadAdminDeposits();
+  } catch (error) {
+    alert(error.message || "Could not reject deposit.");
+  }
+}
+
 function toggleFAQ(index) {
   const answer = document.getElementById("faqAnswer" + index);
   const icon = document.getElementById("faqIcon" + index);
@@ -1187,6 +1385,11 @@ function applyUserToDashboard(user) {
   const signupForm = document.getElementById("signupForm");
   if (signupForm) {
     signupForm.closest(".panel").style.display = "none";
+  }
+
+  const adminPanelNav = document.getElementById("adminPanelNav");
+  if (adminPanelNav) {
+    adminPanelNav.style.display = user.is_admin === true ? "flex" : "none";
   }
 }
 
