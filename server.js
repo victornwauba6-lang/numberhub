@@ -37,26 +37,166 @@ const NUMBERHUB_PRICES = {
 
 
 const FIVESIM_COUNTRY_MAP = {
-  "United States": "usa",
-  "United Kingdom": "england",
-  "Canada": "canada",
-  "Nigeria": "nigeria",
-  "Australia": "australia",
-  "Germany": "germany",
-  "France": "france",
-  "Spain": "spain",
-  "Italy": "italy",
-  "Netherlands": "netherlands",
-  "Belgium": "belgium",
-  "Sweden": "sweden",
-  "Norway": "norway",
-  "Denmark": "denmark",
-  "Finland": "finland",
-  "Poland": "poland",
-  "Portugal": "portugal",
-  "Ireland": "ireland",
-  "Austria": "austria",
-  "Switzerland": "switzerland"
+  'Afghanistan': "afghanistan",
+  'Albania': "albania",
+  'Algeria': "algeria",
+  'Angola': "angola",
+  'Argentina': "argentina",
+  'Armenia': "armenia",
+  'Australia': "australia",
+  'Austria': "austria",
+  'Azerbaijan': "azerbaijan",
+  'Bahamas': "bahamas",
+  'Bahrain': "bahrain",
+  'Bangladesh': "bangladesh",
+  'Barbados': "barbados",
+  'Belarus': "belarus",
+  'Belgium': "belgium",
+  'Belize': "belize",
+  'Benin': "benin",
+  'Bhutan': "bhutan",
+  'Bolivia': "bolivia",
+  'Bosnia and Herzegovina': "bosnia",
+  'Botswana': "botswana",
+  'Brazil': "brazil",
+  'Brunei': "brunei",
+  'Bulgaria': "bulgaria",
+  'Burkina Faso': "burkina-faso",
+  'Burundi': "burundi",
+  'Cambodia': "cambodia",
+  'Cameroon': "cameroon",
+  'Canada': "canada",
+  'Cape Verde': "cape-verde",
+  'Central African Republic': "central-african-republic",
+  'Chad': "chad",
+  'Chile': "chile",
+  'China': "china",
+  'Colombia': "colombia",
+  'Congo': "congo",
+  'Costa Rica': "costa-rica",
+  'Croatia': "croatia",
+  'Cyprus': "cyprus",
+  'Czech Republic': "czech-republic",
+  'Denmark': "denmark",
+  'Djibouti': "djibouti",
+  'Dominican Republic': "dominican-republic",
+  'Ecuador': "ecuador",
+  'Egypt': "egypt",
+  'El Salvador': "el-salvador",
+  'Estonia': "estonia",
+  'Ethiopia': "ethiopia",
+  'Finland': "finland",
+  'France': "france",
+  'Georgia': "georgia",
+  'Germany': "germany",
+  'Ghana': "ghana",
+  'Greece': "greece",
+  'Guatemala': "guatemala",
+  'Guinea': "guinea",
+  'Haiti': "haiti",
+  'Honduras': "honduras",
+  'Hong Kong': "hong-kong",
+  'Hungary': "hungary",
+  'Iceland': "iceland",
+  'India': "india",
+  'Indonesia': "indonesia",
+  'Iran': "iran",
+  'Iraq': "iraq",
+  'Ireland': "ireland",
+  'Israel': "israel",
+  'Italy': "italy",
+  'Ivory Coast': "ivory-coast",
+  'Jamaica': "jamaica",
+  'Japan': "japan",
+  'Jordan': "jordan",
+  'Kazakhstan': "kazakhstan",
+  'Kenya': "kenya",
+  'Kuwait': "kuwait",
+  'Kyrgyzstan': "kyrgyzstan",
+  'Laos': "laos",
+  'Latvia': "latvia",
+  'Lebanon': "lebanon",
+  'Lesotho': "lesotho",
+  'Liberia': "liberia",
+  'Libya': "libya",
+  'Lithuania': "lithuania",
+  'Luxembourg': "luxembourg",
+  'Madagascar': "madagascar",
+  'Malawi': "malawi",
+  'Malaysia': "malaysia",
+  'Maldives': "maldives",
+  'Mali': "mali",
+  'Malta': "malta",
+  'Mauritania': "mauritania",
+  'Mauritius': "mauritius",
+  'Mexico': "mexico",
+  'Moldova': "moldova",
+  'Monaco': "monaco",
+  'Mongolia': "mongolia",
+  'Montenegro': "montenegro",
+  'Morocco': "morocco",
+  'Mozambique': "mozambique",
+  'Myanmar': "myanmar",
+  'Namibia': "namibia",
+  'Nepal': "nepal",
+  'Netherlands': "netherlands",
+  'New Zealand': "new-zealand",
+  'Nicaragua': "nicaragua",
+  'Niger': "niger",
+  'Nigeria': "nigeria",
+  'North Macedonia': "north-macedonia",
+  'Norway': "norway",
+  'Oman': "oman",
+  'Pakistan': "pakistan",
+  'Panama': "panama",
+  'Papua New Guinea': "papua-new-guinea",
+  'Paraguay': "paraguay",
+  'Peru': "peru",
+  'Philippines': "philippines",
+  'Poland': "poland",
+  'Portugal': "portugal",
+  'Puerto Rico': "puerto-rico",
+  'Qatar': "qatar",
+  'Romania': "romania",
+  'Russia': "russia",
+  'Rwanda': "rwanda",
+  'Saudi Arabia': "saudi-arabia",
+  'Senegal': "senegal",
+  'Serbia': "serbia",
+  'Seychelles': "seychelles",
+  'Sierra Leone': "sierra-leone",
+  'Singapore': "singapore",
+  'Slovakia': "slovakia",
+  'Slovenia': "slovenia",
+  'South Africa': "south-africa",
+  'South Korea': "south-korea",
+  'Spain': "spain",
+  'Sri Lanka': "sri-lanka",
+  'Sudan': "sudan",
+  'Suriname': "suriname",
+  'Sweden': "sweden",
+  'Switzerland': "switzerland",
+  'Taiwan': "taiwan",
+  'Tajikistan': "tajikistan",
+  'Tanzania': "tanzania",
+  'Thailand': "thailand",
+  'Togo': "togo",
+  'Trinidad and Tobago': "trinidad-and-tobago",
+  'Tunisia': "tunisia",
+  'Turkey': "turkey",
+  'Turkmenistan': "turkmenistan",
+  'Uganda': "uganda",
+  'Ukraine': "ukraine",
+  'United Arab Emirates': "united-arab-emirates",
+  'United Kingdom': "england",
+  'United States': "usa",
+  'Uruguay': "uruguay",
+  'Uzbekistan': "uzbekistan",
+  'Venezuela': "venezuela",
+  'Vietnam': "vietnam",
+  'Yemen': "yemen",
+  'Zambia': "zambia",
+  'Zimbabwe': "zimbabwe"
 };
 
 function fiveSimCountryCode(country) {
@@ -280,6 +420,7 @@ async function initDatabase() {
       price NUMERIC(12,2) NOT NULL CHECK (price > 0),
       status TEXT NOT NULL DEFAULT 'active',
       sms_code TEXT,
+      supplier_id TEXT,
       reference TEXT UNIQUE NOT NULL,
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
@@ -289,6 +430,11 @@ async function initDatabase() {
 
     CREATE INDEX IF NOT EXISTS number_purchases_created_at_idx
       ON number_purchases(created_at);
+  `);
+
+  await pool.query(`
+    ALTER TABLE number_purchases
+    ADD COLUMN IF NOT EXISTS supplier_id TEXT
   `);
 
   console.log("PostgreSQL database ready");
@@ -528,6 +674,122 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
+    if (req.method === "GET" && req.url.startsWith("/api/numbers/sms/")) {
+      const cookies = String(req.headers.cookie || "");
+      const match = cookies.match(/(?:^|;\s*)session=([^;]+)/);
+
+      if (!match) {
+        sendJSON(res, 401, { error: "Not authenticated" });
+        return;
+      }
+
+      const tokenHash = crypto.createHash("sha256")
+        .update(match[1])
+        .digest("hex");
+
+      const sessionResult = await pool.query(
+        `SELECT user_id
+         FROM sessions
+         WHERE token_hash = $1
+           AND expires_at > NOW()`,
+        [tokenHash]
+      );
+
+      if (sessionResult.rows.length === 0) {
+        sendJSON(res, 401, { error: "Session expired or invalid" });
+        return;
+      }
+
+      const userId = sessionResult.rows[0].user_id;
+      const supplierId = decodeURIComponent(
+        req.url.substring("/api/numbers/sms/".length).split("?")[0]
+      ).trim();
+
+      if (!supplierId) {
+        sendJSON(res, 400, { error: "Missing activation ID" });
+        return;
+      }
+
+      const purchaseResult = await pool.query(
+        `SELECT id, phone_number, country, service, status, sms_code
+         FROM number_purchases
+         WHERE user_id = $1
+           AND supplier_id = $2
+         ORDER BY created_at DESC
+         LIMIT 1`,
+        [userId, supplierId]
+      );
+
+      if (purchaseResult.rows.length === 0) {
+        sendJSON(res, 404, { error: "Purchase not found" });
+        return;
+      }
+
+      try {
+        const activation = await fiveSimRequest(
+          `/user/check/${encodeURIComponent(supplierId)}`
+        );
+
+        const smsList = Array.isArray(activation.sms)
+          ? activation.sms
+          : [];
+
+        let smsCode = "";
+
+        if (smsList.length) {
+          const latest = smsList[smsList.length - 1];
+
+          smsCode = String(
+            latest.code ||
+            latest.sms ||
+            latest.text ||
+            ""
+          ).trim();
+        }
+
+        const status = String(
+          activation.status ||
+          purchaseResult.rows[0].status ||
+          "active"
+        ).trim();
+
+        if (smsCode) {
+          await pool.query(
+            `UPDATE number_purchases
+             SET sms_code = $1,
+                 status = $2
+             WHERE id = $3
+               AND user_id = $4`,
+            [smsCode, status, purchaseResult.rows[0].id, userId]
+          );
+        } else {
+          await pool.query(
+            `UPDATE number_purchases
+             SET status = $1
+             WHERE id = $2
+               AND user_id = $3`,
+            [status, purchaseResult.rows[0].id, userId]
+          );
+        }
+
+        sendJSON(res, 200, {
+          status,
+          smsCode,
+          phoneNumber: purchaseResult.rows[0].phone_number,
+          activationId: supplierId
+        });
+
+      } catch (error) {
+        console.error("5SIM SMS check error:", error);
+
+        sendJSON(res, 502, {
+          error: error.message || "Unable to check OTP"
+        });
+      }
+
+      return;
+    }
+
     if (req.method === "POST" && req.url === "/api/numbers/purchase") {
       const cookies = String(req.headers.cookie || "");
       const match = cookies.match(/(?:^|;\s*)session=([^;]+)/);
@@ -733,8 +995,8 @@ const server = http.createServer(async (req, res) => {
           const purchaseResult = await dbClient.query(
             `INSERT INTO number_purchases
               (user_id, phone_number, country, service, provider,
-               price, status, reference)
-             VALUES ($1, $2, $3, $4, $5, $6, 'active', $7)
+               price, status, supplier_id, reference)
+             VALUES ($1, $2, $3, $4, $5, $6, 'active', $7, $8)
              RETURNING id, phone_number, country, service, provider,
                        price, status, reference, created_at`,
             [
@@ -744,6 +1006,7 @@ const server = http.createServer(async (req, res) => {
               service,
               provider || option.operator,
               price.toFixed(2),
+              supplierId,
               reference
             ]
           );

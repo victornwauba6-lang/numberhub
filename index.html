@@ -1422,35 +1422,48 @@ function showCountryServiceInterface(type, serverName) {
         Select Country
       </label>
 
-      <input
-        id="countrySearch"
-        type="search"
-        placeholder="🔎 Search country..."
-        autocomplete="off"
-        style="
-          width:100%;
-          box-sizing:border-box;
-          padding:13px;
-          margin-bottom:8px;
-          border:1px solid #ddd;
-          border-radius:9px;
-          background:#fff;
-          font-size:14px;
-        "
-      />
+      <div style="position:relative;">
+        <input
+          id="countrySearch"
+          type="search"
+          placeholder="🔎 Search country..."
+          autocomplete="off"
+          style="
+            width:100%;
+            box-sizing:border-box;
+            padding:13px;
+            border:1px solid #ddd;
+            border-radius:9px;
+            background:#fff;
+            font-size:14px;
+          "
+        />
+
+        <div
+          id="countryResults"
+          style="
+            display:none;
+            position:absolute;
+            left:0;
+            right:0;
+            top:calc(100% + 5px);
+            max-height:280px;
+            overflow-y:auto;
+            background:#fff;
+            border:1px solid #e5e7eb;
+            border-radius:10px;
+            box-shadow:0 8px 24px rgba(0,0,0,.10);
+            z-index:1000;
+          "
+        ></div>
+      </div>
 
       <select
         id="numberCountry"
         onchange="updateNumberPurchaseState()"
-        style="
-          width:100%;
-          padding:13px;
-          border:1px solid #ddd;
-          border-radius:9px;
-          background:#fff;
-        "
+        style="display:none;"
       >
-        <option value="">Search and select country…</option>
+        <option value="">Select country</option>
         ${countryOptions}
       </select>
 
@@ -1464,34 +1477,47 @@ function showCountryServiceInterface(type, serverName) {
           Select Service
         </label>
 
-        <input
-          id="serviceSearch"
-          type="search"
-          placeholder="🔎 Search service..."
-          autocomplete="off"
-          disabled
-          style="
-            width:100%;
-            box-sizing:border-box;
-            padding:13px;
-            margin-bottom:8px;
-            border:1px solid #ddd;
-            border-radius:9px;
-            background:#fff;
-            font-size:14px;
-          "
-        />
+        <div style="position:relative;">
+          <input
+            id="serviceSearch"
+            type="search"
+            placeholder="🔎 Search service..."
+            autocomplete="off"
+            disabled
+            style="
+              width:100%;
+              box-sizing:border-box;
+              padding:13px;
+              border:1px solid #ddd;
+              border-radius:9px;
+              background:#fff;
+              font-size:14px;
+            "
+          />
+
+          <div
+            id="serviceResults"
+            style="
+              display:none;
+              position:absolute;
+              left:0;
+              right:0;
+              top:calc(100% + 5px);
+              max-height:300px;
+              overflow-y:auto;
+              background:#fff;
+              border:1px solid #e5e7eb;
+              border-radius:10px;
+              box-shadow:0 8px 24px rgba(0,0,0,.10);
+              z-index:999;
+            "
+          ></div>
+        </div>
 
         <select
           id="numberService"
           onchange="updateNumberPurchaseState()"
-          style="
-            width:100%;
-            padding:13px;
-            border:1px solid #ddd;
-            border-radius:9px;
-            background:#fff;
-          "
+          style="display:none;"
         >
           <option value="">Select country first</option>
         </select>
@@ -1515,6 +1541,132 @@ function showCountryServiceInterface(type, serverName) {
           "
         >
           ₦0.00
+        </div>
+      </div>
+
+      <div
+        id="numberPurchasePanel"
+        style="
+          display:none;
+          margin-top:18px;
+          padding:16px;
+          border-radius:12px;
+          background:#f8fafc;
+          border:1px solid #e5e7eb;
+        "
+      >
+        <button
+          id="buyNumberButton"
+          type="button"
+          onclick="purchaseSelectedNumber()"
+          style="
+            width:100%;
+            padding:14px;
+            border:0;
+            border-radius:10px;
+            background:#16a34a;
+            color:#fff;
+            font-weight:900;
+            font-size:15px;
+            cursor:pointer;
+          "
+        >
+          Buy Number
+        </button>
+
+        <div
+          id="purchaseStatus"
+          style="
+            display:none;
+            margin-top:14px;
+          "
+        >
+
+          <div style="
+            font-size:13px;
+            color:#64748b;
+            font-weight:700;
+          ">
+            Your Number
+          </div>
+
+          <div
+            id="purchasedNumber"
+            style="
+              margin-top:5px;
+              font-size:23px;
+              font-weight:900;
+              letter-spacing:.5px;
+            "
+          >
+            —
+          </div>
+
+          <div
+            id="otpWaiting"
+            style="
+              margin-top:14px;
+              padding:13px;
+              border-radius:10px;
+              background:#fff;
+              border:1px solid #e5e7eb;
+              font-weight:800;
+            "
+          >
+            ⏳ Waiting for OTP...
+          </div>
+
+          <div
+            id="otpCode"
+            style="
+              display:none;
+              margin-top:12px;
+              padding:16px;
+              border-radius:10px;
+              background:#fff;
+              border:1px solid #e5e7eb;
+              text-align:center;
+            "
+          >
+            <div style="
+              font-size:12px;
+              color:#64748b;
+              font-weight:700;
+            ">
+              OTP CODE
+            </div>
+
+            <div
+              id="otpValue"
+              style="
+                margin-top:4px;
+                font-size:30px;
+                font-weight:900;
+                letter-spacing:5px;
+              "
+            >
+              —
+            </div>
+          </div>
+
+          <button
+            id="checkOtpButton"
+            type="button"
+            onclick="checkPurchasedOtp()"
+            style="
+              width:100%;
+              margin-top:12px;
+              padding:12px;
+              border:1px solid #d1d5db;
+              border-radius:10px;
+              background:#fff;
+              font-weight:800;
+              cursor:pointer;
+            "
+          >
+            🔄 Check for OTP
+          </button>
+
         </div>
       </div>
 
@@ -1558,6 +1710,12 @@ function showCountryServiceInterface(type, serverName) {
       window.selectedService = null;
 
       const serviceSearch = document.getElementById("serviceSearch");
+      const countrySearch = document.getElementById("countrySearch");
+
+      if (countrySearch && this.value) {
+        const option = this.options[this.selectedIndex];
+        countrySearch.value = option ? option.textContent.trim() : this.value;
+      }
 
       if (serviceSearch) {
         serviceSearch.disabled = !this.value;
@@ -1566,11 +1724,12 @@ function showCountryServiceInterface(type, serverName) {
 
       await populateNumberServices();
       updateNumberPurchaseState();
+      setupServiceAutocomplete();
     };
   }
 
-  filterSelectOptions("countrySearch", "numberCountry");
-  filterSelectOptions("serviceSearch", "numberService");
+  setupCountryAutocomplete();
+  setupServiceAutocomplete();
 
   box.scrollIntoView({
     behavior:"smooth",
@@ -1578,26 +1737,197 @@ function showCountryServiceInterface(type, serverName) {
   });
 }
 
-function filterSelectOptions(inputId, selectId) {
-  const input = document.getElementById(inputId);
-  const select = document.getElementById(selectId);
+function setupCountryAutocomplete() {
+  const input = document.getElementById("countrySearch");
+  const results = document.getElementById("countryResults");
+  const select = document.getElementById("numberCountry");
 
-  if (!input || !select) return;
+  if (!input || !results || !select) return;
 
-  input.addEventListener("input", function () {
-    const query = this.value.trim().toLowerCase();
+  const countries = Array.from(select.options)
+    .filter(option => option.value)
+    .map(option => ({
+      value: option.value,
+      label: option.textContent.trim()
+    }));
 
-    Array.from(select.options).forEach((option, index) => {
-      if (index === 0) {
-        option.hidden = false;
-        return;
-      }
+  function render(query = "") {
+    const q = query.trim().toLowerCase();
 
-      option.hidden =
-        query && !option.textContent.toLowerCase().includes(query);
-    });
+    const matches = countries
+      .filter(item => !q || item.label.toLowerCase().includes(q))
+      .slice(0, 50);
+
+    if (!matches.length) {
+      results.innerHTML =
+        '<div style="padding:13px;color:#64748b;">No country found</div>';
+      results.style.display = "block";
+      return;
+    }
+
+    results.innerHTML = matches.map(item => `
+      <button
+        type="button"
+        data-country="${item.value.replace(/"/g, "&quot;")}"
+        style="
+          display:block;
+          width:100%;
+          padding:12px 14px;
+          border:0;
+          border-bottom:1px solid #f1f5f9;
+          background:#fff;
+          text-align:left;
+          cursor:pointer;
+          font-size:14px;
+        "
+      >${item.label}</button>
+    `).join("");
+
+    results.style.display = "block";
+  }
+
+  input.addEventListener("focus", () => render(input.value));
+
+  input.addEventListener("input", () => {
+    select.value = "";
+    window.selectedCountry = null;
+    window.selectedService = null;
+
+    const serviceInput = document.getElementById("serviceSearch");
+    const serviceResults = document.getElementById("serviceResults");
+
+    if (serviceInput) {
+      serviceInput.value = "";
+      serviceInput.disabled = true;
+    }
+
+    if (serviceResults) {
+      serviceResults.innerHTML = "";
+      serviceResults.style.display = "none";
+    }
+
+    render(input.value);
+  });
+
+  results.addEventListener("click", async event => {
+    const button = event.target.closest("[data-country]");
+    if (!button) return;
+
+    const value = button.dataset.country;
+
+    select.value = value;
+    input.value = button.textContent.trim();
+    results.style.display = "none";
+
+    window.selectedCountry = value;
+    window.selectedService = null;
+
+    const serviceInput = document.getElementById("serviceSearch");
+    if (serviceInput) {
+      serviceInput.disabled = false;
+      serviceInput.value = "";
+    }
+
+    await populateNumberServices();
+    updateNumberPurchaseState();
+
+    setupServiceAutocomplete();
   });
 }
+
+function setupServiceAutocomplete() {
+  const input = document.getElementById("serviceSearch");
+  const results = document.getElementById("serviceResults");
+  const select = document.getElementById("numberService");
+
+  if (!input || !results || !select) return;
+
+  function render(query = "") {
+    if (input.disabled) return;
+
+    const q = query.trim().toLowerCase();
+
+    const services = Array.from(select.options)
+      .filter(option => option.value)
+      .map(option => ({
+        value: option.value,
+        label: option.textContent.trim(),
+        stock: option.dataset.stock || ""
+      }));
+
+    const matches = services
+      .filter(item => !q || item.label.toLowerCase().includes(q))
+      .slice(0, 50);
+
+    if (!matches.length) {
+      results.innerHTML =
+        '<div style="padding:13px;color:#64748b;">No matching service found</div>';
+      results.style.display = "block";
+      return;
+    }
+
+    results.innerHTML = matches.map(item => `
+      <button
+        type="button"
+        data-service="${item.value.replace(/"/g, "&quot;")}"
+        style="
+          display:block;
+          width:100%;
+          padding:12px 14px;
+          border:0;
+          border-bottom:1px solid #f1f5f9;
+          background:#fff;
+          text-align:left;
+          cursor:pointer;
+          font-size:14px;
+        "
+      >${item.label}</button>
+    `).join("");
+
+    results.style.display = "block";
+  }
+
+  input.onfocus = () => render(input.value);
+  input.oninput = () => render(input.value);
+
+  results.onclick = event => {
+    const button = event.target.closest("[data-service]");
+    if (!button) return;
+
+    const value = button.dataset.service;
+
+    select.value = value;
+    input.value = button.textContent.trim();
+    results.style.display = "none";
+
+    window.selectedService = value;
+    updateNumberPurchaseState();
+  };
+}
+
+function closeAutocompleteResults(event) {
+  const countryBox = document.getElementById("countryResults");
+  const serviceBox = document.getElementById("serviceResults");
+
+  if (
+    countryBox &&
+    !event.target.closest("#countrySearch") &&
+    !event.target.closest("#countryResults")
+  ) {
+    countryBox.style.display = "none";
+  }
+
+  if (
+    serviceBox &&
+    !event.target.closest("#serviceSearch") &&
+    !event.target.closest("#serviceResults")
+  ) {
+    serviceBox.style.display = "none";
+  }
+}
+
+
+document.addEventListener("click", closeAutocompleteResults);
 
 async function populateNumberServices() {
   const country = document.getElementById("numberCountry");
@@ -1710,6 +2040,182 @@ function updateNumberPurchaseState() {
 
   window.selectedCountry = country.value;
   window.selectedService = service.value;
+
+  const purchasePanel =
+    document.getElementById("numberPurchasePanel");
+
+  const buyButton =
+    document.getElementById("buyNumberButton");
+
+  if (purchasePanel && buyButton) {
+    const canBuy =
+      country.value &&
+      service.value &&
+      price.textContent !== "₦0.00" &&
+      price.textContent !== "Price coming soon";
+
+    purchasePanel.style.display = canBuy ? "block" : "none";
+    buyButton.style.display = canBuy ? "block" : "none";
+    buyButton.disabled = false;
+    buyButton.textContent = "Buy Number";
+  }
+}
+
+async function purchaseSelectedNumber() {
+  const country = document.getElementById("numberCountry");
+  const service = document.getElementById("numberService");
+  const price = document.getElementById("numberPrice");
+  const button = document.getElementById("buyNumberButton");
+  const panel = document.getElementById("numberPurchasePanel");
+  const statusBox = document.getElementById("purchaseStatus");
+
+  if (!country || !service || !price || !button) return;
+
+  if (!country.value || !service.value) {
+    alert("Please select a country and service first.");
+    return;
+  }
+
+  const displayedPrice = price.textContent.trim();
+
+  if (
+    displayedPrice === "₦0.00" ||
+    displayedPrice === "Price coming soon"
+  ) {
+    alert("This country and service does not have a configured NumberHub price yet.");
+    return;
+  }
+
+  const confirmed = confirm(
+    `Buy ${service.value.toUpperCase()} number for ${displayedPrice}?`
+  );
+
+  if (!confirmed) return;
+
+  button.disabled = true;
+  button.textContent = "Purchasing...";
+
+  try {
+    const response = await fetch(
+      "https://numberhub.onrender.com/api/numbers/purchase",
+      {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          country: country.value,
+          service: service.value,
+          provider: ""
+        })
+      }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok || !result.purchase || !result.supplier) {
+      throw new Error(result.error || "Number purchase failed");
+    }
+
+    window.currentNumberPurchase = result.purchase;
+    window.currentSupplierId = result.supplier.id;
+
+    const purchasedNumber =
+      document.getElementById("purchasedNumber");
+
+    if (purchasedNumber) {
+      purchasedNumber.textContent =
+        result.purchase.phone_number || "Number received";
+    }
+
+    if (panel) panel.style.display = "block";
+    if (statusBox) statusBox.style.display = "block";
+
+    button.style.display = "none";
+
+    const otpWaiting = document.getElementById("otpWaiting");
+    if (otpWaiting) {
+      otpWaiting.textContent = "⏳ Waiting for OTP...";
+    }
+
+    await checkPurchasedOtp();
+
+  } catch (error) {
+    console.error("Purchase error:", error);
+    alert(error.message || "Unable to purchase number.");
+
+    button.disabled = false;
+    button.textContent = "Buy Number";
+  }
+}
+
+async function checkPurchasedOtp() {
+  const supplierId = window.currentSupplierId;
+  const waiting = document.getElementById("otpWaiting");
+  const otpBox = document.getElementById("otpCode");
+  const otpValue = document.getElementById("otpValue");
+  const button = document.getElementById("checkOtpButton");
+
+  if (!supplierId) {
+    if (waiting) waiting.textContent = "No active number purchase.";
+    return;
+  }
+
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Checking...";
+  }
+
+  try {
+    const response = await fetch(
+      "https://numberhub.onrender.com/api/numbers/sms/" +
+      encodeURIComponent(supplierId),
+      {
+        credentials: "include"
+      }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || "Unable to check OTP");
+    }
+
+    if (result.smsCode) {
+      if (waiting) {
+        waiting.textContent = "✅ OTP received";
+      }
+
+      if (otpBox) {
+        otpBox.style.display = "block";
+      }
+
+      if (otpValue) {
+        otpValue.textContent = result.smsCode;
+      }
+    } else {
+      if (waiting) {
+        waiting.textContent =
+          "⏳ Waiting for OTP... Status: " +
+          (result.status || "active");
+      }
+    }
+
+  } catch (error) {
+    console.error("OTP check error:", error);
+
+    if (waiting) {
+      waiting.textContent =
+        "⚠️ " + (error.message || "Unable to check OTP");
+    }
+
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = "🔄 Check for OTP";
+    }
+  }
 }
 
 function backToServerSelection() {
