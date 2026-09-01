@@ -650,6 +650,129 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (req.method === "GET" && req.url === "/api/admin/deposits") {
+      const admin = await getAdminUserId(req);
+
+      if (admin.error) {
+        sendJSON(res, admin.status, { error: admin.error });
+        return;
+      }
+
+      const result = await pool.query(
+        `SELECT
+           wt.id,
+           wt.user_id,
+           u.name,
+           u.username,
+           u.email,
+           wt.amount,
+           wt.method,
+           wt.status,
+           wt.reference,
+           wt.description,
+           wt.created_at
+         FROM wallet_transactions wt
+         JOIN users u ON u.id = wt.user_id
+         WHERE wt.type = 'deposit'
+           AND wt.status = 'pending'
+         ORDER BY wt.created_at ASC
+         LIMIT 100`
+      );
+
+      sendJSON(res, 200, {
+        deposits: result.rows
+      });
+      return;
+    }
+
+    if (req.method === "POST" && /^\/api\/admin\/deposits\/\d+\/approve$/.test(req.url)) {
+      const admin = await getAdminUserId(req);
+
+      if (admin.error) {
+        sendJSON(res, admin.status, { error: admin.error });
+        return;
+      }
+
+      const depositId = Number(req.url.split("/")[4]);
+
+      const client = await pool.connect();
+
+      try {
+        await client.query("BEGIN");
+
+        const depositResult = await client.query(
+          `SELECT id, user_id, amount, status, reference
+           FROM wallet_transactions
+           WHERE id = $1
+             AND type = 'deposit'
+           FOR UPDATE`,
+          [depositId]
+        );
+
+        if (depositResult.rows.length === 0) {
+          await client.query("ROLLBACK");
+          sendJSON(res, 404, { error: "Deposit not found" });
+          return;
+        }
+
+        const deposit = depositResult.rows[0];
+
+        if (deposit.status !== "pending") {
+          await client.query("ROLLBACK");
+          sendJSON(res, 409, {
+            error: "Deposit has already been processed",
+            status: deposit.status
+          });
+          return;
+        }
+
+        await client.query(
+          `UPDATE wallet_transactions
+           SET status = 'successful',
+               description = $2
+           WHERE id = $1`,
+          [
+            deposit.id,
+            "Wallet funding approved by admin"
+          ]
+        );
+
+        const walletResult = await client.query(
+          `UPDATE users
+           SET wallet = wallet + $1
+           WHERE id = $2
+           RETURNING wallet`,
+          [deposit.amount, deposit.user_id]
+        );
+
+        if (walletResult.rows.length === 0) {
+          throw new Error("Customer account not found");
+        }
+
+        await client.query("COMMIT");
+
+        sendJSON(res, 200, {
+          message: "Deposit approved and wallet credited",
+          transaction: {
+            id: deposit.id,
+            reference: deposit.reference,
+            amount: deposit.amount,
+            status: "successful"
+          },
+          wallet: walletResult.rows[0].wallet
+        });
+        return;
+      } catch (error) {
+        try {
+          await client.query("ROLLBACK");
+        } catch (_) {}
+
+        throw error;
+      } finally {
+        client.release();
+      }
+    }
+
     if (req.method === "GET" && req.url === "/api/wallet/transactions") {
       const cookies = String(req.headers.cookie || "");
       const match = cookies.match(/(?:^|;\\s*)session=([^;]+)/);
