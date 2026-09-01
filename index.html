@@ -1422,6 +1422,23 @@ function showCountryServiceInterface(type, serverName) {
         Select Country
       </label>
 
+      <input
+        id="countrySearch"
+        type="search"
+        placeholder="🔎 Search country..."
+        autocomplete="off"
+        style="
+          width:100%;
+          box-sizing:border-box;
+          padding:13px;
+          margin-bottom:8px;
+          border:1px solid #ddd;
+          border-radius:9px;
+          background:#fff;
+          font-size:14px;
+        "
+      />
+
       <select
         id="numberCountry"
         onchange="updateNumberPurchaseState()"
@@ -1446,6 +1463,24 @@ function showCountryServiceInterface(type, serverName) {
         ">
           Select Service
         </label>
+
+        <input
+          id="serviceSearch"
+          type="search"
+          placeholder="🔎 Search service..."
+          autocomplete="off"
+          disabled
+          style="
+            width:100%;
+            box-sizing:border-box;
+            padding:13px;
+            margin-bottom:8px;
+            border:1px solid #ddd;
+            border-radius:9px;
+            background:#fff;
+            font-size:14px;
+          "
+        />
 
         <select
           id="numberService"
@@ -1522,6 +1557,13 @@ function showCountryServiceInterface(type, serverName) {
       window.selectedCountry = this.value;
       window.selectedService = null;
 
+      const serviceSearch = document.getElementById("serviceSearch");
+
+      if (serviceSearch) {
+        serviceSearch.disabled = !this.value;
+        serviceSearch.value = "";
+      }
+
       await populateNumberServices();
       updateNumberPurchaseState();
     };
@@ -1530,6 +1572,27 @@ function showCountryServiceInterface(type, serverName) {
   box.scrollIntoView({
     behavior:"smooth",
     block:"start"
+  });
+}
+
+function filterSelectOptions(inputId, selectId) {
+  const input = document.getElementById(inputId);
+  const select = document.getElementById(selectId);
+
+  if (!input || !select) return;
+
+  input.addEventListener("input", function () {
+    const query = this.value.trim().toLowerCase();
+
+    Array.from(select.options).forEach((option, index) => {
+      if (index === 0) {
+        option.hidden = false;
+        return;
+      }
+
+      option.hidden =
+        query && !option.textContent.toLowerCase().includes(query);
+    });
   });
 }
 
