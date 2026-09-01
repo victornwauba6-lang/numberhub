@@ -426,7 +426,8 @@ async function initDatabase() {
       password_hash TEXT NOT NULL,
       wallet NUMERIC(12,2) DEFAULT 0,
       purchases INTEGER DEFAULT 0,
-      created_at TIMESTAMPTZ DEFAULT NOW()
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      is_admin BOOLEAN NOT NULL DEFAULT FALSE
     );
 
     ALTER TABLE users
@@ -434,6 +435,9 @@ async function initDatabase() {
 
     ALTER TABLE users
       ADD COLUMN IF NOT EXISTS phone_number TEXT;
+
+    ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT FALSE;
 
     CREATE TABLE IF NOT EXISTS sessions (
       token_hash TEXT PRIMARY KEY,
