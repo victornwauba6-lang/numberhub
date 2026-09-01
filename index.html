@@ -2303,6 +2303,7 @@ function backToNumberTypes() {
   const box = document.getElementById("buyNumberInterface");
   const types = document.getElementById("buyNumberTypes");
   const title = document.getElementById("buyNumbersTitle");
+  const dashboard = document.getElementById("dashboardMain");
 
   if (box) {
     box.style.display = "none";
@@ -2316,6 +2317,36 @@ function backToNumberTypes() {
   window.selectedServer = null;
   window.selectedCountry = null;
   window.selectedService = null;
+
+  // Restore the normal dashboard after leaving the standalone interface.
+  // Keep normally hidden sections hidden.
+  if (dashboard) {
+    dashboard.style.setProperty("display", "block", "important");
+
+    const transactionHistory = document.getElementById("transactionHistorySection");
+    const numbersHistory = document.getElementById("numbersHistorySection");
+    const availableNumbers = document.getElementById("availableNumbersPanel");
+    const operatorPanel = document.getElementById("operatorPanel");
+
+    if (transactionHistory) transactionHistory.style.display = "none";
+    if (numbersHistory) numbersHistory.style.display = "none";
+    if (availableNumbers) availableNumbers.style.display = "none";
+    if (operatorPanel) operatorPanel.style.display = "none";
+
+    // Restore the main dashboard content.
+    const mainContent = dashboard.querySelector(".top");
+    const quickOtp = dashboard.querySelector(".quick-otp");
+    const buyNumbers = document.getElementById("buyNumbersPanel");
+
+    if (mainContent) mainContent.style.removeProperty("display");
+    if (quickOtp) quickOtp.style.removeProperty("display");
+    if (buyNumbers) buyNumbers.style.removeProperty("display");
+  }
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
 }
 </script>
 </body>
