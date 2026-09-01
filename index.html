@@ -105,7 +105,17 @@ h1{margin:5px 0;font-size:30px}
 <script>async function showTransactionHistory(){const s=document.getElementById("transactionHistorySection"),m=document.getElementById("transactionHistoryMessage"),l=document.getElementById("transactionHistoryList");s.style.display="block";m.textContent="Loading transactions...";l.innerHTML="";try{const r=await fetch("https://numberhub.onrender.com/api/wallet/transactions",{credentials:"include"}),d=await r.json();if(!r.ok){m.textContent=d.error||"Could not load transactions.";return}if(!d.transactions||!d.transactions.length){m.textContent="No transactions yet.";return}m.textContent="";l.innerHTML=d.transactions.map(t=>`<div style="border:1px solid #e5e7eb;border-radius:12px;padding:15px;margin:10px 0;background:#fff"><strong>₦${Number(t.amount).toFixed(2)}</strong> — <strong>${t.status}</strong><br>Method: ${t.method||"—"}<br>Type: ${t.type}<br>Reference: ${t.reference}<br><small>${new Date(t.created_at).toLocaleString()}</small></div>`).join("")}catch(e){console.error(e);m.textContent="Could not connect to the transaction server."}}</script>
 <script>async function showNumbersHistory(){const s=document.getElementById("numbersHistorySection"),m=document.getElementById("numbersHistoryMessage"),l=document.getElementById("numbersHistoryList");s.style.display="block";m.textContent="Loading numbers...";l.innerHTML="";s.scrollIntoView({behavior:"smooth",block:"start"});try{const r=await fetch("https://numberhub.onrender.com/api/numbers/history",{credentials:"include"}),d=await r.json();if(!r.ok){m.textContent=d.error||"Could not load numbers history.";return}if(!d.purchases||!d.purchases.length){m.textContent="No purchased numbers yet.";return}m.textContent="";l.innerHTML=d.purchases.map(t=>`<div style="border:1px solid #e5e7eb;border-radius:12px;padding:15px;margin:10px 0;background:#fff"><strong>${t.phone_number}</strong><br>Service: ${t.service}<br>Country: ${t.country}<br>Provider: ${t.provider||"—"}<br>Price: ₦${Number(t.price).toFixed(2)}<br>Status: <strong>${t.status}</strong><br>Reference: ${t.reference}<br><small>${new Date(t.created_at).toLocaleString()}</small></div>`).join("")}catch(e){console.error(e);m.textContent="Could not connect to the numbers history server."}}</script>
 </head>
-<body>
+<body><div id="jsErrorBox" style="display:none;position:fixed;top:10px;left:10px;right:10px;z-index:99999;background:#fee2e2;color:#991b1b;padding:15px;border-radius:10px;font-weight:700;font-size:14px;"></div>
+<script>
+window.addEventListener("error", function(e) {
+  const box = document.getElementById("jsErrorBox");
+  if (box) {
+    box.style.display = "block";
+    box.textContent = "JavaScript error: " + e.message;
+  }
+});
+</script>
+
 <div class="app">
 <button class="mobile-menu" onclick="toggleSidebar()">☰</button>
 <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
@@ -121,7 +131,7 @@ h1{margin:5px 0;font-size:30px}
 <button class="nav" onclick="fund()">💳 Fund Wallet</button>
 <div class="title">COMMUNITY</div><button class="nav" onclick="window.open('https://whatsapp.com/channel/0029VbDRxIfD38CSw1z02m3H','_blank')">📢 WhatsApp Channel</button><div class="title">ACCOUNT</div>
 <button class="nav">🚀 Boost Account</button>
-<button class="nav">❓ FAQs</button>
+<button class="nav" type="button" onclick="openFAQs()">❓ FAQs</button>
 <button class="nav" onclick="window.open('https://t.me/Numberhubsupport','_blank')">💬 Telegram Support</button>
 <button class="nav" onclick="showNumbersHistory()">🧾 Numbers History</button>
 <button class="nav" onclick="showTransactionHistory()">💳 Transaction History</button>
@@ -324,6 +334,138 @@ h1{margin:5px 0;font-size:30px}
         <p id="profilePasswordMessage" style="text-align:center;margin:12px 0 0;"></p>
       </form>
 
+    </div>
+  </div>
+</div>
+
+
+<div id="faqStandalone" style="display:none;min-height:100vh;background:#f8fafc;padding:20px;box-sizing:border-box;">
+  <div style="max-width:700px;margin:0 auto;">
+
+    <button type="button" onclick="closeFAQs()" style="
+      border:0;
+      background:#fff;
+      color:#16a34a;
+      font-weight:800;
+      font-size:15px;
+      padding:10px 14px;
+      border-radius:10px;
+      cursor:pointer;
+      margin-bottom:18px;
+    ">← Back to Dashboard</button>
+
+    <div style="
+      background:#fff;
+      border-radius:16px;
+      padding:22px;
+      box-sizing:border-box;
+      box-shadow:0 4px 18px rgba(0,0,0,.06);
+    ">
+      <div style="color:#16a34a;font-weight:800;font-size:13px;margin-bottom:6px;">
+        NUMBERHUB
+      </div>
+
+      <h1 style="margin:0 0 8px;font-size:26px;">
+        Frequently Asked Questions
+      </h1>
+
+      <p style="margin:0 0 22px;color:#64748b;font-size:14px;">
+        Find answers to common questions about using NumberHub.
+      </p>
+
+      <div class="faq-list">
+
+        <div class="faq-item" style="border:1px solid #e5e7eb;border-radius:12px;margin-bottom:10px;overflow:hidden;background:#fff;">
+          <button type="button" onclick="toggleFAQ(1)" style="width:100%;border:0;background:#fff;padding:17px;text-align:left;font-weight:800;font-size:15px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;">
+            <span>What is NumberHub?</span>
+            <span id="faqIcon1" class="faq-icon" style="font-size:20px;color:#16a34a;">+</span>
+          </button>
+          <div id="faqAnswer1" class="faq-answer" style="display:none;padding:0 17px 17px;color:#64748b;font-size:14px;line-height:1.6;">
+            NumberHub is an online platform that provides virtual phone numbers for receiving SMS verification codes for supported services.
+          </div>
+        </div>
+
+        <div class="faq-item" style="border:1px solid #e5e7eb;border-radius:12px;margin-bottom:10px;overflow:hidden;background:#fff;">
+          <button type="button" onclick="toggleFAQ(2)" style="width:100%;border:0;background:#fff;padding:17px;text-align:left;font-weight:800;font-size:15px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;">
+            <span>How do I buy a number?</span>
+            <span id="faqIcon2" class="faq-icon" style="font-size:20px;color:#16a34a;">+</span>
+          </button>
+          <div id="faqAnswer2" class="faq-answer" style="display:none;padding:0 17px 17px;color:#64748b;font-size:14px;line-height:1.6;">
+            Choose Buy Numbers, select the available country and service you need, choose an available number, and complete the purchase using your NumberHub wallet balance.
+          </div>
+        </div>
+
+        <div class="faq-item" style="border:1px solid #e5e7eb;border-radius:12px;margin-bottom:10px;overflow:hidden;background:#fff;">
+          <button type="button" onclick="toggleFAQ(3)" style="width:100%;border:0;background:#fff;padding:17px;text-align:left;font-weight:800;font-size:15px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;">
+            <span>How do I receive my OTP?</span>
+            <span id="faqIcon3" class="faq-icon" style="font-size:20px;color:#16a34a;">+</span>
+          </button>
+          <div id="faqAnswer3" class="faq-answer" style="display:none;padding:0 17px 17px;color:#64748b;font-size:14px;line-height:1.6;">
+            After purchasing a number, use the SMS/OTP option on your active order to check for incoming verification messages.
+          </div>
+        </div>
+
+        <div class="faq-item" style="border:1px solid #e5e7eb;border-radius:12px;margin-bottom:10px;overflow:hidden;background:#fff;">
+          <button type="button" onclick="toggleFAQ(4)" style="width:100%;border:0;background:#fff;padding:17px;text-align:left;font-weight:800;font-size:15px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;">
+            <span>How long does a number remain active?</span>
+            <span id="faqIcon4" class="faq-icon" style="font-size:20px;color:#16a34a;">+</span>
+          </button>
+          <div id="faqAnswer4" class="faq-answer" style="display:none;padding:0 17px 17px;color:#64748b;font-size:14px;line-height:1.6;">
+            The active period depends on the number provider and the specific number purchased. Please check the details shown for your order.
+          </div>
+        </div>
+
+        <div class="faq-item" style="border:1px solid #e5e7eb;border-radius:12px;margin-bottom:10px;overflow:hidden;background:#fff;">
+          <button type="button" onclick="toggleFAQ(5)" style="width:100%;border:0;background:#fff;padding:17px;text-align:left;font-weight:800;font-size:15px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;">
+            <span>What happens if I don't receive an SMS?</span>
+            <span id="faqIcon5" class="faq-icon" style="font-size:20px;color:#16a34a;">+</span>
+          </button>
+          <div id="faqAnswer5" class="faq-answer" style="display:none;padding:0 17px 17px;color:#64748b;font-size:14px;line-height:1.6;">
+            Give the service some time to send the message and use the SMS/OTP option to check again. If the SMS still does not arrive, contact NumberHub support for assistance.
+          </div>
+        </div>
+
+        <div class="faq-item" style="border:1px solid #e5e7eb;border-radius:12px;margin-bottom:10px;overflow:hidden;background:#fff;">
+          <button type="button" onclick="toggleFAQ(6)" style="width:100%;border:0;background:#fff;padding:17px;text-align:left;font-weight:800;font-size:15px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;">
+            <span>How do I fund my wallet?</span>
+            <span id="faqIcon6" class="faq-icon" style="font-size:20px;color:#16a34a;">+</span>
+          </button>
+          <div id="faqAnswer6" class="faq-answer" style="display:none;padding:0 17px 17px;color:#64748b;font-size:14px;line-height:1.6;">
+            Open Fund Wallet from your dashboard and follow the available payment instructions to add funds to your NumberHub wallet.
+          </div>
+        </div>
+
+        <div class="faq-item" style="border:1px solid #e5e7eb;border-radius:12px;margin-bottom:10px;overflow:hidden;background:#fff;">
+          <button type="button" onclick="toggleFAQ(7)" style="width:100%;border:0;background:#fff;padding:17px;text-align:left;font-weight:800;font-size:15px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;">
+            <span>Can I get a refund for a failed order?</span>
+            <span id="faqIcon7" class="faq-icon" style="font-size:20px;color:#16a34a;">+</span>
+          </button>
+          <div id="faqAnswer7" class="faq-answer" style="display:none;padding:0 17px 17px;color:#64748b;font-size:14px;line-height:1.6;">
+            If a purchase fails after your wallet has been charged, the transaction should be reviewed and any eligible refund will be handled according to NumberHub's refund policy.
+          </div>
+        </div>
+
+        <div class="faq-item" style="border:1px solid #e5e7eb;border-radius:12px;margin-bottom:10px;overflow:hidden;background:#fff;">
+          <button type="button" onclick="toggleFAQ(8)" style="width:100%;border:0;background:#fff;padding:17px;text-align:left;font-weight:800;font-size:15px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;">
+            <span>How do I change my password?</span>
+            <span id="faqIcon8" class="faq-icon" style="font-size:20px;color:#16a34a;">+</span>
+          </button>
+          <div id="faqAnswer8" class="faq-answer" style="display:none;padding:0 17px 17px;color:#64748b;font-size:14px;line-height:1.6;">
+            Open My Profile, scroll to Change Password, enter your current password and your new password, then tap Change Password.
+          </div>
+        </div>
+
+        <div class="faq-item" style="border:1px solid #e5e7eb;border-radius:12px;margin-bottom:0;overflow:hidden;background:#fff;">
+          <button type="button" onclick="toggleFAQ(9)" style="width:100%;border:0;background:#fff;padding:17px;text-align:left;font-weight:800;font-size:15px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;">
+            <span>How do I contact support?</span>
+            <span id="faqIcon9" class="faq-icon" style="font-size:20px;color:#16a34a;">+</span>
+          </button>
+          <div id="faqAnswer9" class="faq-answer" style="display:none;padding:0 17px 17px;color:#64748b;font-size:14px;line-height:1.6;">
+            You can contact NumberHub support through the Telegram Support option in the dashboard.
+          </div>
+        </div>
+
+      </div>
     </div>
   </div>
 </div>
@@ -784,11 +926,7 @@ function closeMyProfile() {
   if (profile) profile.style.display = "none";
 
   if (dashboard) {
-    dashboard.style.setProperty(
-      "display",
-      "block",
-      "important"
-    );
+    dashboard.style.setProperty("display", "block", "important");
   }
 
   window.scrollTo({
@@ -796,6 +934,74 @@ function closeMyProfile() {
     behavior: "smooth"
   });
 }
+
+function openFAQs() {
+  const dashboard = document.getElementById("dashboardMain");
+  const profile = document.getElementById("profileStandalone");
+  const faq = document.getElementById("faqStandalone");
+
+  if (!faq) {
+    alert("FAQ interface could not be found.");
+    return;
+  }
+
+  if (dashboard) {
+    dashboard.style.setProperty("display", "none", "important");
+  }
+
+  if (profile) {
+    profile.style.setProperty("display", "none", "important");
+  }
+
+  faq.style.setProperty("display", "block", "important");
+  faq.style.setProperty("position", "relative", "important");
+  faq.style.setProperty("z-index", "9999", "important");
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
+}
+
+function closeFAQs() {
+  const faq = document.getElementById("faqStandalone");
+  const dashboard = document.getElementById("dashboardMain");
+
+  if (faq) faq.style.display = "none";
+
+  if (dashboard) {
+    dashboard.style.setProperty("display", "block", "important");
+  }
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
+}
+
+function toggleFAQ(index) {
+  const answer = document.getElementById("faqAnswer" + index);
+  const icon = document.getElementById("faqIcon" + index);
+
+  if (!answer) return;
+
+  const isOpen = answer.style.display === "block";
+
+  document.querySelectorAll(".faq-answer").forEach(function (item) {
+    item.style.display = "none";
+  });
+
+  document.querySelectorAll(".faq-icon").forEach(function (item) {
+    item.textContent = "+";
+  });
+
+  if (!isOpen) {
+    answer.style.display = "block";
+    if (icon) icon.textContent = "−";
+  }
+}
+
+
 
 document.addEventListener("DOMContentLoaded", function () {
 
