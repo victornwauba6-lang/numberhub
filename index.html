@@ -1490,7 +1490,7 @@ function showCountryServiceInterface(type, serverName) {
       ">
         ${config.countries.length === 1
           ? "USA numbers available"
-          : "153 countries available"}
+          : "158 countries available"}
       </div>
 
       <button
@@ -1512,6 +1512,20 @@ function showCountryServiceInterface(type, serverName) {
   `;
 
   box.style.display = "block";
+
+  // Load the real 5SIM services after the country/service
+  // interface has been created.
+  const countrySelect = document.getElementById("numberCountry");
+
+  if (countrySelect) {
+    countrySelect.onchange = async function () {
+      window.selectedCountry = this.value;
+      window.selectedService = null;
+
+      await populateNumberServices();
+      updateNumberPurchaseState();
+    };
+  }
 
   box.scrollIntoView({
     behavior:"smooth",
