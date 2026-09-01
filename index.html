@@ -1984,6 +1984,30 @@ async function populateNumberServices() {
   }
 }
 
+
+function selectServiceFromQuick(serviceName) {
+  const buyPanel = document.getElementById("buyNumbersPanel");
+  const buyTypes = document.getElementById("buyNumberTypes");
+  const title = document.getElementById("buyNumbersTitle");
+
+  if (buyPanel) {
+    buyPanel.scrollIntoView({
+      behavior: "smooth",
+      block: "start"
+    });
+  }
+
+  if (buyTypes) {
+    buyTypes.style.display = "grid";
+  }
+
+  if (title) {
+    title.textContent = serviceName + " — Choose Number Type";
+  }
+
+  window.quickSelectedService = serviceName;
+}
+
 function updateNumberPurchaseState() {
   const country = document.getElementById("numberCountry");
   const service = document.getElementById("numberService");
