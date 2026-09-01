@@ -1374,7 +1374,7 @@ const server = http.createServer(async (req, res) => {
         .digest("hex");
 
       const result = await pool.query(
-        `SELECT u.id, u.name, u.email, u.wallet, u.purchases, u.created_at
+        `SELECT u.id, u.name, u.email, u.wallet, u.purchases, u.created_at, u.is_admin
          FROM sessions s
          JOIN users u ON u.id = s.user_id
          WHERE s.token_hash = $1
