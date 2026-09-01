@@ -1519,7 +1519,7 @@ function showCountryServiceInterface(type, serverName) {
   });
 }
 
-function populateNumberServices() {
+async function populateNumberServices() {
   const country = document.getElementById("numberCountry");
   const service = document.getElementById("numberService");
 
@@ -1530,16 +1530,46 @@ function populateNumberServices() {
     return;
   }
 
-  service.innerHTML = `
-    <option value="">Select a service</option>
-    <option value="WhatsApp">WhatsApp</option>
-    <option value="Facebook">Facebook</option>
-    <option value="Instagram">Instagram</option>
-    <option value="Telegram">Telegram</option>
-    <option value="TikTok">TikTok</option>
-    <option value="Google">Google</option>
-    <option value="X">X</option>
-  `;
+  service.innerHTML = '<option value="">Loading available services...</option>';
+  service.disabled = true;
+
+  try {
+    const response = await fetch(
+      "https://numberhub.onrender.com/api/numbers/services?country=" +
+      encodeURIComponent(country.value)
+    );
+
+    const result = await response.json();
+
+    if (!response.ok || !Array.isArray(result.services)) {
+      throw new Error(result.error || "Unable to load services");
+    }
+
+    if (result.services.length === 0) {
+      service.innerHTML =
+        '<option value="">No services currently available</option>';
+      return;
+    }
+
+    service.innerHTML =
+      '<option value="">Select a service</option>' +
+      result.services.map(item => {
+        const name = item.product;
+        const stock = Number(item.available || 0);
+
+        return `<option value="${name}" data-stock="${stock}">
+          ${name.toUpperCase()} — ${stock.toLocaleString()} available
+        </option>`;
+      }).join("");
+
+  } catch (error) {
+    console.error("Service loading error:", error);
+
+    service.innerHTML =
+      '<option value="">Unable to load services</option>';
+  } finally {
+    service.disabled = false;
+  }
 }
 
 function updateNumberPurchaseState() {
