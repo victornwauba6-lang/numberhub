@@ -36,6 +36,48 @@ const NUMBERHUB_PRICES = {
 
 
 
+
+// Automatic pricing for countries without a manually configured price.
+// Existing NUMBERHUB_PRICES always take priority.
+const FIVESIM_USD_TO_NGN = 1500;
+const NUMBERHUB_AUTO_MARKUP = 2;
+const NUMBERHUB_MIN_AUTO_PRICE = 1000;
+
+function calculateNumberHubPrice(countryName, serviceName, supplierCost) {
+  const countryPrices =
+    NUMBERHUB_PRICES[String(countryName || "").trim()];
+
+  const serviceKey =
+    String(serviceName || "").trim().toLowerCase();
+
+  // Keep existing manually configured prices unchanged.
+  if (
+    countryPrices &&
+    Object.prototype.hasOwnProperty.call(countryPrices, serviceKey)
+  ) {
+    return Number(countryPrices[serviceKey]);
+  }
+
+  const cost = Number(supplierCost);
+
+  if (!Number.isFinite(cost) || cost <= 0) {
+    return null;
+  }
+
+  const raw =
+    cost *
+    FIVESIM_USD_TO_NGN *
+    NUMBERHUB_AUTO_MARKUP;
+
+  const rounded =
+    Math.ceil(raw / 100) * 100;
+
+  return Math.max(
+    NUMBERHUB_MIN_AUTO_PRICE,
+    rounded
+  );
+}
+
 const FIVESIM_COUNTRY_MAP = {
   'Afghanistan': "afghanistan",
   'Albania': "albania",
@@ -656,11 +698,20 @@ const server = http.createServer(async (req, res) => {
           .filter(Boolean)
           .sort((a, b) => a.product.localeCompare(b.product));
 
+        const servicesWithCustomerPrices = services.map(item => ({
+          ...item,
+          customerPrice: calculateNumberHubPrice(
+            requestedCountry,
+            item.product,
+            item.cheapestCost
+          )
+        }));
+
         sendJSON(res, 200, {
           country: requestedCountry,
           providerCountry: country,
-          count: services.length,
-          services
+          count: servicesWithCustomerPrices.length,
+          services: servicesWithCustomerPrices
         });
         return;
 
@@ -824,16 +875,6 @@ const server = http.createServer(async (req, res) => {
       const country = fiveSimCountryCode(String(data.country || "United States").trim());
 
       const serviceKey = service.toLowerCase();
-      const countryPrices = NUMBERHUB_PRICES[String(data.country || "United States").trim()];
-
-      if (!countryPrices || !Object.prototype.hasOwnProperty.call(countryPrices, serviceKey)) {
-        sendJSON(res, 400, {
-          error: "Price not configured for this country and service"
-        });
-        return;
-      }
-
-      const price = Number(countryPrices[serviceKey]);
 
       const productMap = {
         whatsapp: "whatsapp",
@@ -900,6 +941,19 @@ const server = http.createServer(async (req, res) => {
           if (!option) {
             sendJSON(res, 400, {
               error: `No ${service} numbers are currently available from 5SIM`
+            });
+            return;
+          }
+
+          const price = calculateNumberHubPrice(
+            String(data.country || "United States").trim(),
+            service,
+            option.cost
+          );
+
+          if (!Number.isFinite(price) || price <= 0) {
+            sendJSON(res, 400, {
+              error: "Unable to calculate the selling price"
             });
             return;
           }

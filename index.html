@@ -1967,7 +1967,9 @@ async function populateNumberServices() {
         const name = item.product;
         const stock = Number(item.available || 0);
 
-        return `<option value="${name}" data-stock="${stock}">
+        const customerPrice = Number(item.customerPrice || 0);
+
+        return `<option value="${name}" data-stock="${stock}" data-price="${customerPrice}">
           ${name.toUpperCase()} — ${stock.toLocaleString()} available
         </option>`;
       }).join("");
@@ -2029,10 +2031,21 @@ function updateNumberPurchaseState() {
     }
   };
 
+  const selectedOption =
+    service.options[service.selectedIndex];
+
+  const livePrice =
+    Number(selectedOption?.dataset?.price || 0);
+
   const countryPrices = prices[country.value];
   const serviceKey = service.value.toLowerCase();
 
-  if (countryPrices && Number.isFinite(countryPrices[serviceKey])) {
+  if (livePrice >= 1000) {
+    price.textContent = money(livePrice);
+  } else if (
+    countryPrices &&
+    Number.isFinite(countryPrices[serviceKey])
+  ) {
     price.textContent = money(countryPrices[serviceKey]);
   } else {
     price.textContent = "Price coming soon";
