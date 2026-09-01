@@ -390,6 +390,38 @@ function sendJSON(res, status, data) {
   res.end(JSON.stringify(data));
 }
 
+async function getAdminUserId(req) {
+  const cookies = String(req.headers.cookie || "");
+  const match = cookies.match(/(?:^|;\s*)session=([^;]+)/);
+
+  if (!match) {
+    return { error: "Not authenticated", status: 401 };
+  }
+
+  const sessionToken = match[1];
+
+  const tokenHash = crypto
+    .createHash("sha256")
+    .update(sessionToken)
+    .digest("hex");
+
+  const result = await pool.query(
+    `SELECT s.user_id
+     FROM sessions s
+     JOIN users u ON u.id = s.user_id
+     WHERE s.token_hash = $1
+       AND s.expires_at > NOW()
+       AND u.is_admin = TRUE`,
+    [tokenHash]
+  );
+
+  if (result.rows.length === 0) {
+    return { error: "Admin access required", status: 403 };
+  }
+
+  return { userId: result.rows[0].user_id };
+}
+
 function getBody(req) {
   return new Promise((resolve, reject) => {
     let body = "";
@@ -523,6 +555,36 @@ const server = http.createServer(async (req, res) => {
         "Access-Control-Allow-Headers": "Content-Type"
       });
       res.end();
+      return;
+    }
+
+    if (req.method === "POST" && req.url === "/api/admin/bootstrap") {
+      const data = await getBody(req);
+      const secret = String(data.secret || "");
+
+      if (!process.env.ADMIN_BOOTSTRAP_SECRET ||
+          secret !== process.env.ADMIN_BOOTSTRAP_SECRET) {
+        sendJSON(res, 403, { error: "Invalid admin setup secret" });
+        return;
+      }
+
+      const result = await pool.query(
+        `UPDATE users
+         SET is_admin = TRUE
+         WHERE email = $1
+         RETURNING id, name, email, is_admin`,
+        ["numberhubsupport@gmail.com"]
+      );
+
+      if (result.rows.length === 0) {
+        sendJSON(res, 404, { error: "Admin account not found" });
+        return;
+      }
+
+      sendJSON(res, 200, {
+        message: "Admin account activated successfully",
+        user: result.rows[0]
+      });
       return;
     }
 
