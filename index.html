@@ -114,7 +114,7 @@ h1{margin:5px 0;font-size:30px}
 <div class="profile"><b id="profileName">Loading...</b><small>My Profile</small></div>
 <div class="title">MAIN</div>
 <button class="nav active">🏠 Dashboard</button>
-<button class="nav" onclick="goToSection('serviceSection')">📱 Buy Numbers</button>
+<button class="nav" type="button" onclick="openStandaloneAllCountries(); toggleSidebar()">📱 Buy Numbers</button>
 <button class="nav" onclick="goToSection('usaNumbersSection')">🇺🇸 USA Numbers</button>
 <button class="nav" onclick="goToSection('usaNumbersSection')">🌎 Other USA</button>
 <button class="nav" onclick="goToSection('allCountriesSection')">🌍 All Countries</button>
@@ -910,9 +910,9 @@ const numberInterfaceConfigs = {
     price: "₦0.00",
     description: "Global coverage · Servers B, C & D · Choose your country",
     servers: [
-      ["Server B", "⭐ BEST", "Multiple Countries"],
-      ["Server C", "Quick OTP", "Global Coverage"],
-      ["Server D", "Quick OTP", "Global Coverage"]
+      ["Server C", "⭐ BEST", "Global Coverage"],
+      ["Server D", "Quick OTP", "Global Coverage"],
+      ["Server E", "Quick OTP", "Global"]
     ],
     countries: [
       "Afghanistan",
@@ -1246,6 +1246,44 @@ const numberInterfaceConfigs = {
     ]
   }
 };
+
+
+function openStandaloneAllCountries() {
+  const dashboard = document.getElementById("dashboardMain");
+  const buyPanel = document.getElementById("buyNumbersPanel");
+  const buyTypes = document.getElementById("buyNumberTypes");
+  const title = document.getElementById("buyNumbersTitle");
+
+  if (!dashboard || !buyPanel) return;
+
+  // Hide the dashboard and everything else visually.
+  dashboard.style.setProperty("display", "block", "important");
+
+  Array.from(dashboard.children).forEach(child => {
+    child.style.setProperty("display", "none", "important");
+  });
+
+  // Show only the Buy Numbers interface.
+  buyPanel.style.setProperty("display", "block", "important");
+  buyPanel.style.setProperty("margin", "0", "important");
+  buyPanel.style.setProperty("max-width", "100%", "important");
+
+  if (buyTypes) {
+    buyTypes.style.display = "none";
+  }
+
+  if (title) {
+    title.textContent = "🌍 All Country Numbers";
+  }
+
+  // Open the existing All Countries server-selection interface.
+  showNumberInterface("allCountries");
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
+}
 
 function showNumberInterface(type) {
   const config = numberInterfaceConfigs[type];
