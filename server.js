@@ -420,12 +420,20 @@ async function initDatabase() {
     CREATE TABLE IF NOT EXISTS users (
       id BIGSERIAL PRIMARY KEY,
       name TEXT NOT NULL,
+      username TEXT UNIQUE,
       email TEXT UNIQUE NOT NULL,
+      phone_number TEXT,
       password_hash TEXT NOT NULL,
       wallet NUMERIC(12,2) DEFAULT 0,
       purchases INTEGER DEFAULT 0,
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
+
+    ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS username TEXT UNIQUE;
+
+    ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS phone_number TEXT;
 
     CREATE TABLE IF NOT EXISTS sessions (
       token_hash TEXT PRIMARY KEY,
@@ -1226,6 +1234,140 @@ const server = http.createServer(async (req, res) => {
         authenticated: true,
         user: result.rows[0]
       });
+
+      return;
+    }
+
+
+    if (
+      (req.method === "GET" || req.method === "PUT") &&
+      req.url === "/api/profile"
+    ) {
+      const cookies = String(req.headers.cookie || "");
+      const match = cookies.match(/(?:^|;\s*)session=([^;]+)/);
+
+      if (!match) {
+        sendJSON(res, 401, { error: "Not authenticated" });
+        return;
+      }
+
+      const sessionToken = match[1];
+
+      const tokenHash = crypto
+        .createHash("sha256")
+        .update(sessionToken)
+        .digest("hex");
+
+      const sessionResult = await pool.query(
+        `SELECT user_id
+         FROM sessions
+         WHERE token_hash = $1
+           AND expires_at > NOW()`,
+        [tokenHash]
+      );
+
+      if (sessionResult.rows.length === 0) {
+        sendJSON(res, 401, {
+          error: "Session expired or invalid"
+        });
+        return;
+      }
+
+      const userId = sessionResult.rows[0].user_id;
+
+      if (req.method === "GET") {
+        const result = await pool.query(
+          `SELECT
+             u.id,
+             u.name,
+             u.username,
+             u.email,
+             u.phone_number,
+             u.wallet,
+             u.purchases,
+             u.created_at,
+             COALESCE((
+               SELECT SUM(wt.amount)
+               FROM wallet_transactions wt
+               WHERE wt.user_id = u.id
+                 AND wt.type = 'deposit'
+                 AND wt.status = 'successful'
+             ), 0) AS total_recharged
+           FROM users u
+           WHERE u.id = $1`,
+          [userId]
+        );
+
+        if (result.rows.length === 0) {
+          sendJSON(res, 404, { error: "User not found" });
+          return;
+        }
+
+        const user = result.rows[0];
+
+        sendJSON(res, 200, {
+          profile: {
+            id: user.id,
+            name: user.name,
+            username: user.username,
+            email: user.email,
+            phone_number: user.phone_number,
+            wallet: user.wallet,
+            usd_balance: 0,
+            total_recharged: user.total_recharged,
+            total_otp_buys: user.purchases,
+            created_at: user.created_at
+          }
+        });
+
+        return;
+      }
+
+      const data = await getBody(req);
+
+      const name = String(data.name || "").trim();
+      const username = String(data.username || "").trim();
+      const phoneNumber = String(data.phone_number || "").trim();
+
+      if (!name) {
+        sendJSON(res, 400, {
+          error: "Full name is required"
+        });
+        return;
+      }
+
+      if (username && !/^[A-Za-z0-9_]{3,30}$/.test(username)) {
+        sendJSON(res, 400, {
+          error: "Username must be 3-30 characters and use only letters, numbers, or underscores"
+        });
+        return;
+      }
+
+      try {
+        const result = await pool.query(
+          `UPDATE users
+           SET name = $1,
+               username = NULLIF($2, ''),
+               phone_number = NULLIF($3, '')
+           WHERE id = $4
+           RETURNING id, name, username, email, phone_number, wallet, purchases, created_at`,
+          [name, username, phoneNumber, userId]
+        );
+
+        sendJSON(res, 200, {
+          message: "Profile updated successfully",
+          profile: result.rows[0]
+        });
+      } catch (error) {
+        if (error.code === "23505") {
+          sendJSON(res, 409, {
+            error: "That username is already taken"
+          });
+          return;
+        }
+
+        throw error;
+      }
 
       return;
     }

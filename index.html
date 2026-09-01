@@ -129,8 +129,204 @@ h1{margin:5px 0;font-size:30px}
 <div class="title">RESELLER</div>
 <button class="nav">🔌 Reseller Hub</button>
 <button class="nav">📚 API Docs</button>
-<button class="nav">👤 My Profile</button>
+<button class="nav" type="button" onclick="openMyProfile(); toggleSidebar()">👤 My Profile</button>
 </aside>
+
+
+<div id="profileStandalone" style="display:none;min-height:100vh;background:#f8fafc;padding:20px;box-sizing:border-box;">
+  <div style="max-width:720px;margin:0 auto;">
+
+    <button type="button" onclick="closeMyProfile()" style="
+      border:1px solid #e2e8f0;
+      background:#fff;
+      padding:10px 15px;
+      border-radius:10px;
+      font-weight:700;
+      margin-bottom:18px;
+    ">← Dashboard</button>
+
+    <div style="
+      background:#fff;
+      border:1px solid #e5e7eb;
+      border-radius:20px;
+      padding:24px;
+      box-shadow:0 8px 25px rgba(15,23,42,.05);
+    ">
+
+      <div style="text-align:center;margin-bottom:25px;">
+        <div style="
+          width:70px;
+          height:70px;
+          margin:0 auto 12px;
+          border-radius:50%;
+          background:#16a34a;
+          color:#fff;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          font-size:28px;
+          font-weight:900;
+        " id="profileAvatar">V</div>
+
+        <h1 id="standaloneProfileName" style="margin:0;font-size:25px;">Loading...</h1>
+        <p id="standaloneProfileUsername" style="margin:5px 0;color:#64748b;">Username</p>
+        <p id="standaloneProfileEmail" style="margin:0;color:#64748b;">Email</p>
+      </div>
+
+      <div style="
+        display:grid;
+        grid-template-columns:repeat(2,minmax(0,1fr));
+        gap:12px;
+        margin-bottom:25px;
+      ">
+
+        <div class="profile-stat">
+          <small>NGN Balance</small>
+          <strong id="profileNgnBalance">₦0.00</strong>
+        </div>
+
+        <div class="profile-stat">
+          <small>USD Balance</small>
+          <strong id="profileUsdBalance">$0.00</strong>
+        </div>
+
+        <div class="profile-stat">
+          <small>Total Recharged</small>
+          <strong id="profileTotalRecharged">₦0.00</strong>
+        </div>
+
+        <div class="profile-stat">
+          <small>Total OTP Buys</small>
+          <strong id="profileTotalOtpBuys">0</strong>
+        </div>
+
+      </div>
+
+      <div style="
+        border:1px solid #e5e7eb;
+        border-radius:14px;
+        padding:16px;
+        margin-bottom:22px;
+      ">
+        <div style="font-weight:800;margin-bottom:6px;">🔑 API Key</div>
+        <div style="color:#64748b;font-weight:700;">API access coming soon</div>
+      </div>
+
+      <h2 style="margin:0 0 15px;">Edit Profile</h2>
+
+      <form id="profileEditForm">
+
+        <label style="display:block;font-weight:700;margin-bottom:6px;">Full Name</label>
+        <input id="profileFullName" type="text" required style="
+          width:100%;
+          box-sizing:border-box;
+          padding:13px;
+          border:1px solid #d1d5db;
+          border-radius:10px;
+          margin-bottom:14px;
+        ">
+
+        <label style="display:block;font-weight:700;margin-bottom:6px;">Username</label>
+        <input id="profileUsername" type="text" placeholder="Create username" style="
+          width:100%;
+          box-sizing:border-box;
+          padding:13px;
+          border:1px solid #d1d5db;
+          border-radius:10px;
+          margin-bottom:6px;
+        ">
+        <small style="display:block;color:#64748b;margin-bottom:14px;">
+          Username cannot be changed after it has been set.
+        </small>
+
+        <label style="display:block;font-weight:700;margin-bottom:6px;">Email</label>
+        <input id="profileEmail" type="email" readonly style="
+          width:100%;
+          box-sizing:border-box;
+          padding:13px;
+          border:1px solid #e5e7eb;
+          border-radius:10px;
+          background:#f8fafc;
+          margin-bottom:6px;
+        ">
+        <small style="display:block;color:#64748b;margin-bottom:14px;">
+          Contact support to change email
+        </small>
+
+        <label style="display:block;font-weight:700;margin-bottom:6px;">Phone Number</label>
+        <input id="profilePhone" type="tel" placeholder="Add phone number" style="
+          width:100%;
+          box-sizing:border-box;
+          padding:13px;
+          border:1px solid #d1d5db;
+          border-radius:10px;
+          margin-bottom:15px;
+        ">
+
+        <button type="submit" style="
+          width:100%;
+          padding:13px;
+          border:0;
+          border-radius:10px;
+          background:#16a34a;
+          color:#fff;
+          font-weight:800;
+          font-size:15px;
+        ">Save Profile</button>
+
+        <p id="profileEditMessage" style="text-align:center;margin:12px 0 0;"></p>
+      </form>
+
+      <hr style="border:0;border-top:1px solid #e5e7eb;margin:28px 0;">
+
+      <h2 style="margin:0 0 15px;">Change Password</h2>
+
+      <form id="profilePasswordForm">
+
+        <input id="profileCurrentPassword" type="password" placeholder="Current Password" required style="
+          width:100%;
+          box-sizing:border-box;
+          padding:13px;
+          border:1px solid #d1d5db;
+          border-radius:10px;
+          margin-bottom:12px;
+        ">
+
+        <input id="profileNewPassword" type="password" placeholder="New Password" minlength="8" required style="
+          width:100%;
+          box-sizing:border-box;
+          padding:13px;
+          border:1px solid #d1d5db;
+          border-radius:10px;
+          margin-bottom:12px;
+        ">
+
+        <input id="profileConfirmPassword" type="password" placeholder="Confirm New Password" minlength="8" required style="
+          width:100%;
+          box-sizing:border-box;
+          padding:13px;
+          border:1px solid #d1d5db;
+          border-radius:10px;
+          margin-bottom:15px;
+        ">
+
+        <button type="submit" style="
+          width:100%;
+          padding:13px;
+          border:1px solid #16a34a;
+          border-radius:10px;
+          background:#fff;
+          color:#16a34a;
+          font-weight:800;
+          font-size:15px;
+        ">Change Password</button>
+
+        <p id="profilePasswordMessage" style="text-align:center;margin:12px 0 0;"></p>
+      </form>
+
+    </div>
+  </div>
+</div>
 
 <main class="main" id="dashboardMain" style="display:none;">
 <section id="transactionHistorySection" class="panel" style="display:none;margin-bottom:20px">
@@ -484,6 +680,197 @@ document.getElementById("modalText").textContent="Could not connect to the payme
 function closeModal(){document.getElementById("modal").classList.remove("show")}
 // render("WhatsApp");
 </script>
+
+<script>
+async function openMyProfile() {
+  const dashboard = document.getElementById("dashboardMain");
+  const profile = document.getElementById("profileStandalone");
+
+  if (!profile) {
+    alert("Profile interface could not be found.");
+    return;
+  }
+
+  if (dashboard) dashboard.style.display = "none";
+
+  profile.style.display = "block";
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
+
+  try {
+    const response = await fetch(
+      "https://numberhub.onrender.com/api/profile",
+      {
+        method: "GET",
+        credentials: "include"
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Could not load profile");
+    }
+
+    const u = data.profile;
+
+    document.getElementById("standaloneProfileName").textContent =
+      u.name || "Victor";
+
+    document.getElementById("standaloneProfileUsername").textContent =
+      u.username ? "@" + u.username : "Username not set";
+
+    document.getElementById("standaloneProfileEmail").textContent =
+      u.email || "";
+
+    document.getElementById("profileAvatar").textContent =
+      (u.name || "V").trim().charAt(0).toUpperCase();
+
+    document.getElementById("profileNgnBalance").textContent =
+      "₦" + Number(u.wallet || 0).toFixed(2);
+
+    document.getElementById("profileUsdBalance").textContent =
+      "$" + Number(u.usd_balance || 0).toFixed(2);
+
+    document.getElementById("profileTotalRecharged").textContent =
+      "₦" + Number(u.total_recharged || 0).toFixed(2);
+
+    document.getElementById("profileTotalOtpBuys").textContent =
+      Number(u.total_otp_buys || 0);
+
+    document.getElementById("profileFullName").value =
+      u.name || "";
+
+    const usernameInput =
+      document.getElementById("profileUsername");
+
+    usernameInput.value = u.username || "";
+
+    if (u.username) {
+      usernameInput.readOnly = true;
+      usernameInput.style.background = "#f8fafc";
+    } else {
+      usernameInput.readOnly = false;
+      usernameInput.style.background = "#fff";
+    }
+
+    document.getElementById("profileEmail").value =
+      u.email || "";
+
+    document.getElementById("profilePhone").value =
+      u.phone_number || "";
+
+  } catch (error) {
+    console.error("PROFILE LOAD ERROR:", error);
+
+    const message =
+      document.getElementById("profileEditMessage");
+
+    if (message) {
+      message.style.color = "#dc2626";
+      message.textContent =
+        error.message || "Could not load your profile.";
+    }
+  }
+}
+
+function closeMyProfile() {
+  const profile = document.getElementById("profileStandalone");
+  const dashboard = document.getElementById("dashboardMain");
+
+  if (profile) profile.style.display = "none";
+
+  if (dashboard) {
+    dashboard.style.setProperty(
+      "display",
+      "block",
+      "important"
+    );
+  }
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+
+  const profileForm =
+    document.getElementById("profileEditForm");
+
+  if (profileForm) {
+    profileForm.addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      const message =
+        document.getElementById("profileEditMessage");
+
+      const usernameInput =
+        document.getElementById("profileUsername");
+
+      const payload = {
+        name: document.getElementById("profileFullName").value.trim(),
+        username: usernameInput.value.trim(),
+        phone_number: document.getElementById("profilePhone").value.trim()
+      };
+
+      try {
+        const response = await fetch(
+          "https://numberhub.onrender.com/api/profile",
+          {
+            method: "PUT",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+          }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Could not update profile");
+        }
+
+        message.style.color = "#16a34a";
+        message.textContent =
+          "Profile updated successfully.";
+
+        if (data.profile.username) {
+          usernameInput.value =
+            data.profile.username;
+
+          usernameInput.readOnly = true;
+          usernameInput.style.background = "#f8fafc";
+        }
+
+        document.getElementById("standaloneProfileName").textContent =
+          data.profile.name;
+
+        document.getElementById("standaloneProfileUsername").textContent =
+          data.profile.username
+            ? "@" + data.profile.username
+            : "Username not set";
+
+        document.getElementById("profileName").textContent =
+          data.profile.name;
+
+      } catch (error) {
+        message.style.color = "#dc2626";
+        message.textContent =
+          error.message || "Could not update profile.";
+      }
+    });
+  }
+
+});
+</script>
+
 <script src="script.js"></script>
 <script>
 function goToSection(id) {
