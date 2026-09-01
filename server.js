@@ -40,7 +40,6 @@ const NUMBERHUB_PRICES = {
 // Automatic pricing for countries without a manually configured price.
 // Existing NUMBERHUB_PRICES always take priority.
 const FIVESIM_USD_TO_NGN = 1500;
-const NUMBERHUB_AUTO_MARKUP = 2;
 const NUMBERHUB_MIN_AUTO_PRICE = 1000;
 
 function calculateNumberHubPrice(countryName, serviceName, supplierCost) {
@@ -50,7 +49,7 @@ function calculateNumberHubPrice(countryName, serviceName, supplierCost) {
   const serviceKey =
     String(serviceName || "").trim().toLowerCase();
 
-  // Keep existing manually configured prices unchanged.
+  // Keep manually configured prices unchanged.
   if (
     countryPrices &&
     Object.prototype.hasOwnProperty.call(countryPrices, serviceKey)
@@ -58,23 +57,43 @@ function calculateNumberHubPrice(countryName, serviceName, supplierCost) {
     return Number(countryPrices[serviceKey]);
   }
 
-  const cost = Number(supplierCost);
+  const costUSD = Number(supplierCost);
 
-  if (!Number.isFinite(cost) || cost <= 0) {
+  if (!Number.isFinite(costUSD) || costUSD <= 0) {
     return null;
   }
 
-  const raw =
-    cost *
-    FIVESIM_USD_TO_NGN *
-    NUMBERHUB_AUTO_MARKUP;
+  // Convert the live 5SIM supplier cost to NGN.
+  const costNGN = costUSD * FIVESIM_USD_TO_NGN;
 
-  const rounded =
-    Math.ceil(raw / 100) * 100;
+  let tierPrice;
+
+  if (costNGN < 300) {
+    // Very cheap numbers: minimum ₦1,000 profit.
+    tierPrice = costNGN + 1000;
+  } else if (costNGN < 500) {
+    tierPrice = 1300;
+  } else if (costNGN < 1000) {
+    tierPrice = 2000;
+  } else if (costNGN < 1500) {
+    tierPrice = 2800;
+  } else if (costNGN < 2000) {
+    tierPrice = 3500;
+  } else if (costNGN < 3000) {
+    tierPrice = 4500;
+  } else if (costNGN < 4000) {
+    tierPrice = 5500;
+  } else {
+    tierPrice = costNGN + 1500;
+  }
+
+  // Safety rule: never price below supplier cost + ₦1,000.
+  const minimumProfitablePrice = costNGN + 1000;
 
   return Math.max(
     NUMBERHUB_MIN_AUTO_PRICE,
-    rounded
+    tierPrice,
+    minimumProfitablePrice
   );
 }
 
