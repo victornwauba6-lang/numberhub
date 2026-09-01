@@ -4,6 +4,146 @@ const path = require("path");
 const crypto = require("crypto");
 const { Pool } = require("pg");
 const bcrypt = require("bcryptjs");
+
+const FIVESIM_BASE_URL = "https://5sim.net/v1";
+
+const NUMBERHUB_PRICES = {
+  "United States": {
+    whatsapp: 4500,
+    facebook: 1600,
+    tiktok: 1500,
+    telegram: 3500
+  },
+  "United Kingdom": {
+    whatsapp: 4000,
+    facebook: 2000,
+    tiktok: 1500,
+    telegram: 4000
+  },
+  "Canada": {
+    whatsapp: 4000,
+    facebook: 1300,
+    tiktok: 2000,
+    telegram: 3000
+  },
+  "Philippines": {
+    whatsapp: 3500,
+    facebook: 1100,
+    tiktok: 1200,
+    telegram: 2500
+  }
+};
+
+
+
+const FIVESIM_COUNTRY_MAP = {
+  "United States": "usa",
+  "United Kingdom": "england",
+  "Canada": "canada",
+  "Nigeria": "nigeria",
+  "Australia": "australia",
+  "Germany": "germany",
+  "France": "france",
+  "Spain": "spain",
+  "Italy": "italy",
+  "Netherlands": "netherlands",
+  "Belgium": "belgium",
+  "Sweden": "sweden",
+  "Norway": "norway",
+  "Denmark": "denmark",
+  "Finland": "finland",
+  "Poland": "poland",
+  "Portugal": "portugal",
+  "Ireland": "ireland",
+  "Austria": "austria",
+  "Switzerland": "switzerland"
+};
+
+function fiveSimCountryCode(country) {
+  return FIVESIM_COUNTRY_MAP[country] || String(country).trim().toLowerCase();
+}
+
+
+async function fiveSimRequest(endpoint, options = {}) {
+  const apiKey = process.env.FIVESIM_API_KEY;
+
+  if (!apiKey) {
+    throw new Error("FIVESIM_API_KEY is not configured");
+  }
+
+  const response = await fetch(FIVESIM_BASE_URL + endpoint, {
+    ...options,
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Accept": "application/json",
+      "Content-Type": "application/json",
+      ...(options.headers || {})
+    }
+  });
+
+  const text = await response.text();
+  let data;
+
+  try {
+    data = JSON.parse(text);
+  } catch {
+    data = { raw: text };
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      `5SIM API ${response.status}: ${data.message || data.error || text}`
+    );
+  }
+
+  return data;
+}
+
+async function fiveSimProfile() {
+  return fiveSimRequest("/user/profile");
+}
+
+async function fiveSimBuyActivation(country, product, operator = "any") {
+  const endpoint =
+    `/user/buy/activation/${encodeURIComponent(country)}/${encodeURIComponent(operator)}/${encodeURIComponent(product)}`;
+
+  return fiveSimRequest(endpoint, {
+    method: "GET"
+  });
+}
+
+async function fiveSimGetPrices(country, product) {
+  const endpoint =
+    `/guest/prices?country=${encodeURIComponent(country)}&product=${encodeURIComponent(product)}`;
+
+  return fiveSimRequest(endpoint, {
+    method: "GET"
+  });
+}
+
+function fiveSimCheapestAvailable(prices, country, product) {
+  const countryData = prices?.[country]?.[product];
+
+  if (!countryData || typeof countryData !== "object") {
+    return null;
+  }
+
+  const available = Object.entries(countryData)
+    .filter(([, item]) =>
+      item &&
+      Number(item.count) > 0 &&
+      Number.isFinite(Number(item.cost))
+    )
+    .map(([operator, item]) => ({
+      operator,
+      cost: Number(item.cost),
+      count: Number(item.count)
+    }))
+    .sort((a, b) => a.cost - b.cost);
+
+  return available[0] || null;
+}
+
 async function sendPasswordResetEmail(to, code) {
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -311,6 +451,83 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+
+    if (req.method === "GET" && req.url.startsWith("/api/numbers/services")) {
+      const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
+      const requestedCountry = String(
+        url.searchParams.get("country") || "United States"
+      ).trim();
+
+      const country = fiveSimCountryCode(requestedCountry);
+
+      try {
+        const prices = await fiveSimRequest(
+          `/guest/prices?country=${encodeURIComponent(country)}`
+        );
+
+        const countryData = prices?.[country];
+
+        if (!countryData || typeof countryData !== "object") {
+          sendJSON(res, 404, {
+            error: "No service data found for this country"
+          });
+          return;
+        }
+
+        const services = Object.entries(countryData)
+          .map(([product, operators]) => {
+            if (!operators || typeof operators !== "object") {
+              return null;
+            }
+
+            const available = Object.entries(operators)
+              .filter(([, item]) =>
+                item &&
+                Number(item.count) > 0 &&
+                Number.isFinite(Number(item.cost))
+              )
+              .map(([operator, item]) => ({
+                operator,
+                cost: Number(item.cost),
+                count: Number(item.count)
+              }))
+              .sort((a, b) => a.cost - b.cost);
+
+            if (!available.length) {
+              return null;
+            }
+
+            return {
+              product,
+              available: available.reduce(
+                (total, item) => total + item.count,
+                0
+              ),
+              cheapestCost: available[0].cost,
+              operators: available
+            };
+          })
+          .filter(Boolean)
+          .sort((a, b) => a.product.localeCompare(b.product));
+
+        sendJSON(res, 200, {
+          country: requestedCountry,
+          providerCountry: country,
+          count: services.length,
+          services
+        });
+        return;
+
+      } catch (error) {
+        console.error("5SIM service lookup error:", error);
+
+        sendJSON(res, 502, {
+          error: "Unable to retrieve services from 5SIM"
+        });
+        return;
+      }
+    }
+
     if (req.method === "POST" && req.url === "/api/numbers/purchase") {
       const cookies = String(req.headers.cookie || "");
       const match = cookies.match(/(?:^|;\s*)session=([^;]+)/);
@@ -342,12 +559,34 @@ const server = http.createServer(async (req, res) => {
 
       const service = String(data.service || "").trim();
       const provider = String(data.provider || "").trim();
-      const phoneNumber = String(data.phone_number || "").trim();
-      const country = String(data.country || "").trim();
-      const price = Number(data.price);
+      const country = fiveSimCountryCode(String(data.country || "United States").trim());
 
-      if (!service || !provider || !phoneNumber || !country ||
-          !Number.isFinite(price) || price <= 0) {
+      const serviceKey = service.toLowerCase();
+      const countryPrices = NUMBERHUB_PRICES[String(data.country || "United States").trim()];
+
+      if (!countryPrices || !Object.prototype.hasOwnProperty.call(countryPrices, serviceKey)) {
+        sendJSON(res, 400, {
+          error: "Price not configured for this country and service"
+        });
+        return;
+      }
+
+      const price = Number(countryPrices[serviceKey]);
+
+      const productMap = {
+        whatsapp: "whatsapp",
+        facebook: "facebook",
+        instagram: "instagram",
+        telegram: "telegram",
+        tiktok: "tiktok",
+        google: "google",
+        twitter: "twitter",
+        x: "twitter"
+      };
+
+      const product = productMap[service.toLowerCase()];
+
+      if (!service || !product || !Number.isFinite(price) || price <= 0) {
         sendJSON(res, 400, {
           error: "Invalid purchase details"
         });
@@ -383,64 +622,195 @@ const server = http.createServer(async (req, res) => {
           return;
         }
 
-        const reference =
-          "NP-" +
-          Date.now().toString(36).toUpperCase() +
-          "-" +
-          crypto.randomBytes(4).toString("hex").toUpperCase();
+        await client.query("ROLLBACK");
+        client.release();
 
-        const purchaseResult = await client.query(
-          `INSERT INTO number_purchases
-            (user_id, phone_number, country, service, provider,
-             price, status, reference)
-           VALUES ($1, $2, $3, $4, $5, $6, 'active', $7)
-           RETURNING id, phone_number, country, service, provider,
-                     price, status, reference, created_at`,
-          [
-            userId,
-            phoneNumber,
+        let supplierPurchase;
+
+        try {
+          const prices = await fiveSimGetPrices(country, product);
+          const option = fiveSimCheapestAvailable(
+            prices,
             country,
-            service,
-            provider,
-            price.toFixed(2),
-            reference
-          ]
-        );
+            product
+          );
 
-        await client.query(
-          `UPDATE users
-           SET wallet = wallet - $1,
-               purchases = purchases + 1
-           WHERE id = $2`,
-          [price.toFixed(2), userId]
-        );
+          if (!option) {
+            sendJSON(res, 400, {
+              error: `No ${service} numbers are currently available from 5SIM`
+            });
+            return;
+          }
 
-        await client.query(
-          `INSERT INTO wallet_transactions
-            (user_id, type, amount, method, status, reference, description)
-           VALUES ($1, 'purchase', $2, 'Wallet', 'successful', $3, $4)`,
-          [
-            userId,
-            price.toFixed(2),
-            reference,
-            "Number purchase"
-          ]
-        );
+          supplierPurchase = await fiveSimBuyActivation(
+            country,
+            product,
+            option.operator
+          );
+        } catch (supplierError) {
+          console.error("5SIM purchase error:", supplierError);
 
-        await client.query("COMMIT");
+          sendJSON(res, 502, {
+            error: supplierError.message || "5SIM purchase failed"
+          });
+          return;
+        }
 
-        sendJSON(res, 201, {
-          message: "Number purchased successfully",
-          purchase: purchaseResult.rows[0]
-        });
+        const phoneNumber = String(
+          supplierPurchase.phone || supplierPurchase.number || ""
+        ).trim();
 
-        return;
+        const supplierId = supplierPurchase.id;
+
+        if (!phoneNumber || !supplierId) {
+          sendJSON(res, 502, {
+            error: "5SIM returned an invalid purchase response"
+          });
+          return;
+        }
+
+        const dbClient = await pool.connect();
+
+        try {
+          await dbClient.query("BEGIN");
+
+          const lockedUser = await dbClient.query(
+            `SELECT wallet, purchases
+             FROM users
+             WHERE id = $1
+             FOR UPDATE`,
+            [userId]
+          );
+
+          if (lockedUser.rows.length === 0) {
+            await dbClient.query("ROLLBACK");
+
+            try {
+              await fiveSimRequest(`/user/cancel/${supplierId}`, {
+                method: "GET"
+              });
+            } catch (cancelError) {
+              console.error(
+                "Could not cancel 5SIM order:",
+                cancelError
+              );
+            }
+
+            sendJSON(res, 404, { error: "User not found" });
+            return;
+          }
+
+          const currentWallet = Number(
+            lockedUser.rows[0].wallet || 0
+          );
+
+          if (currentWallet < price) {
+            await dbClient.query("ROLLBACK");
+
+            try {
+              await fiveSimRequest(`/user/cancel/${supplierId}`, {
+                method: "GET"
+              });
+            } catch (cancelError) {
+              console.error(
+                "Could not cancel 5SIM order:",
+                cancelError
+              );
+            }
+
+            sendJSON(res, 400, {
+              error: "Insufficient wallet balance"
+            });
+            return;
+          }
+
+          const reference =
+            "NP-" +
+            Date.now().toString(36).toUpperCase() +
+            "-" +
+            crypto.randomBytes(4).toString("hex").toUpperCase();
+
+          const purchaseResult = await dbClient.query(
+            `INSERT INTO number_purchases
+              (user_id, phone_number, country, service, provider,
+               price, status, reference)
+             VALUES ($1, $2, $3, $4, $5, $6, 'active', $7)
+             RETURNING id, phone_number, country, service, provider,
+                       price, status, reference, created_at`,
+            [
+              userId,
+              phoneNumber,
+              country,
+              service,
+              provider || option.operator,
+              price.toFixed(2),
+              reference
+            ]
+          );
+
+          await dbClient.query(
+            `UPDATE users
+             SET wallet = wallet - $1,
+                 purchases = purchases + 1
+             WHERE id = $2`,
+            [price.toFixed(2), userId]
+          );
+
+          await dbClient.query(
+            `INSERT INTO wallet_transactions
+              (user_id, type, amount, method, status, reference, description)
+             VALUES ($1, 'purchase', $2, 'Wallet', 'successful', $3, $4)`,
+            [
+              userId,
+              price.toFixed(2),
+              reference,
+              "Number purchase"
+            ]
+          );
+
+          await dbClient.query("COMMIT");
+
+          sendJSON(res, 201, {
+            message: "Number purchased successfully",
+            purchase: purchaseResult.rows[0],
+            supplier: {
+              id: supplierId,
+              provider: "5SIM"
+            }
+          });
+
+          return;
+
+        } catch (dbError) {
+          await dbClient.query("ROLLBACK");
+
+          try {
+            await fiveSimRequest(`/user/cancel/${supplierId}`, {
+              method: "GET"
+            });
+          } catch (cancelError) {
+            console.error(
+              "Could not cancel 5SIM order:",
+              cancelError
+            );
+          }
+
+          throw dbError;
+
+        } finally {
+          dbClient.release();
+        }
 
       } catch (error) {
-        await client.query("ROLLBACK");
-        throw error;
-      } finally {
-        client.release();
+        console.error("Purchase error:", error);
+
+        if (!res.writableEnded) {
+          sendJSON(res, 500, {
+            error: "Purchase could not be completed"
+          });
+        }
+
+        return;
       }
     }
 

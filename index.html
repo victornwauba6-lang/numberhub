@@ -163,66 +163,54 @@ h1{margin:5px 0;font-size:30px}
 </div>
 </section>
 
-<section class="panel buy-numbers">
+<section class="panel buy-numbers" id="buyNumbersPanel">
+  <div class="green">BUY NUMBERS</div>
+  <h2 id="buyNumbersTitle">Choose Number Type</h2>
 
-<div class="green">BUY NUMBERS</div>
-<h2>Choose Number Type</h2>
-<div class="buy-options">
+  <div class="buy-options" id="buyNumberTypes">
 
-<div class="buy-option usa-container">
-<button class="buy-option-main" type="button" onclick="toggleUSA()">
-🇺🇸<strong>USA</strong><small>Numbers →</small>
-</button>
+    <button class="buy-option" type="button" onclick="showNumberInterface('usa')">
+      🇺🇸
+      <strong>USA</strong>
+      <small>Numbers →</small>
+    </button>
 
-<div class="usa-servers" id="usaServers" style="display:none">
+    <button class="buy-option" type="button" onclick="showNumberInterface('otherUSA')">
+      🇺🇸
+      <strong>Other USA</strong>
+      <small>Numbers →</small>
+    </button>
 
-<button class="dynamic-server usa-server" type="button" onclick="selectUSA('Server A', this)">
-<div class="server-card-top">
-<span class="server-online"><span class="online-dot"></span> ONLINE</span>
-<span class="server-badge">⭐ BEST</span>
-</div>
-<div class="server-name">Server A</div>
-<div class="server-feature">⚡ Quick OTP</div>
-</button>
+    <button class="buy-option" type="button" onclick="showNumberInterface('allCountries')">
+      🌍
+      <strong>All Countries</strong>
+      <small>Numbers →</small>
+    </button>
 
-<button class="dynamic-server usa-server" type="button" onclick="selectUSA('Server B', this)">
-<div class="server-card-top">
-<span class="server-online"><span class="online-dot"></span> ONLINE</span>
-<span class="server-badge">Quick OTP</span>
-</div>
-<div class="server-name">Server B</div>
-<div class="server-feature">⚡ Fast Verification</div>
-</button>
+    <button class="buy-option" type="button" onclick="showNumberInterface('moreCountries')">
+      🌐
+      <strong>More Countries</strong>
+      <small>Numbers →</small>
+    </button>
 
-</div>
-</div>
+  </div>
 
-<button class="buy-option" onclick="showServers('otherUSA')">🇺🇸<strong>Other USA</strong><small>Numbers →</small></button>
-<button class="buy-option" onclick="showServers('allCountries')">🌍<strong>All Countries</strong><small>Numbers →</small></button>
-<button class="buy-option" onclick="showServers('moreCountries')">🌐<strong>More Countries</strong><small>Numbers →</small></button>
-</div>
-<div class="panel server-selection" id="serverSelection" style="display:none"><div class="green">CHOOSE SERVER</div><h2 id="serverTitle">Choose Server</h2><div id="dynamicServers"></div><p id="selectedServer" style="color:#16a34a;font-weight:bold"></p></div>
+  <div id="buyNumberInterface" style="display:none"></div>
 </section>
 
-<section class="panel">
+<section class="panel" id="availableNumbersPanel" style="display:none">
 <h2 id="serviceSection">Available Numbers</h2>
 <div class="services" id="services" style="display:none"></div>
 </section>
 
-<section class="panel">
+<section class="panel" id="operatorPanel" style="display:none">
 <div class="green">SELECT OPERATOR</div>
 <h2>Options for: <span id="serviceName">WhatsApp</span></h2>
 <div class="notice">Demo inventory. Real numbers and OTPs require an authorized provider API.</div>
 <div class="providers" id="providers"></div>
 </section>
 
-<div class="grid2">
-<section class="panel"><h2>Other USA Numbers</h2>
-<div class="option" id="usaNumbersSection">🇺🇸 Other USA Numbers<br><b>₦498.07</b><div class="sub">₦407.36 locked</div></div>
-<div class="option" id="allCountriesSection">🌍 All Country Numbers<div class="sub">Global coverage · Choose your country</div></div>
-</section>
-</section>
-</div>
+
 </main>
 </div>
 
@@ -306,12 +294,21 @@ async function buy(service, provider, price) {
     ? Number(walletElement.textContent.replace(/[^0-9.-]/g, ""))
     : 0;
 
+  const selectedCountry =
+    window.selectedCountry ||
+    "United States";
+
+  const selectedService =
+    window.selectedService ||
+    service;
+
   document.getElementById("modalTitle").textContent =
     "Confirm Purchase";
 
   document.getElementById("modalText").innerHTML =
-    "Service: <b>" + service + "</b><br>" +
-    "Provider: <b>" + provider + "</b><br>" +
+    "Country: <b>" + selectedCountry + "</b><br>" +
+    "Service: <b>" + selectedService + "</b><br>" +
+    "Server: <b>" + (window.selectedServer || provider) + "</b><br>" +
     "Price: <b>" + money(price) + "</b><br><br>" +
     "Wallet balance: <b>₦" + walletBalance.toFixed(2) + "</b>";
 
@@ -334,9 +331,10 @@ async function buy(service, provider, price) {
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
-            country: "US",
-            service: service,
-            provider: provider,
+            country: selectedCountry,
+            service: selectedService,
+            provider: window.selectedServer || provider,
+            numberType: window.selectedNumberType,
             price: price
           })
         }
@@ -349,10 +347,24 @@ async function buy(service, provider, price) {
           ? "Purchase Successful"
           : "Purchase Failed";
 
-      document.getElementById("modalText").innerHTML =
-        "<b>" +
-        (data.error || data.message || "Purchase completed.") +
-        "</b>";
+      if (response.ok && data.purchase) {
+        document.getElementById("modalText").innerHTML =
+          "<b>Number purchased successfully.</b><br><br>" +
+          "Number: <b>" +
+          (data.purchase.phone_number || "") +
+          "</b><br>" +
+          "Country: <b>" +
+          (data.purchase.country || selectedCountry) +
+          "</b><br>" +
+          "Service: <b>" +
+          (data.purchase.service || selectedService) +
+          "</b>";
+      } else {
+        document.getElementById("modalText").innerHTML =
+          "<b>" +
+          (data.error || data.message || "Purchase could not be completed.") +
+          "</b>";
+      }
 
       confirmButton.disabled = false;
       confirmButton.textContent = "Close";
@@ -374,8 +386,7 @@ async function buy(service, provider, price) {
   };
 
   document.getElementById("modal").classList.add("show");
-  }
-
+}
 function fund(){
 document.getElementById("modalTitle").textContent="Fund Wallet";
 document.getElementById("modalText").innerHTML=
@@ -471,7 +482,7 @@ document.getElementById("modalText").textContent="Could not connect to the payme
 }
 
 function closeModal(){document.getElementById("modal").classList.remove("show")}
-render("WhatsApp");
+// render("WhatsApp");
 </script>
 <script src="script.js"></script>
 <script>
@@ -866,9 +877,759 @@ async function logoutNumberHub() {
   window.scrollTo(0, 0);
 }
 </script>
-<script src="server-selection.js"></script>
-<script src="number-type-selector.js"></script>
 <script src="whatsapp-float.js"></script>
+<script>
+const numberInterfaceConfigs = {
+  usa: {
+    title: "🇺🇸 USA Numbers",
+    price: "₦0.00",
+    description: "Affordable US numbers · Servers A & B · Choose your server",
+    servers: [
+      ["Server A", "⭐ BEST", "Quick OTP"],
+      ["Server B", "Quick OTP", "Fast Verification"]
+    ],
+    countries: ["United States"],
+    countryLabel: "United States"
+  },
+
+  otherUSA: {
+    title: "🇺🇸 Other USA Numbers",
+    price: "₦498.07",
+    description: "Budget-friendly US numbers · Servers C, D & E · Choose your server",
+    servers: [
+      ["Server C", "⭐ BEST", "Quick OTP"],
+      ["Server D", "Quick OTP", "Fast Verification"],
+      ["Server E", "Quick OTP", "Reliable OTP"]
+    ],
+    countries: ["United States"],
+    countryLabel: "United States"
+  },
+
+  allCountries: {
+    title: "🌍 All Country Numbers",
+    price: "₦0.00",
+    description: "Global coverage · Servers B, C & D · Choose your country",
+    servers: [
+      ["Server B", "⭐ BEST", "Multiple Countries"],
+      ["Server C", "Quick OTP", "Global Coverage"],
+      ["Server D", "Quick OTP", "Global Coverage"]
+    ],
+    tries: [
+      "Afghanistan",
+      "Albania",
+      "Algeria",
+      "Angola",
+      "Argentina",
+      "Armenia",
+      "Australia",
+      "Austria",
+      "Azerbaijan",
+      "Bahamas",
+      "Bahrain",
+      "Bangladesh",
+      "Barbados",
+      "Belarus",
+      "Belgium",
+      "Belize",
+      "Benin",
+      "Bhutan",
+      "Bolivia",
+      "Bosnia and Herzegovina",
+      "Botswana",
+      "Brazil",
+      "Brunei",
+      "Bulgaria",
+      "Burkina Faso",
+      "Cambodia",
+      "Cameroon",
+      "Canada",
+      "Cape Verde",
+      "Chad",
+      "Chile",
+      "China",
+      "Colombia",
+      "Congo",
+      "Costa Rica",
+      "Croatia",
+      "Cyprus",
+      "Czech Republic",
+      "Denmark",
+      "Djibouti",
+      "Dominican Republic",
+      "Ecuador",
+      "Egypt",
+      "El Salvador",
+      "Estonia",
+      "Ethiopia",
+      "Finland",
+      "France",
+      "Georgia",
+      "Germany",
+      "Ghana",
+      "Greece",
+      "Guatemala",
+      "Guinea",
+      "Haiti",
+      "Honduras",
+      "Hong Kong",
+      "Hungary",
+      "Iceland",
+      "India",
+      "Indonesia",
+      "Iran",
+      "Iraq",
+      "Ireland",
+      "Israel",
+      "Italy",
+      "Ivory Coast",
+      "Jamaica",
+      "Japan",
+      "Jordan",
+      "Kazakhstan",
+      "Kenya",
+      "Kuwait",
+      "Kyrgyzstan",
+      "Laos",
+      "Latvia",
+      "Lebanon",
+      "Lesotho",
+      "Liberia",
+      "Libya",
+      "Lithuania",
+      "Luxembourg",
+      "Madagascar",
+      "Malawi",
+      "Malaysia",
+      "Maldives",
+      "Mali",
+      "Malta",
+      "Mauritania",
+      "Mauritius",
+      "Mexico",
+      "Moldova",
+      "Monaco",
+      "Mongolia",
+      "Montenegro",
+      "Morocco",
+      "Mozambique",
+      "Myanmar",
+      "Namibia",
+      "Nepal",
+      "Netherlands",
+      "New Zealand",
+      "Nicaragua",
+      "Niger",
+      "Nigeria",
+      "North Macedonia",
+      "Norway",
+      "Oman",
+      "Pakistan",
+      "Panama",
+      "Papua New Guinea",
+      "Paraguay",
+      "Peru",
+      "Philippines",
+      "Poland",
+      "Portugal",
+      "Puerto Rico",
+      "Qatar",
+      "Romania",
+      "Russia",
+      "Rwanda",
+      "Saudi Arabia",
+      "Senegal",
+      "Serbia",
+      "Seychelles",
+      "Sierra Leone",
+      "Singapore",
+      "Slovakia",
+      "Slovenia",
+      "South Africa",
+      "South Korea",
+      "Spain",
+      "Sri Lanka",
+      "Sudan",
+      "Suriname",
+      "Sweden",
+      "Switzerland",
+      "Taiwan",
+      "Tajikistan",
+      "Tanzania",
+      "Thailand",
+      "Togo",
+      "Trinidad and Tobago",
+      "Tunisia",
+      "Turkey",
+      "Turkmenistan",
+      "Uganda",
+      "Ukraine",
+      "United Arab Emirates",
+      "United Kingdom",
+      "United States",
+      "Uruguay",
+      "Uzbekistan",
+      "Venezuela",
+      "Vietnam",
+      "Yemen",
+      "Zambia",
+      "Zimbabwe"
+    ]
+  },
+
+  moreCountries: {
+    title: "🌐 More Country Numbers",
+    price: "₦0.00",
+    description: "Extended global coverage · Servers C & E · Choose your country",
+    servers: [
+      ["Server C", "⭐ BEST", "Global Coverage"],
+      ["Server E", "Quick OTP", "Reliable OTP"]
+    ],
+    tries: [
+      "Afghanistan",
+      "Albania",
+      "Algeria",
+      "Angola",
+      "Argentina",
+      "Armenia",
+      "Australia",
+      "Austria",
+      "Azerbaijan",
+      "Bahamas",
+      "Bahrain",
+      "Bangladesh",
+      "Barbados",
+      "Belarus",
+      "Belgium",
+      "Belize",
+      "Benin",
+      "Bhutan",
+      "Bolivia",
+      "Bosnia and Herzegovina",
+      "Botswana",
+      "Brazil",
+      "Brunei",
+      "Bulgaria",
+      "Burkina Faso",
+      "Cambodia",
+      "Cameroon",
+      "Canada",
+      "Cape Verde",
+      "Chad",
+      "Chile",
+      "China",
+      "Colombia",
+      "Congo",
+      "Costa Rica",
+      "Croatia",
+      "Cyprus",
+      "Czech Republic",
+      "Denmark",
+      "Djibouti",
+      "Dominican Republic",
+      "Ecuador",
+      "Egypt",
+      "El Salvador",
+      "Estonia",
+      "Ethiopia",
+      "Finland",
+      "France",
+      "Georgia",
+      "Germany",
+      "Ghana",
+      "Greece",
+      "Guatemala",
+      "Guinea",
+      "Haiti",
+      "Honduras",
+      "Hong Kong",
+      "Hungary",
+      "Iceland",
+      "India",
+      "Indonesia",
+      "Iran",
+      "Iraq",
+      "Ireland",
+      "Israel",
+      "Italy",
+      "Ivory Coast",
+      "Jamaica",
+      "Japan",
+      "Jordan",
+      "Kazakhstan",
+      "Kenya",
+      "Kuwait",
+      "Kyrgyzstan",
+      "Laos",
+      "Latvia",
+      "Lebanon",
+      "Lesotho",
+      "Liberia",
+      "Libya",
+      "Lithuania",
+      "Luxembourg",
+      "Madagascar",
+      "Malawi",
+      "Malaysia",
+      "Maldives",
+      "Mali",
+      "Malta",
+      "Mauritania",
+      "Mauritius",
+      "Mexico",
+      "Moldova",
+      "Monaco",
+      "Mongolia",
+      "Montenegro",
+      "Morocco",
+      "Mozambique",
+      "Myanmar",
+      "Namibia",
+      "Nepal",
+      "Netherlands",
+      "New Zealand",
+      "Nicaragua",
+      "Niger",
+      "Nigeria",
+      "North Macedonia",
+      "Norway",
+      "Oman",
+      "Pakistan",
+      "Panama",
+      "Papua New Guinea",
+      "Paraguay",
+      "Peru",
+      "Philippines",
+      "Poland",
+      "Portugal",
+      "Puerto Rico",
+      "Qatar",
+      "Romania",
+      "Russia",
+      "Rwanda",
+      "Saudi Arabia",
+      "Senegal",
+      "Serbia",
+      "Seychelles",
+      "Sierra Leone",
+      "Singapore",
+      "Slovakia",
+      "Slovenia",
+      "South Africa",
+      "South Korea",
+      "Spain",
+      "Sri Lanka",
+      "Sudan",
+      "Suriname",
+      "Sweden",
+      "Switzerland",
+      "Taiwan",
+      "Tajikistan",
+      "Tanzania",
+      "Thailand",
+      "Togo",
+      "Trinidad and Tobago",
+      "Tunisia",
+      "Turkey",
+      "Turkmenistan",
+      "Uganda",
+      "Ukraine",
+      "United Arab Emirates",
+      "United Kingdom",
+      "United States",
+      "Uruguay",
+      "Uzbekistan",
+      "Venezuela",
+      "Vietnam",
+      "Yemen",
+      "Zambia",
+      "Zimbabwe"
+    ]
+  }
+};
+
+function showNumberInterface(type) {
+  const config = numberInterfaceConfigs[type];
+  const types = document.getElementById("buyNumberTypes");
+  const box = document.getElementById("buyNumberInterface");
+  const title = document.getElementById("buyNumbersTitle");
+
+  if (!config || !types || !box || !title) return;
+
+  window.selectedNumberType = type;
+  window.selectedServer = null;
+  window.selectedCountry = null;
+  window.selectedService = null;
+
+  types.style.display = "none";
+  box.style.display = "block";
+
+  title.textContent = config.title;
+
+  box.innerHTML = `
+    <div style="
+      background:#fff;
+      padding:20px;
+      border-radius:16px;
+      border:1px solid #e5e7eb;
+    ">
+
+      <div style="
+        text-align:center;
+        margin-bottom:24px;
+      ">
+        <div style="
+          font-size:32px;
+          font-weight:900;
+          margin-bottom:8px;
+        ">
+          ${config.price}
+        </div>
+
+        <div style="
+          font-size:20px;
+          font-weight:900;
+          margin-bottom:8px;
+        ">
+          ${config.title}
+        </div>
+
+        <div style="
+          color:#64748b;
+          font-size:14px;
+        ">
+          ${config.description}
+        </div>
+      </div>
+
+      <h3 style="
+        margin:0 0 14px;
+        font-size:18px;
+      ">
+        Choose a Server
+      </h3>
+
+      <div class="server-card-grid">
+        ${config.servers.map(server => `
+          <button
+            type="button"
+            class="dynamic-server"
+            onclick="selectNumberServer('${type}','${server[0]}',this)"
+          >
+            <div class="server-card-top">
+              <span class="server-online">
+                <span class="online-dot"></span> ONLINE
+              </span>
+
+              <span class="server-badge">
+                ${server[1]}
+              </span>
+            </div>
+
+            <div class="server-name">
+              ${server[0]}
+            </div>
+
+            <div class="server-feature">
+              ⚡ ${server[2]}
+            </div>
+          </button>
+        `).join("")}
+      </div>
+
+      <button
+        type="button"
+        onclick="backToNumberTypes()"
+        style="
+          margin-top:20px;
+          padding:11px 16px;
+          border:1px solid #ddd;
+          border-radius:9px;
+          background:#fff;
+          font-weight:700;
+        "
+      >
+        ← Back
+      </button>
+
+    </div>
+  `;
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
+}
+
+function selectNumberServer(type, serverName, card) {
+  document.querySelectorAll("#buyNumberInterface .dynamic-server")
+    .forEach(item => item.classList.remove("selected"));
+
+  card.classList.add("selected");
+
+  window.selectedNumberType = type;
+  window.selectedServer = serverName;
+
+  showCountryServiceInterface(type, serverName);
+}
+
+function showCountryServiceInterface(type, serverName) {
+  const config = numberInterfaceConfigs[type];
+  const box = document.getElementById("buyNumberInterface");
+  const title = document.getElementById("buyNumbersTitle");
+
+  if (!config || !box || !title) return;
+
+  window.selectedNumberType = type;
+  window.selectedServer = serverName;
+  window.selectedCountry = null;
+  window.selectedService = null;
+
+  title.textContent = "Select Country";
+
+  const countryOptions = config.countries.map(country =>
+    `<option value="${country}">${country}</option>`
+  ).join("");
+
+  box.innerHTML = `
+    <div style="
+      background:#fff;
+      padding:20px;
+      border-radius:16px;
+      border:1px solid #e5e7eb;
+    ">
+
+      <div style="
+        font-size:24px;
+        font-weight:900;
+        margin-bottom:6px;
+      ">
+        ${config.title}
+      </div>
+
+      <div style="
+        color:#64748b;
+        font-size:13px;
+        margin-bottom:20px;
+      ">
+        ${serverName} selected
+      </div>
+
+      <label style="
+        display:block;
+        font-weight:800;
+        margin-bottom:8px;
+      ">
+        Select Country
+      </label>
+
+      <select
+        id="numberCountry"
+        onchange="updateNumberPurchaseState()"
+        style="
+          width:100%;
+          padding:13px;
+          border:1px solid #ddd;
+          border-radius:9px;
+          background:#fff;
+        "
+      >
+        <option value="">Search and select country…</option>
+        ${countryOptions}
+      </select>
+
+      <div style="margin-top:20px">
+
+        <label style="
+          display:block;
+          font-weight:800;
+          margin-bottom:8px;
+        ">
+          Select Service
+        </label>
+
+        <select
+          id="numberService"
+          onchange="updateNumberPurchaseState()"
+          style="
+            width:100%;
+            padding:13px;
+            border:1px solid #ddd;
+            border-radius:9px;
+            background:#fff;
+          "
+        >
+          <option value="">Select country first</option>
+        </select>
+
+      </div>
+
+      <div style="
+        margin-top:20px;
+        padding:16px;
+        border-radius:12px;
+        background:#f8fafc;
+      ">
+        <div style="font-weight:800">Price</div>
+
+        <div
+          id="numberPrice"
+          style="
+            font-size:24px;
+            font-weight:900;
+            margin-top:4px;
+          "
+        >
+          ₦0.00
+        </div>
+      </div>
+
+      <div style="
+        margin-top:12px;
+        color:#64748b;
+        font-size:13px;
+      ">
+        ${config.countries.length === 1
+          ? "USA numbers available"
+          : "153 countries available"}
+      </div>
+
+      <button
+        type="button"
+        onclick="backToServerSelection()"
+        style="
+          margin-top:18px;
+          padding:10px 14px;
+          border:1px solid #ddd;
+          border-radius:9px;
+          background:#fff;
+          font-weight:700;
+        "
+      >
+        ← Back
+      </button>
+
+    </div>
+  `;
+
+  box.style.display = "block";
+
+  box.scrollIntoView({
+    behavior:"smooth",
+    block:"start"
+  });
+}
+
+function populateNumberServices() {
+  const country = document.getElementById("numberCountry");
+  const service = document.getElementById("numberService");
+
+  if (!country || !service) return;
+
+  if (!country.value) {
+    service.innerHTML = '<option value="">Select country first</option>';
+    return;
+  }
+
+  service.innerHTML = `
+    <option value="">Select a service</option>
+    <option value="WhatsApp">WhatsApp</option>
+    <option value="Facebook">Facebook</option>
+    <option value="Instagram">Instagram</option>
+    <option value="Telegram">Telegram</option>
+    <option value="TikTok">TikTok</option>
+    <option value="Google">Google</option>
+    <option value="X">X</option>
+  `;
+}
+
+function updateNumberPurchaseState() {
+  const country = document.getElementById("numberCountry");
+  const service = document.getElementById("numberService");
+  const price = document.getElementById("numberPrice");
+
+  if (!country || !service || !price) return;
+
+  if (!country.value) {
+    populateNumberServices();
+    price.textContent = "₦0.00";
+    return;
+  }
+
+  if (!service.value) {
+    price.textContent = "₦0.00";
+    window.selectedCountry = country.value;
+    window.selectedService = null;
+    return;
+  }
+
+  const prices = {
+    "United States": {
+      whatsapp: 4500,
+      facebook: 1600,
+      tiktok: 1500,
+      telegram: 3500
+    },
+    "United Kingdom": {
+      whatsapp: 4000,
+      facebook: 2000,
+      tiktok: 1500,
+      telegram: 4000
+    },
+    "Canada": {
+      whatsapp: 4000,
+      facebook: 1300,
+      tiktok: 2000,
+      telegram: 3000
+    },
+    "Philippines": {
+      whatsapp: 3500,
+      facebook: 1100,
+      tiktok: 1200,
+      telegram: 2500
+    }
+  };
+
+  const countryPrices = prices[country.value];
+  const serviceKey = service.value.toLowerCase();
+
+  if (countryPrices && Number.isFinite(countryPrices[serviceKey])) {
+    price.textContent = money(countryPrices[serviceKey]);
+  } else {
+    price.textContent = "Price coming soon";
+  }
+
+  window.selectedCountry = country.value;
+  window.selectedService = service.value;
+}
+
+function backToServerSelection() {
+  if (window.selectedNumberType) {
+    showNumberInterface(window.selectedNumberType);
+  }
+}
+
+function backToNumberTypes() {
+  const box = document.getElementById("buyNumberInterface");
+  const types = document.getElementById("buyNumberTypes");
+  const title = document.getElementById("buyNumbersTitle");
+
+  if (box) {
+    box.style.display = "none";
+    box.innerHTML = "";
+  }
+
+  if (types) types.style.display = "grid";
+  if (title) title.textContent = "Choose Number Type";
+
+  window.selectedNumberType = null;
+  window.selectedServer = null;
+  window.selectedCountry = null;
+  window.selectedService = null;
+}
+</script>
 </body>
 </html>
+
+
+
 
