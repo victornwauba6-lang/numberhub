@@ -1540,6 +1540,111 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (req.method === "POST" && req.url === "/api/change-password") {
+      const data = await getBody(req);
+
+      const currentPassword = String(data.currentPassword || "");
+      const newPassword = String(data.newPassword || "");
+      const confirmPassword = String(data.confirmPassword || "");
+
+      if (!currentPassword || !newPassword || !confirmPassword) {
+        sendJSON(res, 400, {
+          error: "Current password, new password, and confirmation are required"
+        });
+        return;
+      }
+
+      if (newPassword.length < 8) {
+        sendJSON(res, 400, {
+          error: "Password must be at least 8 characters"
+        });
+        return;
+      }
+
+      if (newPassword !== confirmPassword) {
+        sendJSON(res, 400, {
+          error: "New passwords do not match"
+        });
+        return;
+      }
+
+      const cookies = String(req.headers.cookie || "");
+      const match = cookies.match(/(?:^|;\s*)session=([^;]+)/);
+
+      if (!match) {
+        sendJSON(res, 401, {
+          error: "Not authenticated"
+        });
+        return;
+      }
+
+      const sessionToken = match[1];
+      const tokenHash = crypto
+        .createHash("sha256")
+        .update(sessionToken)
+        .digest("hex");
+
+      const sessionResult = await pool.query(
+        `SELECT user_id
+         FROM sessions
+         WHERE token_hash = $1 AND expires_at > NOW()`,
+        [tokenHash]
+      );
+
+      if (sessionResult.rows.length === 0) {
+        sendJSON(res, 401, {
+          error: "Not authenticated"
+        });
+        return;
+      }
+
+      const userResult = await pool.query(
+        `SELECT password_hash
+         FROM users
+         WHERE id = $1`,
+        [sessionResult.rows[0].user_id]
+      );
+
+      if (userResult.rows.length === 0) {
+        sendJSON(res, 404, {
+          error: "User not found"
+        });
+        return;
+      }
+
+      const passwordMatches = await bcrypt.compare(
+        currentPassword,
+        userResult.rows[0].password_hash
+      );
+
+      if (!passwordMatches) {
+        sendJSON(res, 400, {
+          error: "Current password is incorrect"
+        });
+        return;
+      }
+
+      const passwordHash = await bcrypt.hash(newPassword, 12);
+
+      await pool.query(
+        `UPDATE users
+         SET password_hash = $1
+         WHERE id = $2`,
+        [passwordHash, sessionResult.rows[0].user_id]
+      );
+
+      await pool.query(
+        `DELETE FROM sessions
+         WHERE user_id = $1 AND token_hash <> $2`,
+        [sessionResult.rows[0].user_id, tokenHash]
+      );
+
+      sendJSON(res, 200, {
+        message: "Password changed successfully"
+      });
+      return;
+    }
+
     if (req.method === "POST" && req.url === "/api/reset-password") {
       const data = await getBody(req);
 
