@@ -1569,6 +1569,9 @@ function showCountryServiceInterface(type, serverName) {
     };
   }
 
+  filterSelectOptions("countrySearch", "numberCountry");
+  filterSelectOptions("serviceSearch", "numberService");
+
   box.scrollIntoView({
     behavior:"smooth",
     block:"start"
