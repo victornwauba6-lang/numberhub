@@ -1239,8 +1239,11 @@ The wallet has NOT been credited. Verify the payment before approving the reques
 
       const service = String(data.service || "").trim();
       const provider = String(data.provider || "").trim();
-      const country = fiveSimCountryCode(String(data.country || "United States").trim());
+      const countryName = String(
+        data.country || "United States"
+      ).trim();
 
+      const country = fiveSimCountryCode(countryName);
       const serviceKey = service.toLowerCase();
 
       const productMap = {
@@ -1254,21 +1257,116 @@ The wallet has NOT been credited. Verify the payment before approving the reques
         x: "twitter"
       };
 
-      const product = productMap[service.toLowerCase()];
+      const product = productMap[serviceKey];
 
-      if (!service || !product || !Number.isFinite(price) || price <= 0) {
+      if (!service || !product) {
         sendJSON(res, 400, {
           error: "Invalid purchase details"
         });
         return;
       }
 
-      const client = await pool.connect();
+      let option;
 
       try {
-        await client.query("BEGIN");
+        const prices = await fiveSimGetPrices(country, product);
 
-        const userResult = await client.query(
+        option = fiveSimCheapestAvailable(
+          prices,
+          country,
+          product
+        );
+
+        if (!option) {
+          sendJSON(res, 400, {
+            error: `No ${service} numbers are currently available from 5SIM`
+          });
+          return;
+        }
+      } catch (supplierError) {
+        console.error("5SIM price lookup error:", supplierError);
+
+        sendJSON(res, 502, {
+          error: supplierError.message || "Unable to check 5SIM availability"
+        });
+        return;
+      }
+
+      const price = calculateNumberHubPrice(
+        countryName,
+        service,
+        option.cost
+      );
+
+      if (!Number.isFinite(price) || price <= 0) {
+        sendJSON(res, 400, {
+          error: "Unable to calculate the selling price"
+        });
+        return;
+      }
+
+      // Check the customer's wallet BEFORE purchasing from 5SIM.
+      const walletCheck = await pool.query(
+        `SELECT wallet
+         FROM users
+         WHERE id = $1`,
+        [userId]
+      );
+
+      if (walletCheck.rows.length === 0) {
+        sendJSON(res, 404, {
+          error: "User not found"
+        });
+        return;
+      }
+
+      const wallet = Number(walletCheck.rows[0].wallet || 0);
+
+      if (wallet < price) {
+        sendJSON(res, 400, {
+          error: "Insufficient wallet balance"
+        });
+        return;
+      }
+
+      let supplierPurchase;
+
+      try {
+        supplierPurchase = await fiveSimBuyActivation(
+          country,
+          product,
+          option.operator
+        );
+      } catch (supplierError) {
+        console.error("5SIM purchase error:", supplierError);
+
+        sendJSON(res, 502, {
+          error: supplierError.message || "5SIM purchase failed"
+        });
+        return;
+      }
+
+      const phoneNumber = String(
+        supplierPurchase.phone ||
+        supplierPurchase.number ||
+        ""
+      ).trim();
+
+      const supplierId = supplierPurchase.id;
+
+      if (!phoneNumber || !supplierId) {
+        sendJSON(res, 502, {
+          error: "5SIM returned an invalid purchase response"
+        });
+        return;
+      }
+
+      const dbClient = await pool.connect();
+
+      try {
+        await dbClient.query("BEGIN");
+
+        const lockedUser = await dbClient.query(
           `SELECT wallet, purchases
            FROM users
            WHERE id = $1
@@ -1276,196 +1374,7 @@ The wallet has NOT been credited. Verify the payment before approving the reques
           [userId]
         );
 
-        if (userResult.rows.length === 0) {
-          await client.query("ROLLBACK");
-          sendJSON(res, 404, { error: "User not found" });
-          return;
-        }
-
-        const wallet = Number(userResult.rows[0].wallet || 0);
-
-        if (wallet < price) {
-          await client.query("ROLLBACK");
-          sendJSON(res, 400, {
-            error: "Insufficient wallet balance"
-          });
-          return;
-        }
-
-        await client.query("ROLLBACK");
-        client.release();
-
-        let supplierPurchase;
-
-        try {
-          const prices = await fiveSimGetPrices(country, product);
-          const option = fiveSimCheapestAvailable(
-            prices,
-            country,
-            product
-          );
-
-          if (!option) {
-            sendJSON(res, 400, {
-              error: `No ${service} numbers are currently available from 5SIM`
-            });
-            return;
-          }
-
-          const price = calculateNumberHubPrice(
-            String(data.country || "United States").trim(),
-            service,
-            option.cost
-          );
-
-          if (!Number.isFinite(price) || price <= 0) {
-            sendJSON(res, 400, {
-              error: "Unable to calculate the selling price"
-            });
-            return;
-          }
-
-          supplierPurchase = await fiveSimBuyActivation(
-            country,
-            product,
-            option.operator
-          );
-        } catch (supplierError) {
-          console.error("5SIM purchase error:", supplierError);
-
-          sendJSON(res, 502, {
-            error: supplierError.message || "5SIM purchase failed"
-          });
-          return;
-        }
-
-        const phoneNumber = String(
-          supplierPurchase.phone || supplierPurchase.number || ""
-        ).trim();
-
-        const supplierId = supplierPurchase.id;
-
-        if (!phoneNumber || !supplierId) {
-          sendJSON(res, 502, {
-            error: "5SIM returned an invalid purchase response"
-          });
-          return;
-        }
-
-        const dbClient = await pool.connect();
-
-        try {
-          await dbClient.query("BEGIN");
-
-          const lockedUser = await dbClient.query(
-            `SELECT wallet, purchases
-             FROM users
-             WHERE id = $1
-             FOR UPDATE`,
-            [userId]
-          );
-
-          if (lockedUser.rows.length === 0) {
-            await dbClient.query("ROLLBACK");
-
-            try {
-              await fiveSimRequest(`/user/cancel/${supplierId}`, {
-                method: "GET"
-              });
-            } catch (cancelError) {
-              console.error(
-                "Could not cancel 5SIM order:",
-                cancelError
-              );
-            }
-
-            sendJSON(res, 404, { error: "User not found" });
-            return;
-          }
-
-          const currentWallet = Number(
-            lockedUser.rows[0].wallet || 0
-          );
-
-          if (currentWallet < price) {
-            await dbClient.query("ROLLBACK");
-
-            try {
-              await fiveSimRequest(`/user/cancel/${supplierId}`, {
-                method: "GET"
-              });
-            } catch (cancelError) {
-              console.error(
-                "Could not cancel 5SIM order:",
-                cancelError
-              );
-            }
-
-            sendJSON(res, 400, {
-              error: "Insufficient wallet balance"
-            });
-            return;
-          }
-
-          const reference =
-            "NP-" +
-            Date.now().toString(36).toUpperCase() +
-            "-" +
-            crypto.randomBytes(4).toString("hex").toUpperCase();
-
-          const purchaseResult = await dbClient.query(
-            `INSERT INTO number_purchases
-              (user_id, phone_number, country, service, provider,
-               price, status, supplier_id, reference)
-             VALUES ($1, $2, $3, $4, $5, $6, 'active', $7, $8)
-             RETURNING id, phone_number, country, service, provider,
-                       price, status, reference, created_at`,
-            [
-              userId,
-              phoneNumber,
-              country,
-              service,
-              provider || option.operator,
-              price.toFixed(2),
-              supplierId,
-              reference
-            ]
-          );
-
-          await dbClient.query(
-            `UPDATE users
-             SET wallet = wallet - $1,
-                 purchases = purchases + 1
-             WHERE id = $2`,
-            [price.toFixed(2), userId]
-          );
-
-          await dbClient.query(
-            `INSERT INTO wallet_transactions
-              (user_id, type, amount, method, status, reference, description)
-             VALUES ($1, 'purchase', $2, 'Wallet', 'successful', $3, $4)`,
-            [
-              userId,
-              price.toFixed(2),
-              reference,
-              "Number purchase"
-            ]
-          );
-
-          await dbClient.query("COMMIT");
-
-          sendJSON(res, 201, {
-            message: "Number purchased successfully",
-            purchase: purchaseResult.rows[0],
-            supplier: {
-              id: supplierId,
-              provider: "5SIM"
-            }
-          });
-
-          return;
-
-        } catch (dbError) {
+        if (lockedUser.rows.length === 0) {
           await dbClient.query("ROLLBACK");
 
           try {
@@ -1479,25 +1388,116 @@ The wallet has NOT been credited. Verify the payment before approving the reques
             );
           }
 
-          throw dbError;
-
-        } finally {
-          dbClient.release();
-        }
-
-      } catch (error) {
-        console.error("Purchase error:", error);
-
-        if (!res.writableEnded) {
-          sendJSON(res, 500, {
-            error: "Purchase could not be completed"
+          sendJSON(res, 404, {
+            error: "User not found"
           });
+          return;
         }
+
+        const currentWallet = Number(
+          lockedUser.rows[0].wallet || 0
+        );
+
+        // Re-check after acquiring the database lock.
+        if (currentWallet < price) {
+          await dbClient.query("ROLLBACK");
+
+          try {
+            await fiveSimRequest(`/user/cancel/${supplierId}`, {
+              method: "GET"
+            });
+          } catch (cancelError) {
+            console.error(
+              "Could not cancel 5SIM order:",
+              cancelError
+            );
+          }
+
+          sendJSON(res, 400, {
+            error: "Insufficient wallet balance"
+          });
+          return;
+        }
+
+        const reference =
+          "NP-" +
+          Date.now().toString(36).toUpperCase() +
+          "-" +
+          crypto.randomBytes(4).toString("hex").toUpperCase();
+
+        const purchaseResult = await dbClient.query(
+          `INSERT INTO number_purchases
+             (user_id, phone_number, country, service, provider,
+              price, status, supplier_id, reference)
+           VALUES ($1, $2, $3, $4, $5, $6, 'active', $7, $8)
+           RETURNING id, phone_number, country, service, provider,
+                     price, status, reference, created_at`,
+          [
+            userId,
+            phoneNumber,
+            countryName,
+            service,
+            provider || option.operator,
+            price.toFixed(2),
+            supplierId,
+            reference
+          ]
+        );
+
+        await dbClient.query(
+          `UPDATE users
+           SET wallet = wallet - $1,
+               purchases = purchases + 1
+           WHERE id = $2`,
+          [
+            price.toFixed(2),
+            userId
+          ]
+        );
+
+        await dbClient.query(
+          `INSERT INTO wallet_transactions
+             (user_id, type, amount, method, status, reference, description)
+           VALUES ($1, 'purchase', $2, 'Wallet', 'successful', $3, $4)`,
+          [
+            userId,
+            price.toFixed(2),
+            reference,
+            "Number purchase"
+          ]
+        );
+
+        await dbClient.query("COMMIT");
+
+        sendJSON(res, 201, {
+          message: "Number purchased successfully",
+          purchase: purchaseResult.rows[0],
+          supplier: {
+            id: supplierId,
+            provider: "5SIM"
+          }
+        });
 
         return;
+      } catch (dbError) {
+        await dbClient.query("ROLLBACK");
+
+        try {
+          await fiveSimRequest(`/user/cancel/${supplierId}`, {
+            method: "GET"
+          });
+        } catch (cancelError) {
+          console.error(
+            "Could not cancel 5SIM order:",
+            cancelError
+          );
+        }
+
+        throw dbError;
+      } finally {
+        dbClient.release();
       }
     }
-
     if (req.method === "GET" && req.url === "/api/numbers/history") {
       const cookies = String(req.headers.cookie || "");
       const match = cookies.match(/(?:^|;\s*)session=([^;]+)/);
