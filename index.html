@@ -731,10 +731,21 @@ async function buy(service, provider, price) {
     }
   };
 
-  document.getElementById("modal").classList.add("show");
+  const fundButton = document.querySelector("#modal .confirm");
+if (fundButton) {
+  fundButton.textContent = "Continue";
+  fundButton.onclick = startFunding;
+}
+document.getElementById("modal").classList.add("show");
 }
 function fund(){
 document.getElementById("modalTitle").textContent="Fund Wallet";
+
+const fundButton = document.querySelector("#modal .confirm");
+if (fundButton) {
+  fundButton.textContent = "Continue";
+  fundButton.onclick = startFunding;
+}
 document.getElementById("modalText").innerHTML=
 '<b>Nigerian Payment</b><br><br>'+
 '<label><b>Amount (₦)</b></label>'+
@@ -754,13 +765,13 @@ document.getElementById("modalText").innerHTML=
 '<b>🏦 Kuda Bank Transfer</b><br><br>'+
 'Bank: <b>Kuda Microfinance Bank</b><br>'+
 'Account Name: <b>NUMBERBRIDGE TECHNOLOGIES</b><br>'+ 
-'Account Number: <b>3004234965</b>'+ 
+'Account Number: <b>3004234965</b>'+
 '</div>'+
-'<button type="button" class="confirm" onclick="startFunding()">Continue</button>'+
-'<br><br><small>Payment processing is not connected yet. No real payment will be charged.</small>';
+
+'<br><br><small>After making your payment, enter the payment reference or transaction ID above. Your wallet will be credited after payment is verified.</small>';
+
 document.getElementById("modal").classList.add("show");
 }
-
 function selectPayment(button, method){
 document.querySelectorAll(".payment-option").forEach(b=>{
 b.style.borderColor="#ddd";
@@ -792,6 +803,13 @@ return;
 
 const value=Number(amount.value);
 const method=selected.textContent.trim().includes("OPay") ? "OPay" : selected.textContent.trim().includes("Kuda") ? "Kuda" : "Bank Transfer";
+const paymentReferenceElement = document.getElementById("fundPaymentReference");
+const paymentReference = paymentReferenceElement ? paymentReferenceElement.value.trim() : "";
+
+if(!paymentReference){
+alert("Please enter your payment reference or transaction ID.");
+return;
+}
 
 document.getElementById("modalTitle").textContent="Creating Funding Request...";
 document.getElementById("modalText").textContent="Please wait...";
@@ -804,7 +822,7 @@ headers:{"Content-Type":"application/json"},
 body:JSON.stringify({
 amount:value,
 method:method,
-paymentReference:document.getElementById("fundPaymentReference").value.trim()
+paymentReference:paymentReference
 })
 });
 
@@ -827,7 +845,7 @@ document.querySelector("#modal .confirm").textContent="Close";
 } catch(err) {
 console.error(err);
 document.getElementById("modalTitle").textContent="Connection Error";
-document.getElementById("modalText").textContent="Could not connect to the payment server.";
+document.getElementById("modalText").textContent="Error: "+(err && err.message ? err.message : String(err));
 }
 }
 
