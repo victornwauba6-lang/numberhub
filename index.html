@@ -747,6 +747,9 @@ document.getElementById("modalText").innerHTML=
 '<button type="button" class="payment-option" onclick="selectPayment(this, \'Bank Transfer\')" '+
 'style="padding:12px;border:1px solid #ddd;border-radius:8px;background:white;text-align:left">🏦 Bank Transfer — Kuda</button>'+
 '<p id="paymentChoice" style="font-size:13px;color:#64748b">Select a payment method.</p>'+
+'<br><label><b>Payment Reference / Transaction ID</b></label>'+
+'<input id="fundPaymentReference" type="text" placeholder="Enter your payment reference or transaction ID" '+
+'style="width:100%;padding:12px;margin-top:7px;border:1px solid #ddd;border-radius:8px">'+
 '<div id="kudaDetails" style="display:none;margin-top:12px;padding:14px;border:1px solid #ddd;border-radius:10px;background:#f8fafc">'+
 '<b>🏦 Kuda Bank Transfer</b><br><br>'+
 'Bank: <b>Kuda Microfinance Bank</b><br>'+
@@ -800,7 +803,8 @@ credentials:"include",
 headers:{"Content-Type":"application/json"},
 body:JSON.stringify({
 amount:value,
-method:method
+method:method,
+paymentReference:document.getElementById("fundPaymentReference").value.trim()
 })
 });
 
