@@ -651,6 +651,67 @@ const server = http.createServer(async (req, res) => {
         ]
       );
 
+      // Notify NumberHub admin about the new funding request.
+      try {
+        const tx = result.rows[0];
+
+        const userResult = await pool.query(
+          `SELECT name, username, email
+           FROM users
+           WHERE id = $1
+           LIMIT 1`,
+          [userId]
+        );
+
+        const user = userResult.rows[0] || {};
+
+        const emailResponse = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+            to: ["numberhubsupport@gmail.com"],
+            subject: `NumberHub Funding Request — ₦${Number(tx.amount).toFixed(2)}`,
+            text: `New NumberHub funding request.
+
+Customer: ${user.name || "Unknown"}
+Username: ${user.username || "Not set"}
+Email: ${user.email || "Unknown"}
+
+Amount: ₦${Number(tx.amount).toFixed(2)}
+Method: ${tx.method}
+Payment Reference: ${tx.payment_reference || "Not provided"}
+NumberHub Reference: ${tx.reference}
+Status: ${tx.status}
+
+The wallet has NOT been credited. Verify the payment before approving the request.`,
+            html: `
+              <h2>New NumberHub Funding Request</h2>
+              <p><b>Customer:</b> ${user.name || "Unknown"}</p>
+              <p><b>Username:</b> ${user.username || "Not set"}</p>
+              <p><b>Email:</b> ${user.email || "Unknown"}</p>
+              <hr>
+              <p><b>Amount:</b> ₦${Number(tx.amount).toFixed(2)}</p>
+              <p><b>Method:</b> ${tx.method}</p>
+              <p><b>Payment Reference:</b> ${tx.payment_reference || "Not provided"}</p>
+              <p><b>NumberHub Reference:</b> ${tx.reference}</p>
+              <p><b>Status:</b> ${tx.status}</p>
+              <hr>
+              <p><b>Wallet has NOT been credited.</b> Verify the payment before approving.</p>
+            `
+          })
+        });
+
+        if (!emailResponse.ok) {
+          console.error("Funding notification email failed:", await emailResponse.text());
+        }
+      } catch (emailError) {
+        console.error("Funding notification error:", emailError);
+      }
+
       sendJSON(res, 201, {
         message: "Deposit request created",
         transaction: result.rows[0]
