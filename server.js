@@ -599,12 +599,13 @@ const server = http.createServer(async (req, res) => {
 
         if (
           tx.type !== "deposit" ||
-          tx.status !== "successful" ||
-          Number(tx.amount) !== 100
+          tx.status !== "pending" ||
+          Number(tx.amount) !== 100 ||
+          tx.user_id !== 9
         ) {
           await client.query("ROLLBACK");
           sendJSON(res, 409, {
-            error: "Transaction does not match the expected ₦100 successful test deposit",
+            error: "Transaction does not match the expected ₦100 pending test deposit for user 9",
             transaction: tx
           });
           return;
