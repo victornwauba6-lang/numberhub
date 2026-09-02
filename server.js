@@ -659,6 +659,21 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === "POST" && req.url === "/api/admin/migrate-payment-reference") {
+      const migrationSecret = process.env.MIGRATION_SECRET;
+      const providedSecret = String(req.headers["x-migration-secret"] || "");
+
+      if (migrationSecret && providedSecret === migrationSecret) {
+        await pool.query(
+          `ALTER TABLE wallet_transactions
+           ADD COLUMN IF NOT EXISTS payment_reference TEXT`
+        );
+
+        sendJSON(res, 200, {
+          message: "Payment reference column created successfully"
+        });
+        return;
+      }
+
       const admin = await getAdminUserId(req);
 
       if (admin.error) {
