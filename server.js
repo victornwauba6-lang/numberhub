@@ -601,7 +601,7 @@ const server = http.createServer(async (req, res) => {
           tx.type !== "deposit" ||
           tx.status !== "pending" ||
           Number(tx.amount) !== 100 ||
-          tx.user_id !== 9
+          String(tx.user_id) !== "9"
         ) {
           await client.query("ROLLBACK");
           sendJSON(res, 409, {
