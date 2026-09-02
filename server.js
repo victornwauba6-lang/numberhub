@@ -638,14 +638,15 @@ const server = http.createServer(async (req, res) => {
 
       const result = await pool.query(
         `INSERT INTO wallet_transactions
-          (user_id, type, amount, method, status, reference, description)
-         VALUES ($1, 'deposit', $2, $3, 'pending', $4, $5)
-         RETURNING id, amount, method, status, reference, description, created_at`,
+          (user_id, type, amount, method, status, reference, payment_reference, description)
+         VALUES ($1, 'deposit', $2, $3, 'pending', $4, $5, $6)
+         RETURNING id, amount, method, status, reference, payment_reference, description, created_at`,
         [
           userId,
           amount.toFixed(2),
           method,
           reference,
+          paymentReference,
           "Wallet funding request awaiting payment confirmation"
         ]
       );
@@ -711,6 +712,7 @@ const server = http.createServer(async (req, res) => {
            wt.method,
            wt.status,
            wt.reference,
+           wt.payment_reference,
            wt.description,
            wt.created_at
          FROM wallet_transactions wt
