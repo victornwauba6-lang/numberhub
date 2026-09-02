@@ -605,6 +605,7 @@ const server = http.createServer(async (req, res) => {
 
       const amount = Number(data.amount);
       const method = String(data.method || "").trim();
+        const paymentReference = String(data.paymentReference || "").trim();
 
       const allowedMethods = ["OPay", "Bank Transfer", "Kuda"];
 
@@ -621,6 +622,13 @@ const server = http.createServer(async (req, res) => {
         });
         return;
       }
+
+        if (!paymentReference || paymentReference.length < 3) {
+          sendJSON(res, 400, {
+            error: "Please enter your payment reference or transaction ID"
+          });
+          return;
+        }
 
       const reference =
         "NH-" +
@@ -647,6 +655,25 @@ const server = http.createServer(async (req, res) => {
         transaction: result.rows[0]
       });
 
+      return;
+    }
+
+    if (req.method === "POST" && req.url === "/api/admin/migrate-payment-reference") {
+      const admin = await getAdminUserId(req);
+
+      if (admin.error) {
+        sendJSON(res, admin.status, { error: admin.error });
+        return;
+      }
+
+      await pool.query(
+        `ALTER TABLE wallet_transactions
+         ADD COLUMN IF NOT EXISTS payment_reference TEXT`
+      );
+
+      sendJSON(res, 200, {
+        message: "Payment reference column created successfully"
+      });
       return;
     }
 
