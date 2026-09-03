@@ -1205,6 +1205,28 @@ The wallet has NOT been credited. Verify the payment before approving the reques
       } catch (error) {
         console.error("5SIM SMS check error:", error);
 
+        const errorMessage = String(error.message || "").toLowerCase();
+
+        if (errorMessage.includes("order not found")) {
+          await pool.query(
+            `UPDATE number_purchases
+             SET status = 'timeout'
+             WHERE id = $1
+               AND user_id = $2
+               AND sms_code IS NULL`,
+            [purchaseResult.rows[0].id, userId]
+          );
+
+          sendJSON(res, 200, {
+            status: "timeout",
+            smsCode: "",
+            phoneNumber: purchaseResult.rows[0].phone_number,
+            activationId: supplierId,
+            message: "This number has expired or is no longer available."
+          });
+          return;
+        }
+
         sendJSON(res, 502, {
           error: error.message || "Unable to check OTP"
         });
