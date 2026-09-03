@@ -1213,6 +1213,117 @@ The wallet has NOT been credited. Verify the payment before approving the reques
       return;
     }
 
+    if (req.method === "POST" && req.url.startsWith("/api/numbers/cancel/")) {
+      const cookies = String(req.headers.cookie || "");
+      const match = cookies.match(/(?:^|;\s*)session=([^;]+)/);
+
+      if (!match) {
+        sendJSON(res, 401, { error: "Not authenticated" });
+        return;
+      }
+
+      const tokenHash = crypto.createHash("sha256")
+        .update(match[1])
+        .digest("hex");
+
+      const sessionResult = await pool.query(
+        `SELECT user_id
+         FROM sessions
+         WHERE token_hash = $1
+           AND expires_at > NOW()`,
+        [tokenHash]
+      );
+
+      if (sessionResult.rows.length === 0) {
+        sendJSON(res, 401, { error: "Session expired or invalid" });
+        return;
+      }
+
+      const userId = sessionResult.rows[0].user_id;
+      const supplierId = decodeURIComponent(
+        req.url.substring("/api/numbers/cancel/".length)
+      ).trim();
+
+      if (!supplierId) {
+        sendJSON(res, 400, { error: "Missing supplier ID" });
+        return;
+      }
+
+      try {
+        const purchaseResult = await pool.query(
+          `SELECT id, phone_number, status, sms_code, supplier_id
+           FROM number_purchases
+           WHERE user_id = $1
+             AND supplier_id = $2
+           ORDER BY created_at DESC
+           LIMIT 1`,
+          [userId, supplierId]
+        );
+
+        if (purchaseResult.rows.length === 0) {
+          sendJSON(res, 404, { error: "Number purchase not found" });
+          return;
+        }
+
+        const purchase = purchaseResult.rows[0];
+
+        if (purchase.sms_code) {
+          sendJSON(res, 400, {
+            error: "This number cannot be canceled because an OTP has already been received."
+          });
+          return;
+        }
+
+        if (["received", "finished", "canceled", "timeout", "banned"].includes(
+          String(purchase.status || "").toLowerCase()
+        )) {
+          sendJSON(res, 400, {
+            error: "This number is no longer active and cannot be canceled."
+          });
+          return;
+        }
+
+        const cancelResult = await fiveSimRequest(
+          `/user/cancel/${encodeURIComponent(supplierId)}`,
+          { method: "GET" }
+        );
+
+        const supplierStatus = String(cancelResult?.status || "").toLowerCase();
+
+        if (supplierStatus && supplierStatus !== "canceled") {
+          sendJSON(res, 400, {
+            error: "5SIM did not cancel this number.",
+            status: cancelResult.status
+          });
+          return;
+        }
+
+        await pool.query(
+          `UPDATE number_purchases
+           SET status = 'canceled'
+           WHERE id = $1
+             AND user_id = $2`,
+          [purchase.id, userId]
+        );
+
+        sendJSON(res, 200, {
+          success: true,
+          status: "canceled",
+          message: "Number canceled successfully.",
+          supplier: cancelResult
+        });
+
+      } catch (error) {
+        console.error("5SIM number cancellation error:", error);
+
+        sendJSON(res, 502, {
+          error: error.message || "Unable to cancel number"
+        });
+      }
+
+      return;
+    }
+
     if (req.method === "POST" && req.url === "/api/numbers/purchase") {
       const cookies = String(req.headers.cookie || "");
       const match = cookies.match(/(?:^|;\s*)session=([^;]+)/);

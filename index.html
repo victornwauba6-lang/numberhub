@@ -2590,6 +2590,40 @@ function showCountryServiceInterface(type, serverName) {
             🔄 Check for OTP
           </button>
 
+          <div
+            id="numberCountdown"
+            style="
+              margin-top:12px;
+              padding:12px;
+              border-radius:10px;
+              background:#fff;
+              border:1px solid #e5e7eb;
+              text-align:center;
+              font-weight:900;
+            "
+          >
+            ⏱️ Time remaining: —
+          </div>
+
+          <button
+            id="cancelNumberButton"
+            type="button"
+            onclick="cancelPurchasedNumber()"
+            style="
+              width:100%;
+              margin-top:10px;
+              padding:12px;
+              border:1px solid #fecaca;
+              border-radius:10px;
+              background:#fff;
+              color:#b91c1c;
+              font-weight:800;
+              cursor:pointer;
+            "
+          >
+            ✕ Cancel Number
+          </button>
+
         </div>
       </div>
 
@@ -3081,6 +3115,8 @@ async function purchaseSelectedNumber() {
     window.currentNumberPurchase = result.purchase;
     window.currentSupplierId = result.supplier.id;
 
+    startNumberCountdown(result.purchase.supplier_expires_at);
+
     const purchasedNumber =
       document.getElementById("purchasedNumber");
 
@@ -3107,6 +3143,127 @@ async function purchaseSelectedNumber() {
 
     button.disabled = false;
     button.textContent = "Buy Number";
+  }
+}
+
+let numberCountdownTimer = null;
+
+function startNumberCountdown(expiresAt) {
+  const countdown = document.getElementById("numberCountdown");
+
+  if (numberCountdownTimer) {
+    clearInterval(numberCountdownTimer);
+    numberCountdownTimer = null;
+  }
+
+  if (!countdown || !expiresAt) {
+    if (countdown) countdown.textContent = "⏱️ Time remaining: unavailable";
+    return;
+  }
+
+  const expiryTime = new Date(expiresAt).getTime();
+
+  if (!Number.isFinite(expiryTime)) {
+    countdown.textContent = "⏱️ Time remaining: unavailable";
+    return;
+  }
+
+  function updateCountdown() {
+    const remaining = Math.max(0, expiryTime - Date.now());
+    const totalSeconds = Math.floor(remaining / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+
+    countdown.textContent =
+      "⏱️ Time remaining: " +
+      minutes + ":" +
+      String(seconds).padStart(2, "0");
+
+    if (remaining <= 0) {
+      clearInterval(numberCountdownTimer);
+      numberCountdownTimer = null;
+      countdown.textContent = "⌛ Number expired";
+      const waiting = document.getElementById("otpWaiting");
+      if (waiting) waiting.textContent = "⌛ Number expired";
+      const cancelButton = document.getElementById("cancelNumberButton");
+      if (cancelButton) cancelButton.style.display = "none";
+    }
+  }
+
+  updateCountdown();
+  numberCountdownTimer = setInterval(updateCountdown, 1000);
+}
+
+async function cancelPurchasedNumber() {
+  const supplierId = window.currentSupplierId;
+  const button = document.getElementById("cancelNumberButton");
+  const waiting = document.getElementById("otpWaiting");
+  const countdown = document.getElementById("numberCountdown");
+
+  if (!supplierId) {
+    if (waiting) waiting.textContent = "No active number purchase.";
+    return;
+  }
+
+  const confirmed = window.confirm(
+    "Are you sure you want to cancel this number?"
+  );
+
+  if (!confirmed) return;
+
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Canceling...";
+  }
+
+  try {
+    const response = await fetch(
+      "https://numberhub.onrender.com/api/numbers/cancel/" +
+      encodeURIComponent(supplierId),
+      {
+        method: "POST",
+        credentials: "include"
+      }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || "Unable to cancel number");
+    }
+
+    if (numberCountdownTimer) {
+      clearInterval(numberCountdownTimer);
+      numberCountdownTimer = null;
+    }
+
+    if (countdown) {
+      countdown.textContent = "✕ Number canceled";
+    }
+
+    if (waiting) {
+      waiting.textContent = "✕ Number canceled";
+    }
+
+    if (button) {
+      button.textContent = "✕ Number Canceled";
+      button.disabled = true;
+    }
+
+    window.currentSupplierId = null;
+
+  } catch (error) {
+    console.error("Number cancellation error:", error);
+
+    if (waiting) {
+      waiting.textContent =
+        "⚠️ " + (error.message || "Unable to cancel number");
+    }
+
+    if (button) {
+      button.disabled = false;
+      button.textContent = "✕ Cancel Number";
+    }
   }
 }
 
