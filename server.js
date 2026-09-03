@@ -1274,7 +1274,7 @@ The wallet has NOT been credited. Verify the payment before approving the reques
           return;
         }
 
-        if (["received", "finished", "canceled", "timeout", "banned"].includes(
+        if (["finished", "canceled", "timeout", "banned"].includes(
           String(purchase.status || "").toLowerCase()
         )) {
           sendJSON(res, 400, {
