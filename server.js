@@ -547,6 +547,16 @@ async function initDatabase() {
     ADD COLUMN IF NOT EXISTS supplier_expires_at TIMESTAMPTZ
   `);
 
+  await pool.query(`
+    ALTER TABLE number_purchases
+    ADD COLUMN IF NOT EXISTS refunded_at TIMESTAMPTZ
+  `);
+
+  await pool.query(`
+    ALTER TABLE number_purchases
+    ADD COLUMN IF NOT EXISTS supplier_cost_usd NUMERIC(12,4)
+  `);
+
   console.log("PostgreSQL database ready");
 }
 
@@ -1567,10 +1577,10 @@ The wallet has NOT been credited. Verify the payment before approving the reques
         const purchaseResult = await dbClient.query(
           `INSERT INTO number_purchases
              (user_id, phone_number, country, service, provider,
-              price, status, supplier_id, supplier_expires_at, reference)
-           VALUES ($1, $2, $3, $4, $5, $6, 'active', $7, $8, $9)
+              price, status, supplier_id, supplier_expires_at, supplier_cost_usd, reference)
+           VALUES ($1, $2, $3, $4, $5, $6, 'active', $7, $8, $9, $10)
            RETURNING id, phone_number, country, service, provider,
-                     price, status, supplier_id, supplier_expires_at, reference, created_at`,
+                     price, status, supplier_id, supplier_expires_at, supplier_cost_usd, reference, created_at`,
           [
             userId,
             phoneNumber,
@@ -1580,6 +1590,7 @@ The wallet has NOT been credited. Verify the payment before approving the reques
             price.toFixed(2),
             supplierId,
             supplierExpiresAt,
+            Number(option.cost),
             reference
           ]
         );
