@@ -1466,6 +1466,21 @@ function applyUserToDashboard(user) {
 }
 
 async function loadCurrentUser() {
+  const savedUser = localStorage.getItem("numberhubUser");
+  if (savedUser) {
+    try {
+      const user = JSON.parse(savedUser);
+      if (user && user.id && user.email) {
+        const authScreen = document.getElementById("authScreen");
+        if (authScreen) authScreen.style.display = "none";
+        applyUserToDashboard(user);
+        console.log("Restored saved user");
+      }
+    } catch (e) {
+      localStorage.removeItem("numberhubUser");
+    }
+  }
+
   try {
     const r = await fetch("https://numberhub.onrender.com/api/me", {
       method: "GET",
@@ -1690,6 +1705,7 @@ document.getElementById("loginForm")?.addEventListener("submit", async e => {
 
     if (r.ok) {
       localStorage.setItem("numberhubLoggedIn", "true");
+        localStorage.setItem("numberhubUser", JSON.stringify(d.user));
       message.textContent = "Login successful. Welcome back, " + d.user.name + "!";
 
       applyUserToDashboard(d.user);
