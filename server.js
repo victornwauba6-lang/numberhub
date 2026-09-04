@@ -2364,6 +2364,29 @@ The wallet has NOT been credited. Verify the payment before approving the reques
       return;
     }
 
+    // Serve frontend static files
+    if (req.method === "GET") {
+      const requestedPath = decodeURIComponent((req.url || "/").split("?")[0]);
+
+      if (/^\/(redesign\.css|style\.css|script\.js)$/.test(requestedPath)) {
+        const filePath = path.join(__dirname, requestedPath.slice(1));
+
+        if (fs.existsSync(filePath)) {
+          const contentTypes = {
+            ".css": "text/css; charset=utf-8",
+            ".js": "application/javascript; charset=utf-8"
+          };
+
+          res.writeHead(200, {
+            "Content-Type": contentTypes[path.extname(filePath)] || "application/octet-stream"
+          });
+
+          fs.createReadStream(filePath).pipe(res);
+          return;
+        }
+      }
+    }
+
     sendJSON(res, 404, {
       error: "Not found"
     });
