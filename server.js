@@ -784,6 +784,97 @@ The wallet has NOT been credited. Verify the payment before approving the reques
       return;
     }
 
+    if (req.method === "POST" && req.url === "/api/admin/refund") {
+      const admin = await getAdminUserId(req);
+
+      if (admin.error) {
+        sendJSON(res, admin.status, { error: admin.error });
+        return;
+      }
+
+      const body = await getBody(req);
+      const email = String(body.email || "").trim().toLowerCase();
+      const amount = Number(body.amount);
+
+      if (!email || !Number.isFinite(amount) || amount <= 0) {
+        sendJSON(res, 400, {
+          error: "Valid email and positive refund amount are required"
+        });
+        return;
+      }
+
+      const client = await pool.connect();
+
+      try {
+        await client.query("BEGIN");
+
+        const userResult = await client.query(
+          `SELECT id, name, email, wallet
+           FROM users
+           WHERE LOWER(email) = $1
+           FOR UPDATE`,
+          [email]
+        );
+
+        if (userResult.rows.length === 0) {
+          await client.query("ROLLBACK");
+          sendJSON(res, 404, { error: "Customer account not found" });
+          return;
+        }
+
+        const user = userResult.rows[0];
+
+        const reference =
+          "REFUND-" + Date.now() + "-" + crypto.randomBytes(4).toString("hex");
+
+        const walletResult = await client.query(
+          `UPDATE users
+           SET wallet = wallet + $1
+           WHERE id = $2
+           RETURNING wallet`,
+          [amount.toFixed(2), user.id]
+        );
+
+        await client.query(
+          `INSERT INTO wallet_transactions
+             (user_id, type, amount, method, status, reference, description)
+           VALUES ($1, 'refund', $2, 'admin', 'successful', $3, $4)`,
+          [
+            user.id,
+            amount.toFixed(2),
+            reference,
+            "Wallet refund issued by admin"
+          ]
+        );
+
+        await client.query("COMMIT");
+
+        sendJSON(res, 200, {
+          message: "Refund credited successfully",
+          customer: {
+            id: user.id,
+            name: user.name,
+            email: user.email
+          },
+          refund: {
+            amount: amount.toFixed(2),
+            reference,
+            status: "successful"
+          },
+          wallet: walletResult.rows[0].wallet
+        });
+        return;
+      } catch (error) {
+        try {
+          await client.query("ROLLBACK");
+        } catch (_) {}
+
+        throw error;
+      } finally {
+        client.release();
+      }
+    }
+
     if (req.method === "GET" && req.url === "/api/admin/deposits") {
       const admin = await getAdminUserId(req);
 
