@@ -1498,6 +1498,12 @@ async function loadCurrentUser() {
       return true;
     }
 
+    // If a saved user exists, keep the dashboard visible.
+    if (localStorage.getItem("numberhubUser")) {
+      console.log("Keeping dashboard from saved user");
+      return true;
+    }
+
     // User is not authenticated — show login screen
     const app = document.querySelector(".app");
     if (app) app.style.setProperty("display", "none", "important");
