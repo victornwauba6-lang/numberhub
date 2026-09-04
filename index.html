@@ -1501,6 +1501,10 @@ async function loadCurrentUser() {
     // If a saved user exists, keep the dashboard visible.
     if (localStorage.getItem("numberhubUser")) {
       console.log("Keeping dashboard from saved user");
+      const authScreen = document.getElementById("authScreen");
+      if (authScreen) authScreen.style.setProperty("display", "none", "important");
+      const loginPanel = document.getElementById("loginForm")?.closest(".panel");
+      if (loginPanel) loginPanel.style.setProperty("display", "none", "important");
       return true;
     }
 
