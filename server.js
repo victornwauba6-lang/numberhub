@@ -1715,6 +1715,8 @@ The wallet has NOT been credited. Verify the payment before approving the reques
         [tokenHash]
       );
 
+      console.log("AUTH DEBUG /api/me session rows:", result.rows.length);
+
       if (result.rows.length === 0) {
         sendJSON(res, 401, {
           error: "Session expired or invalid"
