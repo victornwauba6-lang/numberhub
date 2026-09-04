@@ -1461,7 +1461,7 @@ function applyUserToDashboard(user) {
 
   const adminPanelNav = document.getElementById("adminPanelNav");
   if (adminPanelNav) {
-    adminPanelNav.style.display = user.is_admin === true ? "flex" : "none";
+    adminPanelNav.style.display = user.is_admin === true || user.is_admin === "true" || user.is_admin === 1 ? "flex" : "none";
   }
 }
 
