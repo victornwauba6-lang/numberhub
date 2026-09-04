@@ -1689,6 +1689,7 @@ The wallet has NOT been credited. Verify the payment before approving the reques
 
     if (req.method === "GET" && req.url === "/api/me") {
       const cookies = String(req.headers.cookie || "");
+      console.log("AUTH DEBUG /api/me cookie:", cookies ? "PRESENT" : "MISSING");
       const match = cookies.match(/(?:^|;\s*)session=([^;]+)/);
 
       if (!match) {
