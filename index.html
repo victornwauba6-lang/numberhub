@@ -102,6 +102,31 @@ h1{margin:5px 0;font-size:30px}
 }
 </style>
 <link rel="stylesheet" href="redesign.css">
+<script>
+(function(){
+  function updateMobileWallet(){
+    const mobile = document.getElementById("mobileWalletBalance");
+    const wallet = document.querySelector(".wallet strong");
+    if(mobile && wallet){
+      mobile.textContent = wallet.textContent.trim();
+    }
+  }
+
+  updateMobileWallet();
+
+  const observer = new MutationObserver(updateMobileWallet);
+  const wallet = document.querySelector(".wallet");
+  if(wallet){
+    observer.observe(wallet, {
+      childList:true,
+      subtree:true,
+      characterData:true
+    });
+  }
+
+  window.addEventListener("load", updateMobileWallet);
+})();
+</script>
 <script>async function showTransactionHistory(){const s=document.getElementById("transactionHistorySection"),m=document.getElementById("transactionHistoryMessage"),l=document.getElementById("transactionHistoryList");s.style.display="block";m.textContent="Loading transactions...";l.innerHTML="";try{const r=await fetch("https://numberhub.onrender.com/api/wallet/transactions",{credentials:"include"}),d=await r.json();if(!r.ok){m.textContent=d.error||"Could not load transactions.";return}if(!d.transactions||!d.transactions.length){m.textContent="No transactions yet.";return}m.textContent="";l.innerHTML=d.transactions.map(t=>`<div style="border:1px solid #e5e7eb;border-radius:12px;padding:15px;margin:10px 0;background:#fff"><strong>₦${Number(t.amount).toFixed(2)}</strong> — <strong>${t.status}</strong><br>Method: ${t.method||"—"}<br>Type: ${t.type}<br>Reference: ${t.reference}<br><small>${new Date(t.created_at).toLocaleString()}</small></div>`).join("")}catch(e){console.error(e);m.textContent="Could not connect to the transaction server."}}</script>
 <script>async function showNumbersHistory(){const s=document.getElementById("numbersHistorySection"),m=document.getElementById("numbersHistoryMessage"),l=document.getElementById("numbersHistoryList");s.style.display="block";m.textContent="Loading numbers...";l.innerHTML="";s.scrollIntoView({behavior:"smooth",block:"start"});try{const r=await fetch("https://numberhub.onrender.com/api/numbers/history",{credentials:"include"}),d=await r.json();if(!r.ok){m.textContent=d.error||"Could not load numbers history.";return}if(!d.purchases||!d.purchases.length){m.textContent="No purchased numbers yet.";return}m.textContent="";l.innerHTML=d.purchases.map(t=>`<div style="border:1px solid #e5e7eb;border-radius:12px;padding:15px;margin:10px 0;background:#fff"><strong>${t.phone_number}</strong><br>Service: ${t.service}<br>Country: ${t.country}<br>Provider: ${t.provider||"—"}<br>Price: ₦${Number(t.price).toFixed(2)}<br>Status: <strong>${t.status}</strong><br>Reference: ${t.reference}<br><small>${new Date(t.created_at).toLocaleString()}</small></div>`).join("")}catch(e){console.error(e);m.textContent="Could not connect to the numbers history server."}}</script>
 </head>
@@ -118,6 +143,19 @@ window.addEventListener("error", function(e) {
 
 <div class="app">
 <button class="mobile-menu" onclick="toggleSidebar()">☰</button>
+
+<div class="mobile-dashboard-header">
+  <div class="mobile-dashboard-left">
+    <button class="mobile-dashboard-menu" type="button" onclick="toggleSidebar()">☰</button>
+    <span class="mobile-dashboard-title">Dashboard</span>
+  </div>
+
+  <div class="mobile-dashboard-wallet">
+    Wallet: <span id="mobileWalletBalance">₦0.00</span>
+  </div>
+
+  <button class="mobile-dashboard-more" type="button" onclick="toggleSidebar()" aria-label="More options">⋮</button>
+</div>
 <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
 <aside class="sidebar">
 <div class="brand">NUMBER<span>HUB</span></div>
@@ -132,7 +170,7 @@ window.addEventListener("error", function(e) {
 <div class="title">COMMUNITY</div><button class="nav" onclick="window.open('https://whatsapp.com/channel/0029VbDRxIfD38CSw1z02m3H','_blank')">📢 WhatsApp Channel</button><div class="title">ACCOUNT</div>
 <button class="nav">🚀 Boost Account</button>
 <button class="nav" type="button" onclick="openFAQs()">❓ FAQs</button>
-<button class="nav" onclick="window.open('https://t.me/Numberhubsupport','_blank')">💬 Telegram Support</button>
+<button class="nav" onclick="window.open('https://t.me/numberhubsuppor','_blank')">💬 Telegram Support</button>
 <button class="nav" onclick="showNumbersHistory()">🧾 Numbers History</button>
 <button class="nav" onclick="showTransactionHistory()">💳 Transaction History</button>
 <button class="nav" id="adminPanelNav" type="button" onclick="openAdminPanel(); toggleSidebar()" style="display:none;">🛡️ Admin Panel</button>
@@ -1381,6 +1419,7 @@ function toggleSidebar() {
 </script>
 <script>
 function applyUserToDashboard(user) {
+  const authScreen = document.getElementById("authScreen"); if (authScreen) authScreen.style.display = "none";
   if (!user) return;
 
   const app = document.querySelector(".app");
@@ -1397,6 +1436,8 @@ function applyUserToDashboard(user) {
   const walletTop = document.querySelector(".wallet strong");
   if (walletTop) {
     walletTop.textContent = "₦" + Number(user.wallet || 0).toFixed(2);
+      const mobileWallet = document.getElementById("mobileWalletBalance"); if (mobileWallet) mobileWallet.textContent = "₦" + Number(user.wallet || 0).toFixed(2);
+      updateMobileWallet();
   }
 
   const stats = document.querySelectorAll(".stat strong");
@@ -1433,6 +1474,7 @@ async function loadCurrentUser() {
     });
 
     const d = await r.json();
+    console.log("NUMBERHUB /api/me:", r.status, d);
 
     if (r.ok && d.authenticated && d.user) {
       const authScreen = document.getElementById("authScreen");
@@ -1474,8 +1516,7 @@ async function loadCurrentUser() {
   }
 }
 
-loadCurrentUser();</script>
-
+</script>
 
 
 <div id="authScreen" style="display:none;max-width:500px;margin:40px auto;padding:0 15px">
@@ -1531,7 +1572,7 @@ function showLoginFromReset() {
   if (loginPanel) loginPanel.style.display = "block";
 }
 
-document.getElementById("forgotPasswordForm").addEventListener("submit", async e => {
+document.getElementById("forgotPasswordForm")?.addEventListener("submit", async e => {
   e.preventDefault();
   const message = document.getElementById("resetMessage");
   const email = document.getElementById("resetEmail").value.trim();
@@ -1558,7 +1599,7 @@ document.getElementById("forgotPasswordForm").addEventListener("submit", async e
   }
 });
 
-document.getElementById("verifyCodeForm").addEventListener("submit", async e => {
+document.getElementById("verifyCodeForm")?.addEventListener("submit", async e => {
   e.preventDefault();
   const message = document.getElementById("resetMessage");
   const code = document.getElementById("resetCode").value.trim();
@@ -1585,7 +1626,7 @@ document.getElementById("verifyCodeForm").addEventListener("submit", async e => 
   }
 });
 
-document.getElementById("newPasswordForm").addEventListener("submit", async e => {
+document.getElementById("newPasswordForm")?.addEventListener("submit", async e => {
   e.preventDefault();
   const message = document.getElementById("resetMessage");
   const password = document.getElementById("newPassword").value;
@@ -1629,7 +1670,7 @@ function showSignup() {
   if (signupPanel) signupPanel.style.display = "block";
 }
 
-document.getElementById("loginForm").addEventListener("submit", async e => {
+document.getElementById("loginForm")?.addEventListener("submit", async e => {
   e.preventDefault();
 
   const message = document.getElementById("loginMessage");
@@ -1680,7 +1721,7 @@ document.getElementById("loginForm").addEventListener("submit", async e => {
 </div>
 
 <script>
-document.getElementById("signupForm").addEventListener("submit", async e => {
+document.getElementById("signupForm")?.addEventListener("submit", async e => {
   e.preventDefault();
 
   const message = document.getElementById("signupMessage");
@@ -3391,6 +3432,7 @@ function backToNumberTypes() {
   });
 }
 </script>
+<script>loadCurrentUser();</script>
 </body>
 </html>
 
