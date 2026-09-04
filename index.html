@@ -1486,7 +1486,7 @@ async function loadCurrentUser() {
   }
 
   try {
-    const r = await fetch("/api/me", {
+    const r = await fetch("https://numberhub.onrender.com/api/me", {
       method: "GET",
       credentials: "include",
       cache: "no-store"
@@ -3467,7 +3467,7 @@ function backToNumberTypes() {
   });
 }
 </script>
-<script>loadCurrentUser();</script>
+<script>document.addEventListener("DOMContentLoaded", () => loadCurrentUser());</script>
 </body>
 </html>
 
