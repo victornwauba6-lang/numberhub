@@ -2340,7 +2340,7 @@ The wallet has NOT been credited. Verify the payment before approving the reques
       }
 
       const result = await pool.query(
-        `SELECT id, name, email, password_hash, wallet, purchases, created_at
+        `SELECT id, name, email, password_hash, wallet, purchases, created_at, is_admin
          FROM users
          WHERE email = $1`,
         [email]
