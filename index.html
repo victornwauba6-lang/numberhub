@@ -1521,6 +1521,11 @@ async function loadCurrentUser() {
   } catch (err) {
     console.error("Could not load current user:", err);
 
+    if (localStorage.getItem("numberhubUser")) {
+      console.log("Keeping dashboard from saved user after API error");
+      return true;
+    }
+
     const app = document.querySelector(".app");
     if (app) app.style.setProperty("display", "none", "important");
 
