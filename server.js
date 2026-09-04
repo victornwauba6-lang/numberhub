@@ -384,7 +384,7 @@ const pool = new Pool({
 function sendJSON(res, status, data) {
   res.writeHead(status, {
     "Content-Type": "application/json",
-    "Access-Control-Allow-Origin": "http://localhost:3000",
+    "Access-Control-Allow-Origin": "https://numberhub.onrender.com",
     "Access-Control-Allow-Credentials": "true"
   });
   res.end(JSON.stringify(data));
@@ -564,7 +564,7 @@ const server = http.createServer(async (req, res) => {
   try {
     if (req.method === "OPTIONS") {
       res.writeHead(204, {
-        "Access-Control-Allow-Origin": "http://localhost:3000",
+        "Access-Control-Allow-Origin": "https://numberhub.onrender.com",
         "Access-Control-Allow-Credentials": "true",
         "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type"
@@ -971,7 +971,7 @@ The wallet has NOT been credited. Verify the payment before approving the reques
 
     if (req.method === "GET" && req.url === "/api/wallet/transactions") {
       const cookies = String(req.headers.cookie || "");
-      const match = cookies.match(/(?:^|;\\s*)session=([^;]+)/);
+      const match = cookies.match(/(?:^|;\s*)session=([^;]+)/);
 
       if (!match) {
         sendJSON(res, 401, {
@@ -1689,7 +1689,7 @@ The wallet has NOT been credited. Verify the payment before approving the reques
 
     if (req.method === "GET" && req.url === "/api/me") {
       const cookies = String(req.headers.cookie || "");
-      const match = cookies.match(/(?:^|;\\s*)session=([^;]+)/);
+      const match = cookies.match(/(?:^|;\s*)session=([^;]+)/);
 
       if (!match) {
         sendJSON(res, 401, {
@@ -2281,7 +2281,7 @@ The wallet has NOT been credited. Verify the payment before approving the reques
 
       res.writeHead(200, {
         "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "http://localhost:3000",
+        "Access-Control-Allow-Origin": "https://numberhub.onrender.com",
         "Access-Control-Allow-Credentials": "true",
         "Set-Cookie": `session=${sessionToken}; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=604800`
       });
@@ -2313,7 +2313,7 @@ The wallet has NOT been credited. Verify the payment before approving the reques
 
       res.writeHead(200, {
         "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "http://localhost:3000",
+        "Access-Control-Allow-Origin": "https://numberhub.onrender.com",
         "Access-Control-Allow-Credentials": "true",
         "Set-Cookie": "session=; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=0"
       });
