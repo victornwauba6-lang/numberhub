@@ -1468,6 +1468,10 @@ function applyUserToDashboard(user) {
 async function loadCurrentUser() {
   const savedUser = localStorage.getItem("numberhubUser");
   if (savedUser) {
+    const authScreen = document.getElementById("authScreen");
+    if (authScreen) authScreen.style.setProperty("display", "none", "important");
+  }
+  if (savedUser) {
     try {
       const user = JSON.parse(savedUser);
       if (user && user.id && user.email) {
