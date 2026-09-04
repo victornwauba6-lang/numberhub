@@ -1481,7 +1481,6 @@ async function loadCurrentUser() {
         console.log("Restored saved user");
       }
     } catch (e) {
-      localStorage.removeItem("numberhubUser");
     }
   }
 
@@ -3467,34 +3466,20 @@ function backToNumberTypes() {
   });
 }
 </script>
-<script>
-document.addEventListener("DOMContentLoaded", async () => {
+<script>document.addEventListener("DOMContentLoaded", async () => {
   const savedUser = localStorage.getItem("numberhubUser");
-
   if (savedUser) {
     try {
       const user = JSON.parse(savedUser);
-
       if (user && user.id && user.email) {
-        const authScreen = document.getElementById("authScreen");
-        const app = document.querySelector(".app");
-        const dashboard = document.getElementById("dashboardMain");
-
-        if (authScreen) authScreen.style.setProperty("display", "none", "important");
-        if (app) app.style.setProperty("display", "flex", "important");
-        if (dashboard) dashboard.style.setProperty("display", "block", "important");
-
         applyUserToDashboard(user);
       }
     } catch (e) {
       console.error("Saved user restore failed:", e);
-      localStorage.removeItem("numberhubUser");
     }
   }
-
   await loadCurrentUser();
-});
-</script>
+});</script>
 </body>
 </html>
 
