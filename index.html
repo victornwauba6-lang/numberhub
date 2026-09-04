@@ -1689,7 +1689,7 @@ document.getElementById("loginForm")?.addEventListener("submit", async e => {
     const d = await r.json();
 
     if (r.ok) {
-      sessionStorage.setItem("numberhubLoggedIn", "true");
+      localStorage.setItem("numberhubLoggedIn", "true");
       message.textContent = "Login successful. Welcome back, " + d.user.name + "!";
 
       applyUserToDashboard(d.user);
@@ -1763,7 +1763,7 @@ document.getElementById("signupForm")?.addEventListener("submit", async e => {
       return;
     }
 
-    sessionStorage.setItem("numberhubLoggedIn", "true");
+    localStorage.setItem("numberhubLoggedIn", "true");
     message.textContent = "Account created successfully. Welcome, " + loginData.user.name + "!";
     applyUserToDashboard(loginData.user);
 
@@ -1786,7 +1786,7 @@ async function logoutNumberHub() {
     console.error("Logout request failed:", err);
   }
 
-  sessionStorage.removeItem("numberhubLoggedIn");
+  localStorage.removeItem("numberhubLoggedIn");
 
   const app = document.querySelector(".app");
   if (app) app.style.setProperty("display", "none", "important");
