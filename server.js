@@ -588,6 +588,36 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (req.method === "POST" && req.url === "/api/admin/bootstrap") {
+      const data = await getBody(req);
+      const secret = String(data.secret || "");
+
+      if (!process.env.ADMIN_BOOTSTRAP_SECRET ||
+          secret !== process.env.ADMIN_BOOTSTRAP_SECRET) {
+        sendJSON(res, 403, { error: "Invalid admin setup secret" });
+        return;
+      }
+
+      const result = await pool.query(
+        `UPDATE users
+         SET is_admin = TRUE
+         WHERE LOWER(email) = $1
+         RETURNING id, name, email, is_admin`,
+        ["numberhubsupport@gmail.com"]
+      );
+
+      if (result.rows.length === 0) {
+        sendJSON(res, 404, { error: "Admin account not found" });
+        return;
+      }
+
+      sendJSON(res, 200, {
+        message: "Admin account activated successfully",
+        user: result.rows[0]
+      });
+      return;
+    }
+
     if (req.method === "GET" && req.url === "/api/status") {
       sendJSON(res, 200, {
         status: "online",
@@ -747,34 +777,6 @@ The wallet has NOT been credited. Verify the payment before approving the reques
         transaction: result.rows[0]
       });
 
-      return;
-    }
-
-    if (req.method === "POST" && req.url === "/api/admin/bootstrap") {
-      const providedSecret = String(req.headers["x-migration-secret"] || "");
-
-      if (!process.env.MIGRATION_SECRET || providedSecret !== process.env.MIGRATION_SECRET) {
-        sendJSON(res, 403, { error: "Invalid admin setup secret" });
-        return;
-      }
-
-      const result = await pool.query(
-        `UPDATE users
-         SET is_admin = TRUE
-         WHERE LOWER(email) = $1
-         RETURNING id, name, email, is_admin`,
-        ["numberhubsupport@gmail.com"]
-      );
-
-      if (result.rows.length === 0) {
-        sendJSON(res, 404, { error: "Admin account not found" });
-        return;
-      }
-
-      sendJSON(res, 200, {
-        message: "Admin account activated successfully",
-        user: result.rows[0]
-      });
       return;
     }
 
