@@ -1468,6 +1468,12 @@ function applyUserToDashboard(user) {
       user.is_admin === "true" ||
       user.is_admin === 1;
 
+    console.log("ADMIN CHECK:", {
+      email: user.email,
+      is_admin: user.is_admin,
+      isAdmin: isAdmin
+    });
+
     adminPanelNav.style.setProperty(
       "display",
       isAdmin ? "flex" : "none",
