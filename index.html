@@ -1474,6 +1474,8 @@ function applyUserToDashboard(user) {
       isAdmin: isAdmin
     });
 
+    alert("ADMIN CHECK\\nEmail: " + String(user.email || "") + "\\nis_admin: " + String(user.is_admin) + "\\nisAdmin: " + String(isAdmin));
+
     adminPanelNav.style.setProperty(
       "display",
       isAdmin ? "flex" : "none",
