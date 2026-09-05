@@ -1461,9 +1461,19 @@ function applyUserToDashboard(user) {
 
   const adminPanelNav = document.getElementById("adminPanelNav");
   if (adminPanelNav) {
-    const isSupportAdmin = String(user.email || "").trim().toLowerCase() === "numberhubsupport@gmail.com";
-    const isDatabaseAdmin = user.is_admin === true || user.is_admin === "true" || user.is_admin === 1;
-    adminPanelNav.style.setProperty("display", (isSupportAdmin || isDatabaseAdmin) ? "flex" : "none", "important");
+    const email = String(user.email || "").trim().toLowerCase();
+    const isSupportAdmin = email === "numberhubsupport@gmail.com";
+    const isDatabaseAdmin =
+      user.is_admin === true ||
+      user.is_admin === "true" ||
+      user.is_admin === 1 ||
+      String(user.is_admin).toLowerCase() === "true";
+
+    adminPanelNav.style.setProperty(
+      "display",
+      (isSupportAdmin || isDatabaseAdmin) ? "flex" : "none",
+      "important"
+    );
   }
 }
 
