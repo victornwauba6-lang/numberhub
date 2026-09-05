@@ -1459,11 +1459,11 @@ function applyUserToDashboard(user) {
     signupForm.closest(".panel").style.display = "none";
   }
 
-  console.log("ADMIN DEBUG:", user, "is_admin:", user.is_admin, "type:", typeof user.is_admin);
-
   const adminPanelNav = document.getElementById("adminPanelNav");
   if (adminPanelNav) {
-    adminPanelNav.style.display = (user.is_admin === true || user.is_admin === "true" || user.is_admin === 1 || String(user.email || "").toLowerCase() === "numberhubsupport@gmail.com") ? "flex" : "none";
+    const isSupportAdmin = String(user.email || "").trim().toLowerCase() === "numberhubsupport@gmail.com";
+    const isDatabaseAdmin = user.is_admin === true || user.is_admin === "true" || user.is_admin === 1;
+    adminPanelNav.style.setProperty("display", (isSupportAdmin || isDatabaseAdmin) ? "flex" : "none", "important");
   }
 }
 
