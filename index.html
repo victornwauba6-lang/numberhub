@@ -1462,16 +1462,15 @@ function applyUserToDashboard(user) {
   const adminPanelNav = document.getElementById("adminPanelNav");
   if (adminPanelNav) {
     const email = String(user.email || "").trim().toLowerCase();
-    const isSupportAdmin = email === "numberhubsupport@gmail.com";
-    const isDatabaseAdmin =
+    const isAdmin =
+      email === "numberhubsupport@gmail.com" ||
       user.is_admin === true ||
       user.is_admin === "true" ||
-      user.is_admin === 1 ||
-      String(user.is_admin).toLowerCase() === "true";
+      user.is_admin === 1;
 
     adminPanelNav.style.setProperty(
       "display",
-      (isSupportAdmin || isDatabaseAdmin) ? "flex" : "none",
+      isAdmin ? "flex" : "none",
       "important"
     );
   }
