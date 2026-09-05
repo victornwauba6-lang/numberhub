@@ -173,7 +173,7 @@ window.addEventListener("error", function(e) {
 <button class="nav" onclick="window.open('https://t.me/numberhubsuppor','_blank')">💬 Telegram Support</button>
 <button class="nav" onclick="showNumbersHistory()">🧾 Numbers History</button>
 <button class="nav" onclick="showTransactionHistory()">💳 Transaction History</button>
-<button class="nav" id="adminPanelNav" type="button" onclick="openAdminPanel()" style="display:none;">🛡️ Admin Panel</button>
+<button class="nav" id="adminPanelNav" type="button" onclick="openAdminPanel()" style="display:flex !important;">🛡️ Admin Panel</button>
 <button class="nav" type="button" onclick="logoutNumberHub()">🚪 Logout</button>
 <div class="title">RESELLER</div>
 <button class="nav">🔌 Reseller Hub</button>
@@ -1742,7 +1742,8 @@ document.getElementById("loginForm")?.addEventListener("submit", async e => {
 
     if (r.ok) {
       localStorage.setItem("numberhubLoggedIn", "true");
-        localStorage.setItem("numberhubUser", JSON.stringify(d.user));
+      localStorage.setItem("numberhubUser", JSON.stringify(d.user));
+      alert("LOGIN DATA:\n" + JSON.stringify(d.user, null, 2));
       message.textContent = "Login successful. Welcome back, " + d.user.name + "!";
 
       applyUserToDashboard(d.user);
