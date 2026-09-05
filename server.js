@@ -1280,7 +1280,7 @@ The wallet has NOT been credited. Verify the payment before approving the reques
       }
 
       const purchaseResult = await pool.query(
-        `SELECT id, phone_number, country, service, status, sms_code
+        `SELECT id, phone_number, country, service, status, sms_code, price, reference
          FROM number_purchases
          WHERE user_id = $1
            AND supplier_id = $2
@@ -1322,6 +1322,105 @@ The wallet has NOT been credited. Verify the payment before approving the reques
           "active"
         ).trim();
 
+        const terminalStatus = status.toLowerCase();
+
+        if (
+          (terminalStatus === "canceled" || terminalStatus === "timeout") &&
+          !smsCode &&
+          !purchaseResult.rows[0].sms_code
+        ) {
+          const refundClient = await pool.connect();
+
+          try {
+            await refundClient.query("BEGIN");
+
+            const lockedPurchaseResult = await refundClient.query(
+              `SELECT id, price, reference, sms_code
+               FROM number_purchases
+               WHERE id = $1
+                 AND user_id = $2
+               FOR UPDATE`,
+              [purchaseResult.rows[0].id, userId]
+            );
+
+            if (lockedPurchaseResult.rows.length === 0) {
+              await refundClient.query("ROLLBACK");
+              sendJSON(res, 404, { error: "Purchase not found" });
+              return;
+            }
+
+            const lockedPurchase = lockedPurchaseResult.rows[0];
+            const refundReference = "REFUND-" + lockedPurchase.reference;
+
+            const existingRefund = await refundClient.query(
+              `SELECT id
+               FROM wallet_transactions
+               WHERE user_id = $1
+                 AND reference = $2
+                 AND type = 'refund'
+               LIMIT 1`,
+              [userId, refundReference]
+            );
+
+            const alreadyRefunded = existingRefund.rows.length > 0;
+
+            if (!alreadyRefunded && !lockedPurchase.sms_code) {
+              await refundClient.query(
+                `UPDATE users
+                 SET wallet = wallet + $1
+                 WHERE id = $2`,
+                [lockedPurchase.price, userId]
+              );
+
+              await refundClient.query(
+                `INSERT INTO wallet_transactions
+                   (user_id, type, amount, method, status, reference, description)
+                 VALUES ($1, 'refund', $2, '5SIM', 'successful', $3, $4)`,
+                [
+                  userId,
+                  lockedPurchase.price,
+                  refundReference,
+                  terminalStatus === "canceled"
+                    ? "Automatic refund for canceled number"
+                    : "Automatic refund for expired number"
+                ]
+              );
+            }
+
+            await refundClient.query(
+              `UPDATE number_purchases
+               SET status = $1
+               WHERE id = $2
+                 AND user_id = $3`,
+              [terminalStatus, lockedPurchase.id, userId]
+            );
+
+            await refundClient.query("COMMIT");
+
+            sendJSON(res, 200, {
+              status: terminalStatus,
+              smsCode: "",
+              phoneNumber: purchaseResult.rows[0].phone_number,
+              activationId: supplierId,
+              refunded: !alreadyRefunded && !lockedPurchase.sms_code,
+              refundAmount: Number(lockedPurchase.price).toFixed(2),
+              message: alreadyRefunded
+                ? "This number is no longer active. The refund was already processed."
+                : terminalStatus === "canceled"
+                  ? "Number was canceled and your wallet has been refunded."
+                  : "Number expired and your wallet has been refunded."
+            });
+            return;
+          } catch (refundError) {
+            try {
+              await refundClient.query("ROLLBACK");
+            } catch (_) {}
+            throw refundError;
+          } finally {
+            refundClient.release();
+          }
+        }
+
         if (smsCode) {
           await pool.query(
             `UPDATE number_purchases
@@ -1354,23 +1453,97 @@ The wallet has NOT been credited. Verify the payment before approving the reques
         const errorMessage = String(error.message || "").toLowerCase();
 
         if (errorMessage.includes("order not found")) {
-          await pool.query(
-            `UPDATE number_purchases
-             SET status = 'timeout'
-             WHERE id = $1
-               AND user_id = $2
-               AND sms_code IS NULL`,
-            [purchaseResult.rows[0].id, userId]
-          );
+          const refundClient = await pool.connect();
 
-          sendJSON(res, 200, {
-            status: "timeout",
-            smsCode: "",
-            phoneNumber: purchaseResult.rows[0].phone_number,
-            activationId: supplierId,
-            message: "This number has expired or is no longer available."
-          });
-          return;
+          try {
+            await refundClient.query("BEGIN");
+
+            const lockedPurchaseResult = await refundClient.query(
+              `SELECT id, price, reference, sms_code
+               FROM number_purchases
+               WHERE id = $1
+                 AND user_id = $2
+               FOR UPDATE`,
+              [purchaseResult.rows[0].id, userId]
+            );
+
+            if (lockedPurchaseResult.rows.length === 0) {
+              await refundClient.query("ROLLBACK");
+              sendJSON(res, 404, { error: "Purchase not found" });
+              return;
+            }
+
+            const lockedPurchase = lockedPurchaseResult.rows[0];
+            let refunded = false;
+
+            if (!lockedPurchase.sms_code) {
+              const refundReference =
+                "REFUND-" + lockedPurchase.reference;
+
+              const existingRefund = await refundClient.query(
+                `SELECT id
+                 FROM wallet_transactions
+                 WHERE user_id = $1
+                   AND reference = $2
+                   AND type = 'refund'
+                 LIMIT 1`,
+                [userId, refundReference]
+              );
+
+              if (existingRefund.rows.length === 0) {
+                await refundClient.query(
+                  `UPDATE users
+                   SET wallet = wallet + $1
+                   WHERE id = $2`,
+                  [lockedPurchase.price, userId]
+                );
+
+                await refundClient.query(
+                  `INSERT INTO wallet_transactions
+                     (user_id, type, amount, method, status, reference, description)
+                   VALUES ($1, 'refund', $2, '5SIM', 'successful', $3, $4)`,
+                  [
+                    userId,
+                    lockedPurchase.price,
+                    refundReference,
+                    "Automatic refund for expired number"
+                  ]
+                );
+
+                refunded = true;
+              }
+            }
+
+            await refundClient.query(
+              `UPDATE number_purchases
+               SET status = 'timeout'
+               WHERE id = $1
+                 AND user_id = $2`,
+              [purchaseResult.rows[0].id, userId]
+            );
+
+            await refundClient.query("COMMIT");
+
+            sendJSON(res, 200, {
+              status: "timeout",
+              smsCode: "",
+              phoneNumber: purchaseResult.rows[0].phone_number,
+              activationId: supplierId,
+              refunded,
+              refundAmount: Number(lockedPurchase.price).toFixed(2),
+              message: refunded
+                ? "This number expired and your wallet has been refunded."
+                : "This number has expired or is no longer available."
+            });
+            return;
+          } catch (refundError) {
+            try {
+              await refundClient.query("ROLLBACK");
+            } catch (_) {}
+            throw refundError;
+          } finally {
+            refundClient.release();
+          }
         }
 
         sendJSON(res, 502, {
@@ -1466,20 +1639,88 @@ The wallet has NOT been credited. Verify the payment before approving the reques
           return;
         }
 
-        await pool.query(
-          `UPDATE number_purchases
-           SET status = 'canceled'
-           WHERE id = $1
-             AND user_id = $2`,
-          [purchase.id, userId]
-        );
+        const refundClient = await pool.connect();
 
-        sendJSON(res, 200, {
-          success: true,
-          status: "canceled",
-          message: "Number canceled successfully.",
-          supplier: cancelResult
-        });
+        try {
+          await refundClient.query("BEGIN");
+
+          const lockedPurchase = await refundClient.query(
+            `SELECT id, price, reference, status, sms_code
+             FROM number_purchases
+             WHERE id = $1
+               AND user_id = $2
+             FOR UPDATE`,
+            [purchase.id, userId]
+          );
+
+          if (lockedPurchase.rows.length === 0) {
+            await refundClient.query("ROLLBACK");
+            sendJSON(res, 404, { error: "Number purchase not found" });
+            return;
+          }
+
+          const locked = lockedPurchase.rows[0];
+          const refundReference = "REFUND-" + locked.reference;
+
+          const existingRefund = await refundClient.query(
+            `SELECT id
+             FROM wallet_transactions
+             WHERE user_id = $1
+               AND reference = $2
+               AND type = 'refund'
+             LIMIT 1`,
+            [userId, refundReference]
+          );
+
+          if (existingRefund.rows.length === 0) {
+            await refundClient.query(
+              `UPDATE users
+               SET wallet = wallet + $1
+               WHERE id = $2`,
+              [locked.price, userId]
+            );
+
+            await refundClient.query(
+              `INSERT INTO wallet_transactions
+                 (user_id, type, amount, method, status, reference, description)
+               VALUES ($1, 'refund', $2, '5SIM', 'successful', $3, $4)`,
+              [
+                userId,
+                locked.price,
+                refundReference,
+                "Automatic refund for canceled number"
+              ]
+            );
+          }
+
+          await refundClient.query(
+            `UPDATE number_purchases
+             SET status = 'canceled'
+             WHERE id = $1
+               AND user_id = $2`,
+            [purchase.id, userId]
+          );
+
+          await refundClient.query("COMMIT");
+
+          sendJSON(res, 200, {
+            success: true,
+            status: "canceled",
+            refunded: existingRefund.rows.length === 0,
+            refundAmount: Number(locked.price).toFixed(2),
+            message: existingRefund.rows.length === 0
+              ? "Number canceled and wallet refunded successfully."
+              : "Number canceled successfully. Refund was already processed.",
+            supplier: cancelResult
+          });
+        } catch (refundError) {
+          try {
+            await refundClient.query("ROLLBACK");
+          } catch (_) {}
+          throw refundError;
+        } finally {
+          refundClient.release();
+        }
 
       } catch (error) {
         console.error("5SIM number cancellation error:", error);
