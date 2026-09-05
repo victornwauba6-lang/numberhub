@@ -1727,6 +1727,22 @@ document.getElementById("loginForm")?.addEventListener("submit", async e => {
       message.textContent = "Login successful. Welcome back, " + d.user.name + "!";
 
       applyUserToDashboard(d.user);
+
+      try {
+        const meResponse = await fetch("https://numberhub.onrender.com/api/me", {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store"
+        });
+        const meData = await meResponse.json();
+
+        if (meResponse.ok && meData.authenticated && meData.user) {
+          localStorage.setItem("numberhubUser", JSON.stringify(meData.user));
+          applyUserToDashboard(meData.user);
+        }
+      } catch (meError) {
+        console.error("Could not refresh user after login:", meError);
+      }
     } else {
       message.textContent = d.error || "Login failed.";
     }
