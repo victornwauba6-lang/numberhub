@@ -173,7 +173,7 @@ window.addEventListener("error", function(e) {
 <button class="nav" onclick="window.open('https://t.me/numberhubsuppor','_blank')">💬 Telegram Support</button>
 <button class="nav" onclick="showNumbersHistory()">🧾 Numbers History</button>
 <button class="nav" onclick="showTransactionHistory()">💳 Transaction History</button>
-<button class="nav" id="adminPanelNav" type="button" onclick="openAdminPanel(); toggleSidebar()" style="display:none;">🛡️ Admin Panel</button>
+<button class="nav" id="adminPanelNav" type="button" onclick="openAdminPanel()" style="display:none;">🛡️ Admin Panel</button>
 <button class="nav" type="button" onclick="logoutNumberHub()">🚪 Logout</button>
 <div class="title">RESELLER</div>
 <button class="nav">🔌 Reseller Hub</button>
@@ -1474,7 +1474,7 @@ function applyUserToDashboard(user) {
       isAdmin: isAdmin
     });
 
-    alert("ADMIN CHECK\\nEmail: " + String(user.email || "") + "\\nis_admin: " + String(user.is_admin) + "\\nisAdmin: " + String(isAdmin));
+
 
     adminPanelNav.style.setProperty(
       "display",
