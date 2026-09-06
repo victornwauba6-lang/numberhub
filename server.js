@@ -345,6 +345,123 @@ function fiveSimCheapestAvailable(prices, country, product) {
   return available[0] || null;
 }
 
+
+const TEXTVERIFIED_BASE_URL = "https://backend.textverified.com";
+
+let textVerifiedToken = null;
+let textVerifiedTokenExpiresAt = 0;
+
+async function textVerifiedGetToken() {
+  const email = process.env.TEXTVERIFIED_EMAIL;
+  const apiKey = process.env.TEXTVERIFIED_API_KEY;
+
+  if (!email) {
+    throw new Error("TEXTVERIFIED_EMAIL is not configured");
+  }
+
+  if (!apiKey) {
+    throw new Error("TEXTVERIFIED_API_KEY is not configured");
+  }
+
+  if (textVerifiedToken && Date.now() < textVerifiedTokenExpiresAt) {
+    return textVerifiedToken;
+  }
+
+  const response = await fetch(
+    `${TEXTVERIFIED_BASE_URL}/api/pub/v2/auth`,
+    {
+      method: "POST",
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        email,
+        apiKey
+      })
+    }
+  );
+
+  const text = await response.text();
+
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    data = { raw: text };
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      `TextVerified auth ${response.status}: ${
+        data.message || data.error || text
+      }`
+    );
+  }
+
+  const token =
+    data.token ||
+    data.accessToken ||
+    data.access_token;
+
+  if (!token) {
+    throw new Error("TextVerified authentication succeeded but no token was returned");
+  }
+
+  textVerifiedToken = token;
+
+  // Refresh early so we don't reuse an expired token.
+  const expiresInSeconds =
+    Number(data.expiresIn || data.expires_in || 300);
+
+  textVerifiedTokenExpiresAt =
+    Date.now() + Math.max(30, expiresInSeconds - 30) * 1000;
+
+  return textVerifiedToken;
+}
+
+async function textVerifiedRequest(endpoint, options = {}) {
+  const token = await textVerifiedGetToken();
+
+  const response = await fetch(
+    TEXTVERIFIED_BASE_URL + endpoint,
+    {
+      ...options,
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        ...(options.headers || {})
+      }
+    }
+  );
+
+  const text = await response.text();
+
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    data = { raw: text };
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      `TextVerified API ${response.status}: ${
+        data.message || data.error || text
+      }`
+    );
+  }
+
+  return data;
+}
+
+async function textVerifiedGetServices() {
+  return textVerifiedRequest("/api/pub/v2/services", {
+    method: "GET"
+  });
+}
+
 async function sendPasswordResetEmail(to, code) {
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -567,6 +684,33 @@ async function initDatabase() {
   console.log("PostgreSQL database ready");
 }
 
+
+async function runTextVerifiedTest(req, res, origin) {
+  const admin = await getAdminUserId(req);
+
+  if (admin.error) {
+    return sendJSON(res, admin.status, { error: admin.error }, origin);
+  }
+
+  try {
+    const services = await textVerifiedGetServices();
+
+    return sendJSON(res, 200, {
+      success: true,
+      provider: "TextVerified",
+      services
+    }, origin);
+  } catch (error) {
+    console.error("TextVerified test failed:", error);
+
+    return sendJSON(res, 502, {
+      success: false,
+      provider: "TextVerified",
+      error: error.message
+    }, origin);
+  }
+}
+
 const server = http.createServer(async (req, res) => {
   try {
     if (req.method === "OPTIONS") {
@@ -625,6 +769,10 @@ const server = http.createServer(async (req, res) => {
         message: "Backend is working"
       });
       return;
+    }
+
+    if (req.method === "GET" && req.url === "/api/admin/textverified-test") {
+      return await runTextVerifiedTest(req, res, req.headers.origin);
     }
 
     if (req.method === "POST" && req.url === "/api/wallet/deposit") {
