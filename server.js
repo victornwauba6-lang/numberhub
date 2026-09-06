@@ -373,12 +373,9 @@ async function textVerifiedGetToken() {
       method: "POST",
       headers: {
         "Accept": "application/json",
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        email,
-        apiKey
-      })
+        "X-API-USERNAME": email,
+        "X-API-KEY": apiKey
+      }
     }
   );
 
@@ -457,9 +454,12 @@ async function textVerifiedRequest(endpoint, options = {}) {
 }
 
 async function textVerifiedGetServices() {
-  return textVerifiedRequest("/api/pub/v2/services", {
-    method: "GET"
-  });
+  return textVerifiedRequest(
+    "/api/pub/v2/services?numberType=mobile&reservationType=verification",
+    {
+      method: "GET"
+    }
+  );
 }
 
 async function sendPasswordResetEmail(to, code) {
