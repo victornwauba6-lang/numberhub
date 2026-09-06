@@ -1238,7 +1238,7 @@ The wallet has NOT been credited. Verify the payment before approving the reques
         console.error("5SIM service lookup error:", error);
 
         sendJSON(res, 502, {
-          error: "Unable to retrieve services from 5SIM"
+          error: "Unable to load services right now. Please try again."
         }, requestOrigin);
         return;
       }
@@ -1634,7 +1634,7 @@ The wallet has NOT been credited. Verify the payment before approving the reques
 
         if (supplierStatus && supplierStatus !== "canceled") {
           sendJSON(res, 400, {
-            error: "5SIM did not cancel this number.",
+            error: "Unable to cancel this number right now. Please try again.",
             status: cancelResult.status
           });
           return;
@@ -1805,7 +1805,7 @@ The wallet has NOT been credited. Verify the payment before approving the reques
 
         if (!option) {
           sendJSON(res, 400, {
-            error: `No ${service} numbers are currently available from 5SIM`
+            error: `No ${service} numbers are currently available. Please choose another service or country.`
           });
           return;
         }
@@ -1813,7 +1813,7 @@ The wallet has NOT been credited. Verify the payment before approving the reques
         console.error("5SIM price lookup error:", supplierError);
 
         sendJSON(res, 502, {
-          error: supplierError.message || "Unable to check 5SIM availability"
+          error: "Unable to check availability right now. Please try again."
         });
         return;
       }
@@ -1867,7 +1867,7 @@ The wallet has NOT been credited. Verify the payment before approving the reques
         console.error("5SIM purchase error:", supplierError);
 
         sendJSON(res, 502, {
-          error: supplierError.message || "5SIM purchase failed"
+          error: "Unable to purchase this number right now. Please try again."
         });
         return;
       }
@@ -1883,7 +1883,7 @@ The wallet has NOT been credited. Verify the payment before approving the reques
 
       if (!phoneNumber || !supplierId) {
         sendJSON(res, 502, {
-          error: "5SIM returned an invalid purchase response"
+          error: "We couldn't complete the number purchase. Please try again."
         });
         return;
       }
