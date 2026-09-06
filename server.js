@@ -1165,6 +1165,7 @@ The wallet has NOT been credited. Verify the payment before approving the reques
       ).trim();
 
       const country = fiveSimCountryCode(requestedCountry);
+      const requestOrigin = req.headers.origin;
 
       try {
         const prices = await fiveSimRequest(
@@ -1176,7 +1177,7 @@ The wallet has NOT been credited. Verify the payment before approving the reques
         if (!countryData || typeof countryData !== "object") {
           sendJSON(res, 404, {
             error: "No service data found for this country"
-          });
+          }, requestOrigin);
           return;
         }
 
@@ -1230,7 +1231,7 @@ The wallet has NOT been credited. Verify the payment before approving the reques
           providerCountry: country,
           count: servicesWithCustomerPrices.length,
           services: servicesWithCustomerPrices
-        });
+        }, requestOrigin);
         return;
 
       } catch (error) {
@@ -1238,7 +1239,7 @@ The wallet has NOT been credited. Verify the payment before approving the reques
 
         sendJSON(res, 502, {
           error: "Unable to retrieve services from 5SIM"
-        });
+        }, requestOrigin);
         return;
       }
     }
