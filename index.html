@@ -128,7 +128,36 @@ h1{margin:5px 0;font-size:30px}
 })();
 </script>
 <script>async function showTransactionHistory(){const s=document.getElementById("transactionHistorySection"),m=document.getElementById("transactionHistoryMessage"),l=document.getElementById("transactionHistoryList");s.style.display="block";m.textContent="Loading transactions...";l.innerHTML="";try{const r=await fetch("https://numberhub.onrender.com/api/wallet/transactions",{credentials:"include"}),d=await r.json();if(!r.ok){m.textContent=d.error||"Could not load transactions.";return}if(!d.transactions||!d.transactions.length){m.textContent="No transactions yet.";return}m.textContent="";l.innerHTML=d.transactions.map(t=>`<div style="border:1px solid #e5e7eb;border-radius:12px;padding:15px;margin:10px 0;background:#fff"><strong>₦${Number(t.amount).toFixed(2)}</strong> — <strong>${t.status}</strong><br>Method: ${t.method||"—"}<br>Type: ${t.type}<br>Reference: ${t.reference}<br><small>${new Date(t.created_at).toLocaleString()}</small></div>`).join("")}catch(e){console.error(e);m.textContent="Could not connect to the transaction server."}}</script>
-<script>async function showNumbersHistory(){const s=document.getElementById("numbersHistorySection"),m=document.getElementById("numbersHistoryMessage"),l=document.getElementById("numbersHistoryList");s.style.display="block";m.textContent="Loading numbers...";l.innerHTML="";s.scrollIntoView({behavior:"smooth",block:"start"});try{const r=await fetch("https://numberhub.onrender.com/api/numbers/history",{credentials:"include"}),d=await r.json();if(!r.ok){m.textContent=d.error||"Could not load numbers history.";return}if(!d.purchases||!d.purchases.length){m.textContent="No purchased numbers yet.";return}m.textContent="";l.innerHTML=d.purchases.map(t=>`<div style="border:1px solid #e5e7eb;border-radius:12px;padding:15px;margin:10px 0;background:#fff"><strong>${t.phone_number}</strong><br>Service: ${t.service}<br>Country: ${t.country}<br>Provider: ${t.provider||"—"}<br>Price: ₦${Number(t.price).toFixed(2)}<br>Status: <strong>${t.status}</strong><br>Reference: ${t.reference}<br><small>${new Date(t.created_at).toLocaleString()}</small></div>`).join("")}catch(e){console.error(e);m.textContent="Could not connect to the numbers history server."}}</script>
+<script>
+function showNumbersHistory(){
+  const dashboard = document.getElementById("dashboardMain");
+  const historyPage = document.getElementById("nhNumberHistoryPage");
+
+  if (!dashboard || !historyPage) return;
+
+  const mainDashboard = dashboard.querySelector(".nh-dashboard");
+
+  if (mainDashboard) mainDashboard.style.display = "none";
+
+  historyPage.style.display = "block";
+  historyPage.scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+function closeNumberHistoryPage(){
+  const dashboard = document.getElementById("dashboardMain");
+  const historyPage = document.getElementById("nhNumberHistoryPage");
+
+  if (!dashboard || !historyPage) return;
+
+  historyPage.style.display = "none";
+
+  const mainDashboard = dashboard.querySelector(".nh-dashboard");
+
+  if (mainDashboard) mainDashboard.style.display = "";
+
+  dashboard.scrollIntoView({behavior:"smooth", block:"start"});
+}
+</script>
 </head>
 <body><div id="jsErrorBox" style="display:none;position:fixed;top:10px;left:10px;right:10px;z-index:99999;background:#fee2e2;color:#991b1b;padding:15px;border-radius:10px;font-weight:700;font-size:14px;"></div>
 <script>
@@ -524,62 +553,184 @@ window.addEventListener("error", function(e) {
   <div id="transactionHistoryList"></div>
 </section>
 
-<section id="numbersHistorySection" class="panel" style="display:none;margin-bottom:20px">
-  <div class="green">ACCOUNT</div>
-  <h2>Numbers History</h2>
-  <p id="numbersHistoryMessage">Loading numbers...</p>
-  <div id="numbersHistoryList"></div>
-</section>
 
-<div class="top">
-<div><div class="green">WELCOME BACK</div><h1>Your Number Dashboard</h1><p>Select a service below to purchase a virtual number.</p></div>
-<div class="wallet"><small>Wallet Balance</small><strong>₦0.00</strong><button class="fund" onclick="fund()">+ Fund Wallet</button></div>
-</div>
 
-<section class="panel quick-otp">
-<div class="green">QUICK OTP</div>
-<h2>Choose a Service</h2>
-<div class="quick-services">
-<button class="quick-service" onclick="selectServiceFromQuick('WhatsApp')">💬<strong>WhatsApp</strong><small>Buy Number →</small></button>
-<button class="quick-service" onclick="selectServiceFromQuick('Facebook')">📘<strong>Facebook</strong><small>Buy Number →</small></button>
-<button class="quick-service" onclick="selectServiceFromQuick('Instagram')">📸<strong>Instagram</strong><small>Buy Number →</small></button>
-<button class="quick-service" onclick="selectServiceFromQuick('Telegram')">✈️<strong>Telegram</strong><small>Buy Number →</small></button>
-</div>
-</section>
 
-<section class="panel buy-numbers" id="buyNumbersPanel">
-  <div class="green">BUY NUMBERS</div>
-  <h2 id="buyNumbersTitle">Choose Number Type</h2>
+<div id="nhNumberHistoryPage" class="nh-number-history-page" style="display:none;">
 
-  <div class="buy-options" id="buyNumberTypes">
-
-    <button class="buy-option" type="button" onclick="showNumberInterface('usa')">
-      🇺🇸
-      <strong>USA</strong>
-      <small>Numbers →</small>
-    </button>
-
-    <button class="buy-option" type="button" onclick="showNumberInterface('otherUSA')">
-      🇺🇸
-      <strong>Other USA</strong>
-      <small>Numbers →</small>
-    </button>
-
-    <button class="buy-option" type="button" onclick="showNumberInterface('allCountries')">
-      🌍
-      <strong>All Countries</strong>
-      <small>Numbers →</small>
-    </button>
-
-    <button class="buy-option" type="button" onclick="showNumberInterface('moreCountries')">
-      🌐
-      <strong>More Countries</strong>
-      <small>Numbers →</small>
-    </button>
-
+  <div class="nh-history-topbar">
+    <button type="button" class="nh-history-back" onclick="closeNumberHistoryPage()">←</button>
+    <h2>Number History</h2>
   </div>
 
-  <div id="buyNumberInterface" style="display:none"></div>
+  <div class="nh-history-filter">
+    <label>Service name</label>
+    <select id="nhHistoryService">
+      <option value="">All Services</option>
+      <option value="WhatsApp">WhatsApp</option>
+      <option value="Telegram">Telegram</option>
+      <option value="Facebook">Facebook</option>
+      <option value="Instagram">Instagram</option>
+      <option value="TikTok">TikTok</option>
+      <option value="Google">Google</option>
+      <option value="X">X</option>
+    </select>
+  </div>
+
+  <div class="nh-history-filter">
+    <label>Status</label>
+    <select id="nhHistoryStatus">
+      <option value="">All Status</option>
+      <option value="Active">Active</option>
+      <option value="Completed">Completed</option>
+      <option value="Cancelled">Cancelled</option>
+      <option value="Expired">Expired</option>
+    </select>
+  </div>
+
+  <div class="nh-history-orders-title">
+    <div class="green">NUMBER ORDERS</div>
+    <h3>All Number Orders <span id="nhHistoryOrderCount">(0)</span></h3>
+  </div>
+
+  <div id="nhHistoryOrders">
+    <div class="nh-empty-history">
+      <div class="nh-empty-history-icon">🕐</div>
+      <strong>No number orders yet</strong>
+      <span>Your purchased numbers will appear here.</span>
+    </div>
+  </div>
+
+</div>
+
+<div class="nh-dashboard">
+
+  <div class="nh-brand">NUMBERHUB</div>
+
+  <div class="nh-welcome">
+    <div>
+      <div class="nh-welcome-title">Welcome back, Victor 👋</div>
+      <div class="nh-welcome-subtitle">Your NumberHub account</div>
+    </div>
+  </div>
+
+  <div class="nh-money-card">
+    <div class="nh-money-label">Wallet Balance</div>
+    <div class="wallet">
+      <strong>₦0.00</strong>
+      <button class="fund" onclick="fund()">+ Fund Wallet</button>
+    </div>
+  </div>
+
+  <section class="nh-buy-section">
+    <div class="green">BUY NUMBERS</div>
+
+    <div class="nh-number-grid">
+      <button class="nh-action-card" type="button" onclick="showNumberInterface('usa')">
+        <span class="nh-icon">🇺🇸</span>
+        <strong>USA Numbers</strong>
+        <small>Server A + B</small>
+        <span class="nh-arrow">→</span>
+      </button>
+
+      <button class="nh-action-card" type="button" onclick="showNumberInterface('otherUSA')">
+        <span class="nh-icon">🇺🇸</span>
+        <strong>Other USA</strong>
+        <small>Server C + D</small>
+        <span class="nh-arrow">→</span>
+      </button>
+
+      <button class="nh-action-card" type="button" onclick="showNumberInterface('allCountries')">
+        <span class="nh-icon">🌍</span>
+        <strong>All Countries</strong>
+        <small>Server B + C + D</small>
+        <span class="nh-arrow">→</span>
+      </button>
+
+      <button class="nh-action-card" type="button" onclick="showNumberInterface('moreCountries')">
+        <span class="nh-icon">🌐</span>
+        <strong>More Countries</strong>
+        <small>Server E</small>
+        <span class="nh-arrow">→</span>
+      </button>
+    </div>
+  </section>
+
+  <div class="nh-quick-grid">
+    <button class="nh-action-card nh-small-card" type="button" onclick="fund()">
+      <span class="nh-icon">💳</span>
+      <strong>Fund Wallet</strong>
+      <small>Add funds</small>
+      <span class="nh-arrow">→</span>
+    </button>
+
+    <button class="nh-action-card nh-small-card" type="button" onclick="showNumbersHistory()">
+      <span class="nh-icon">🕐</span>
+      <strong>History</strong>
+      <small>View records</small>
+      <span class="nh-arrow">→</span>
+    </button>
+  </div>
+
+  <section class="nh-recent-section">
+    <div class="nh-section-heading">
+      <div>
+        <div class="green">RECENT NUMBER HISTORY</div>
+        <h2>Recent Number History</h2>
+      </div>
+      <button type="button" class="nh-view-all" onclick="showNumbersHistory()">View All →</button>
+    </div>
+
+    <div id="nhRecentPurchases">
+      <div class="nh-empty-history">
+        <div class="nh-empty-history-icon">🕐</div>
+        <strong>No recent number history yet</strong>
+        <span>Your purchased numbers will appear here.</span>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+
+<section
+  id="buyNumbersPanel"
+  class="panel"
+  style="
+    display:none;
+    margin-bottom:20px;
+    width:100%;
+    box-sizing:border-box;
+  "
+>
+  <div
+    style="
+      max-width:760px;
+      margin:0 auto;
+    "
+  >
+    <div
+      id="buyNumbersTitle"
+      class="green"
+      style="
+        margin-bottom:14px;
+        font-size:14px;
+        font-weight:900;
+      "
+    >
+      BUY NUMBERS
+    </div>
+
+    <div id="buyNumberTypes" style="display:none;"></div>
+
+    <div
+      id="buyNumberInterface"
+      style="
+        display:none;
+        width:100%;
+      "
+    ></div>
+  </div>
 </section>
 
 <section class="panel" id="availableNumbersPanel" style="display:none">
@@ -1890,12 +2041,11 @@ const numberInterfaceConfigs = {
 
   otherUSA: {
     title: "🇺🇸 Other USA Numbers",
-    price: "",
-    description: "Budget-friendly US numbers · Servers C, D & E · Choose your server",
+    price: "₦0.00",
+    description: "Budget-friendly US numbers · Servers C & D · Choose your server",
     servers: [
       ["Server C", "⭐ BEST", "Quick OTP"],
-      ["Server D", "Quick OTP", "Fast Verification"],
-      ["Server E", "Quick OTP", "Reliable OTP"]
+      ["Server D", "Quick OTP", "Fast Verification"]
     ],
     countries: ["United States"],
     countryLabel: "United States"
@@ -1904,11 +2054,11 @@ const numberInterfaceConfigs = {
   allCountries: {
     title: "🌍 All Country Numbers",
     price: "₦0.00",
-    description: "Global coverage · Servers B, C & D · Choose your country",
+    description: "Global coverage · Servers B, C & D · Choose your server",
     servers: [
-      ["Server C", "⭐ BEST", "Global Coverage"],
-      ["Server D", "Quick OTP", "Global Coverage"],
-      ["Server E", "Quick OTP", "Global"]
+      ["Server B", "⭐ BEST", "Global Coverage"],
+      ["Server C", "Quick OTP", "Global Coverage"],
+      ["Server D", "Quick OTP", "Global Coverage"]
     ],
     countries: [
       "Afghanistan",
@@ -2286,8 +2436,21 @@ function showNumberInterface(type) {
   const types = document.getElementById("buyNumberTypes");
   const box = document.getElementById("buyNumberInterface");
   const title = document.getElementById("buyNumbersTitle");
+  const buyPanel = document.getElementById("buyNumbersPanel");
+  const dashboard = document.getElementById("dashboardMain");
 
-  if (!config || !types || !box || !title) return;
+  if (!config || !types || !box || !title || !buyPanel) return;
+
+  if (dashboard) {
+    dashboard.style.setProperty("display", "block", "important");
+
+    Array.from(dashboard.children).forEach(child => {
+      child.style.setProperty("display", "none", "important");
+    });
+  }
+
+  buyPanel.style.setProperty("display", "block", "important");
+  buyPanel.style.setProperty("width", "100%", "important");
 
   window.selectedNumberType = type;
   window.selectedServer = null;
@@ -2425,93 +2588,181 @@ function showCountryServiceInterface(type, serverName) {
   ).join("");
 
   box.innerHTML = `
-    <div style="
+    <div class="number-config-card" style="
       background:#fff;
       padding:20px;
       border-radius:16px;
       border:1px solid #e5e7eb;
     ">
 
-      <div style="
-        font-size:24px;
-        font-weight:900;
-        margin-bottom:6px;
-      ">
-        ${config.title}
-      </div>
-
-      <div style="
-        color:#64748b;
-        font-size:13px;
-        margin-bottom:20px;
-      ">
-        ${serverName} selected
-      </div>
-
-      <label style="
-        display:block;
-        font-weight:800;
-        margin-bottom:8px;
-      ">
-        Select Country
-      </label>
-
-      <div style="position:relative;">
-        <input
-          id="countrySearch"
-          type="search"
-          placeholder="🔎 Search country..."
-          autocomplete="off"
-          style="
-            width:100%;
-            box-sizing:border-box;
-            padding:13px;
-            border:1px solid #ddd;
-            border-radius:9px;
-            background:#fff;
-            font-size:14px;
-          "
-        />
-
-        <div
-          id="countryResults"
-          style="
-            display:none;
-            position:absolute;
-            left:0;
-            right:0;
-            top:calc(100% + 5px);
-            max-height:280px;
-            overflow-y:auto;
-            background:#fff;
-            border:1px solid #e5e7eb;
-            border-radius:10px;
-            box-shadow:0 8px 24px rgba(0,0,0,.10);
-            z-index:1000;
-          "
-        ></div>
-      </div>
-
-      <select
-        id="numberCountry"
-        onchange="updateNumberPurchaseState()"
-        style="display:none;"
+      <button
+        type="button"
+        onclick="backToServerSelection()"
+        style="
+          border:0;
+          background:none;
+          padding:0;
+          margin:0 0 18px;
+          color:#166534;
+          font-size:14px;
+          font-weight:800;
+          cursor:pointer;
+        "
       >
-        <option value="">Select country</option>
-        ${countryOptions}
-      </select>
+        ← ${serverName}
+      </button>
 
-      <div style="margin-top:20px">
+      <div style="
+        display:flex;
+        align-items:center;
+        gap:12px;
+        margin-bottom:22px;
+      ">
+        <div style="
+          width:48px;
+          height:48px;
+          border-radius:14px;
+          background:#f0fdf4;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          font-size:25px;
+        ">
+          ${type === "allCountries" ? "🌍" : "🇺🇸"}
+        </div>
+
+        <div>
+          <div style="
+            font-size:20px;
+            font-weight:900;
+          ">
+            ${config.title}
+          </div>
+
+          <div style="
+            margin-top:3px;
+            color:#64748b;
+            font-size:13px;
+            font-weight:700;
+          ">
+            ${serverName} · Choose your number
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:8px;">
 
         <label style="
           display:block;
-          font-weight:800;
           margin-bottom:8px;
+          font-size:13px;
+          font-weight:900;
+          color:#334155;
+          text-transform:uppercase;
+          letter-spacing:.4px;
+        ">
+          Select Country
+        </label>
+
+        <button
+          id="countrySelectorButton"
+          type="button"
+          onclick="openNumberCountrySelector()"
+          style="
+            width:100%;
+            box-sizing:border-box;
+            min-height:52px;
+            padding:14px 15px;
+            border:1px solid #dbe3ea;
+            border-radius:12px;
+            background:#fff;
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            text-align:left;
+            font-size:15px;
+            font-weight:800;
+            color:#334155;
+            cursor:pointer;
+          "
+        >
+          <span id="countrySelectorText">🌍 Choose country</span>
+          <span style="color:#64748b;font-size:16px;">⌄</span>
+        </button>
+
+        <div id="countrySelectorPanel" style="
+          display:none;
+          margin-top:10px;
+          padding:12px;
+          border:1px solid #e5e7eb;
+          border-radius:14px;
+          background:#f8fafc;
+        ">
+          <div style="
+            font-weight:900;
+            margin-bottom:10px;
+          ">
+            Search country
+          </div>
+
+          <input
+            id="countrySearch"
+            type="search"
+            placeholder="🔎 Search country..."
+            autocomplete="off"
+            style="
+              width:100%;
+              box-sizing:border-box;
+              padding:13px;
+              border:1px solid #dbe3ea;
+              border-radius:10px;
+              background:#fff;
+              font-size:14px;
+              outline:none;
+            "
+          />
+
+          <div
+            id="countryResults"
+            style="
+              display:block;
+              margin-top:8px;
+              max-height:260px;
+              overflow-y:auto;
+              background:#fff;
+              border:1px solid #e5e7eb;
+              border-radius:10px;
+            "
+          ></div>
+        </div>
+
+        <select
+          id="numberCountry"
+          onchange="updateNumberPurchaseState()"
+          style="display:none;"
+        >
+          <option value="">Select country</option>
+          ${countryOptions}
+        </select>
+
+      </div>
+
+      <div style="margin-top:20px;">
+
+        <label style="
+          display:block;
+          margin-bottom:8px;
+          font-size:13px;
+          font-weight:900;
+          color:#334155;
+          text-transform:uppercase;
+          letter-spacing:.4px;
         ">
           Select Service
         </label>
 
-        <div style="position:relative;">
+        
+
           <input
             id="serviceSearch"
             type="search"
@@ -2522,28 +2773,24 @@ function showCountryServiceInterface(type, serverName) {
               width:100%;
               box-sizing:border-box;
               padding:13px;
-              border:1px solid #ddd;
-              border-radius:9px;
+              border:1px solid #dbe3ea;
+              border-radius:10px;
               background:#fff;
               font-size:14px;
+              outline:none;
             "
           />
 
           <div
             id="serviceResults"
             style="
-              display:none;
-              position:absolute;
-              left:0;
-              right:0;
-              top:calc(100% + 5px);
-              max-height:300px;
+              display:block;
+              margin-top:8px;
+              max-height:280px;
               overflow-y:auto;
               background:#fff;
               border:1px solid #e5e7eb;
               border-radius:10px;
-              box-shadow:0 8px 24px rgba(0,0,0,.10);
-              z-index:999;
             "
           ></div>
         </div>
@@ -2564,7 +2811,15 @@ function showCountryServiceInterface(type, serverName) {
         border-radius:12px;
         background:#f8fafc;
       ">
-        <div style="font-weight:800">Price</div>
+        <div style="
+          font-size:13px;
+          font-weight:800;
+          color:#64748b;
+          text-transform:uppercase;
+          letter-spacing:.4px;
+        ">
+          Price
+        </div>
 
         <div
           id="numberPrice"
@@ -2760,41 +3015,13 @@ function showCountryServiceInterface(type, serverName) {
           font-weight:700;
         "
       >
-        ← Back
+        ← Back to servers
       </button>
 
     </div>
   `;
 
   box.style.display = "block";
-
-  // Load the real 5SIM services after the country/service
-  // interface has been created.
-  const countrySelect = document.getElementById("numberCountry");
-
-  if (countrySelect) {
-    countrySelect.onchange = async function () {
-      window.selectedCountry = this.value;
-      window.selectedService = null;
-
-      const serviceSearch = document.getElementById("serviceSearch");
-      const countrySearch = document.getElementById("countrySearch");
-
-      if (countrySearch && this.value) {
-        const option = this.options[this.selectedIndex];
-        countrySearch.value = option ? option.textContent.trim() : this.value;
-      }
-
-      if (serviceSearch) {
-        serviceSearch.disabled = !this.value;
-        serviceSearch.value = "";
-      }
-
-      await populateNumberServices();
-      updateNumberPurchaseState();
-      setupServiceAutocomplete();
-    };
-  }
 
   setupCountryAutocomplete();
   setupServiceAutocomplete();
@@ -2805,173 +3032,33 @@ function showCountryServiceInterface(type, serverName) {
   });
 }
 
-function setupCountryAutocomplete() {
+
+function openNumberCountrySelector() {
+  const panel = document.getElementById("countrySelectorPanel");
   const input = document.getElementById("countrySearch");
-  const results = document.getElementById("countryResults");
-  const select = document.getElementById("numberCountry");
 
-  if (!input || !results || !select) return;
+  if (!panel || !input) return;
 
-  const countries = Array.from(select.options)
-    .filter(option => option.value)
-    .map(option => ({
-      value: option.value,
-      label: option.textContent.trim()
-    }));
+  panel.style.display = "block";
 
-  function render(query = "") {
-    const q = query.trim().toLowerCase();
+  setupCountryAutocomplete();
 
-    const matches = countries
-      .filter(item => !q || item.label.toLowerCase().includes(q))
-      .slice(0, 50);
-
-    if (!matches.length) {
-      results.innerHTML =
-        '<div style="padding:13px;color:#64748b;">No country found</div>';
-      results.style.display = "block";
-      return;
-    }
-
-    results.innerHTML = matches.map(item => `
-      <button
-        type="button"
-        data-country="${item.value.replace(/"/g, "&quot;")}"
-        style="
-          display:block;
-          width:100%;
-          padding:12px 14px;
-          border:0;
-          border-bottom:1px solid #f1f5f9;
-          background:#fff;
-          text-align:left;
-          cursor:pointer;
-          font-size:14px;
-        "
-      >${item.label}</button>
-    `).join("");
-
-    results.style.display = "block";
-  }
-
-  input.addEventListener("focus", () => render(input.value));
-
-  input.addEventListener("input", () => {
-    select.value = "";
-    window.selectedCountry = null;
-    window.selectedService = null;
-
-    const serviceInput = document.getElementById("serviceSearch");
-    const serviceResults = document.getElementById("serviceResults");
-
-    if (serviceInput) {
-      serviceInput.value = "";
-      serviceInput.disabled = true;
-    }
-
-    if (serviceResults) {
-      serviceResults.innerHTML = "";
-      serviceResults.style.display = "none";
-    }
-
-    render(input.value);
-  });
-
-  results.addEventListener("click", async event => {
-    const button = event.target.closest("[data-country]");
-    if (!button) return;
-
-    const value = button.dataset.country;
-
-    select.value = value;
-    input.value = button.textContent.trim();
-    results.style.display = "none";
-
-    window.selectedCountry = value;
-    window.selectedService = null;
-
-    const serviceInput = document.getElementById("serviceSearch");
-    if (serviceInput) {
-      serviceInput.disabled = false;
-      serviceInput.value = "";
-    }
-
-    await populateNumberServices();
-    updateNumberPurchaseState();
-
-    setupServiceAutocomplete();
-  });
+  setTimeout(() => {
+    input.focus();
+  }, 50);
 }
 
-function setupServiceAutocomplete() {
-  const input = document.getElementById("serviceSearch");
-  const results = document.getElementById("serviceResults");
-  const select = document.getElementById("numberService");
+function closeNumberSelectorPanels() {
+  const countryPanel = document.getElementById("countrySelectorPanel");
+  const servicePanel = document.getElementById("serviceSelectorPanel");
 
-  if (!input || !results || !select) return;
-
-  function render(query = "") {
-    if (input.disabled) return;
-
-    const q = query.trim().toLowerCase();
-
-    const services = Array.from(select.options)
-      .filter(option => option.value)
-      .map(option => ({
-        value: option.value,
-        label: option.textContent.trim(),
-        stock: option.dataset.stock || ""
-      }));
-
-    const matches = services
-      .filter(item => !q || item.label.toLowerCase().includes(q))
-      .slice(0, 50);
-
-    if (!matches.length) {
-      results.innerHTML =
-        '<div style="padding:13px;color:#64748b;">No matching service found</div>';
-      results.style.display = "block";
-      return;
-    }
-
-    results.innerHTML = matches.map(item => `
-      <button
-        type="button"
-        data-service="${item.value.replace(/"/g, "&quot;")}"
-        style="
-          display:block;
-          width:100%;
-          padding:12px 14px;
-          border:0;
-          border-bottom:1px solid #f1f5f9;
-          background:#fff;
-          text-align:left;
-          cursor:pointer;
-          font-size:14px;
-        "
-      >${item.label}</button>
-    `).join("");
-
-    results.style.display = "block";
-  }
-
-  input.onfocus = () => render(input.value);
-  input.oninput = () => render(input.value);
-
-  results.onclick = event => {
-    const button = event.target.closest("[data-service]");
-    if (!button) return;
-
-    const value = button.dataset.service;
-
-    select.value = value;
-    input.value = button.textContent.trim();
-    results.style.display = "none";
-
-    window.selectedService = value;
-    updateNumberPurchaseState();
-  };
+  if (countryPanel) countryPanel.style.display = "none";
+  if (servicePanel) servicePanel.style.display = "none";
 }
+
+
+
+
 
 function closeAutocompleteResults(event) {
   const countryBox = document.getElementById("countryResults");
@@ -2997,60 +3084,7 @@ function closeAutocompleteResults(event) {
 
 document.addEventListener("click", closeAutocompleteResults);
 
-async function populateNumberServices() {
-  const country = document.getElementById("numberCountry");
-  const service = document.getElementById("numberService");
 
-  if (!country || !service) return;
-
-  if (!country.value) {
-    service.innerHTML = '<option value="">Select country first</option>';
-    return;
-  }
-
-  service.innerHTML = '<option value="">Loading available services...</option>';
-  service.disabled = true;
-
-  try {
-    const response = await fetch(
-      "https://numberhub.onrender.com/api/numbers/services?country=" +
-      encodeURIComponent(country.value)
-    );
-
-    const result = await response.json();
-
-    if (!response.ok || !Array.isArray(result.services)) {
-      throw new Error(result.error || "Unable to load services");
-    }
-
-    if (result.services.length === 0) {
-      service.innerHTML =
-        '<option value="">No services currently available</option>';
-      return;
-    }
-
-    service.innerHTML =
-      '<option value="">Select a service</option>' +
-      result.services.map(item => {
-        const name = item.product;
-        const stock = Number(item.available || 0);
-
-        const customerPrice = Number(item.customerPrice || 0);
-
-        return `<option value="${name}" data-stock="${stock}" data-price="${customerPrice}">
-          ${name.toUpperCase()} — ${stock.toLocaleString()} available
-        </option>`;
-      }).join("");
-
-  } catch (error) {
-    console.error("Service loading error:", error);
-
-    service.innerHTML =
-      '<option value="">Unable to load services</option>';
-  } finally {
-    service.disabled = false;
-  }
-}
 
 
 function selectServiceFromQuick(serviceName) {
@@ -3084,7 +3118,6 @@ function updateNumberPurchaseState() {
   if (!country || !service || !price) return;
 
   if (!country.value) {
-    populateNumberServices();
     price.textContent = "₦0.00";
     return;
   }
@@ -3454,53 +3487,65 @@ function backToServerSelection() {
 
 function backToNumberTypes() {
   const box = document.getElementById("buyNumberInterface");
-  const types = document.getElementById("buyNumberTypes");
-  const title = document.getElementById("buyNumbersTitle");
+  const buyPanel = document.getElementById("buyNumbersPanel");
   const dashboard = document.getElementById("dashboardMain");
+  const historyPage = document.getElementById("nhNumberHistoryPage");
 
+  // Close the standalone number interface.
   if (box) {
     box.style.display = "none";
     box.innerHTML = "";
   }
 
-  if (types) types.style.display = "grid";
-  if (title) title.textContent = "Choose Number Type";
+  if (buyPanel) {
+    buyPanel.style.display = "none";
+  }
 
+  // Make sure Number History is not left visible.
+  if (historyPage) {
+    historyPage.style.setProperty("display", "none", "important");
+  }
+
+  // Reset number selection state.
   window.selectedNumberType = null;
   window.selectedServer = null;
   window.selectedCountry = null;
   window.selectedService = null;
 
-  // Restore the normal dashboard after leaving the standalone interface.
-  // Keep normally hidden sections hidden.
+  // Restore the normal dashboard.
   if (dashboard) {
     dashboard.style.setProperty("display", "block", "important");
 
+    const nhDashboard = dashboard.querySelector(".nh-dashboard");
+
+    if (nhDashboard) {
+      nhDashboard.style.setProperty("display", "block", "important");
+    }
+
     const transactionHistory = document.getElementById("transactionHistorySection");
-    const numbersHistory = document.getElementById("numbersHistorySection");
     const availableNumbers = document.getElementById("availableNumbersPanel");
     const operatorPanel = document.getElementById("operatorPanel");
 
-    if (transactionHistory) transactionHistory.style.display = "none";
-    if (numbersHistory) numbersHistory.style.display = "none";
-    if (availableNumbers) availableNumbers.style.display = "none";
-    if (operatorPanel) operatorPanel.style.display = "none";
+    if (transactionHistory) {
+      transactionHistory.style.setProperty("display", "none", "important");
+    }
 
-    // Restore the main dashboard content.
-    const mainContent = dashboard.querySelector(".top");
-    const quickOtp = dashboard.querySelector(".quick-otp");
-    const buyNumbers = document.getElementById("buyNumbersPanel");
+    if (availableNumbers) {
+      availableNumbers.style.setProperty("display", "none", "important");
+    }
 
-    if (mainContent) mainContent.style.removeProperty("display");
-    if (quickOtp) quickOtp.style.removeProperty("display");
-    if (buyNumbers) buyNumbers.style.removeProperty("display");
+    if (operatorPanel) {
+      operatorPanel.style.setProperty("display", "none", "important");
+    }
   }
 
-  window.scrollTo({
-    top: 0,
-    behavior: "smooth"
-  });
+  // Return to the top of the dashboard.
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+  window.scrollTo(0, 0);
 }
+
+
 </script>
 <script>document.addEventListener("DOMContentLoaded", async () => {
   const savedUser = localStorage.getItem("numberhubUser");
@@ -3518,6 +3563,8 @@ function backToNumberTypes() {
 });</script>
 </body>
 </html>
+
+
 
 
 
