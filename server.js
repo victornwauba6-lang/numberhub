@@ -497,6 +497,46 @@ async function runTextVerifiedInventoryTest(req, res, origin) {
   }
 }
 
+
+async function textVerifiedCheckUSWhatsApp() {
+  const inventory = await textVerifiedRequest(
+    "/api/pub/v2/inventory/verifications",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        numberType: "mobile",
+        serviceName: "whatsapp",
+        capability: "Sms"
+      })
+    }
+  );
+
+  const pricing = await textVerifiedRequest(
+    "/api/pub/v2/pricing/verifications",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        areaCode: false,
+        carrier: false,
+        numberType: "mobile",
+        serviceName: "whatsapp",
+        capability: "Sms"
+      })
+    }
+  );
+
+  return {
+    success: true,
+    provider: "TextVerified",
+    country: "US",
+    service: "whatsapp",
+    numberType: "mobile",
+    reservationType: "verification",
+    inventory,
+    pricing
+  };
+}
+
 async function sendPasswordResetEmail(to, code) {
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -806,7 +846,28 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    if (req.method === "GET" && req.url === "/api/admin/textverified-inventory-test") {
+    if (req.method === "GET" && req.url === "/api/admin/textverified-us-whatsapp-test") {
+    const admin = await getAdminUserId(req);
+    if (admin.error) {
+      return sendJSON(res, admin.status, { error: admin.error }, req.headers.origin);
+    }
+
+    try {
+      const result = await textVerifiedCheckUSWhatsApp();
+      return sendJSON(res, 200, result, req.headers.origin);
+    } catch (error) {
+      console.error("TextVerified US WhatsApp test failed:", error);
+      return sendJSON(res, 502, {
+        success: false,
+        provider: "TextVerified",
+        country: "US",
+        service: "whatsapp",
+        error: error.message
+      }, req.headers.origin);
+    }
+  }
+
+  if (req.method === "GET" && req.url === "/api/admin/textverified-inventory-test") {
     return await runTextVerifiedInventoryTest(req, res, req.headers.origin);
   }
 
