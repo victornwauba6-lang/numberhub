@@ -3412,7 +3412,7 @@ async function updateNumberPurchaseState() {
   const countryPrices = prices[country.value];
   const serviceKey = service.value.toLowerCase();
 
-  const selectedNumberType = window.selectedNumberType || "usa";
+
 
   if (
     selectedNumberType === "usa" &&
@@ -3515,8 +3515,6 @@ async function purchaseSelectedNumber() {
     return;
   }
 
-  const selectedNumberType = window.selectedNumberType || "usa";
-  const selectedServer = window.selectedServer || "";
   const selectedFiveSimOption = window.selectedFiveSimOption || null;
 
   const isOtherUSAServer =
