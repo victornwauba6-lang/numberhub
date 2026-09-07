@@ -1824,7 +1824,7 @@ The wallet has NOT been credited. Verify the payment before approving the reques
       }
 
       const purchaseResult = await pool.query(
-        `SELECT id, phone_number, country, service, status, sms_code, price, reference
+        `SELECT id, phone_number, country, service, provider, status, sms_code, price, reference
          FROM number_purchases
          WHERE user_id = $1
            AND supplier_id = $2
@@ -1839,34 +1839,93 @@ The wallet has NOT been credited. Verify the payment before approving the reques
       }
 
       try {
-        const activation = await fiveSimRequest(
-          `/user/check/${encodeURIComponent(supplierId)}`
-        );
+        const purchase = purchaseResult.rows[0];
+        const provider = String(purchase.provider || "").trim().toLowerCase();
 
-        const smsList = Array.isArray(activation.sms)
-          ? activation.sms
-          : [];
-
+        let activation;
         let smsCode = "";
+        let status = purchase.status || "active";
 
-        if (smsList.length) {
-          const latest = smsList[smsList.length - 1];
+        if (provider === "textverified") {
+          const verification = await textVerifiedGetVerification(supplierId);
 
-          smsCode = String(
-            latest.code ||
-            latest.sms ||
-            latest.text ||
-            ""
+          activation = verification;
+
+          const verificationStatus = String(
+            verification?.status ||
+            verification?.data?.status ||
+            purchase.status ||
+            "active"
+          ).trim();
+
+          status = verificationStatus;
+
+          const smsResponse = await textVerifiedGetSMS(supplierId);
+
+          const smsItems = Array.isArray(smsResponse)
+            ? smsResponse
+            : Array.isArray(smsResponse?.data)
+              ? smsResponse.data
+              : Array.isArray(smsResponse?.sms)
+                ? smsResponse.sms
+                : [];
+
+          if (smsItems.length) {
+            const latest = smsItems[smsItems.length - 1];
+
+            smsCode = String(
+              latest?.parsedCode ||
+              latest?.code ||
+              latest?.smsCode ||
+              latest?.smsContent ||
+              latest?.text ||
+              latest?.message ||
+              ""
+            ).trim();
+
+            if (!smsCode) {
+              const rawText = String(
+                latest?.smsContent ||
+                latest?.text ||
+                latest?.message ||
+                ""
+              );
+
+              const codeMatch = rawText.match(/\b\d{4,8}\b/);
+
+              if (codeMatch) {
+                smsCode = codeMatch[0];
+              }
+            }
+          }
+        } else {
+          activation = await fiveSimRequest(
+            `/user/check/${encodeURIComponent(supplierId)}`
+          );
+
+          const smsList = Array.isArray(activation.sms)
+            ? activation.sms
+            : [];
+
+          if (smsList.length) {
+            const latest = smsList[smsList.length - 1];
+
+            smsCode = String(
+              latest.code ||
+              latest.sms ||
+              latest.text ||
+              ""
+            ).trim();
+          }
+
+          status = String(
+            activation.status ||
+            purchase.status ||
+            "active"
           ).trim();
         }
 
-        const status = String(
-          activation.status ||
-          purchaseResult.rows[0].status ||
-          "active"
-        ).trim();
-
-        const terminalStatus = status.toLowerCase();
+        const terminalStatus = String(status).toLowerCase();
 
         if (
           (terminalStatus === "canceled" || terminalStatus === "timeout") &&
@@ -1919,14 +1978,15 @@ The wallet has NOT been credited. Verify the payment before approving the reques
               await refundClient.query(
                 `INSERT INTO wallet_transactions
                    (user_id, type, amount, method, status, reference, description)
-                 VALUES ($1, 'refund', $2, '5SIM', 'successful', $3, $4)`,
+                 VALUES ($1, 'refund', $2, $5, 'successful', $3, $4)`,
                 [
                   userId,
                   lockedPurchase.price,
                   refundReference,
                   terminalStatus === "canceled"
                     ? "Automatic refund for canceled number"
-                    : "Automatic refund for expired number"
+                    : "Automatic refund for expired number",
+                  purchase.provider || "5SIM"
                 ]
               );
             }
@@ -2045,12 +2105,13 @@ The wallet has NOT been credited. Verify the payment before approving the reques
                 await refundClient.query(
                   `INSERT INTO wallet_transactions
                      (user_id, type, amount, method, status, reference, description)
-                   VALUES ($1, 'refund', $2, '5SIM', 'successful', $3, $4)`,
+                   VALUES ($1, 'refund', $2, $5, 'successful', $3, $4)`,
                   [
                     userId,
                     lockedPurchase.price,
                     refundReference,
-                    "Automatic refund for expired number"
+                    "Automatic refund for expired number",
+                    purchase.provider || "5SIM"
                   ]
                 );
 
