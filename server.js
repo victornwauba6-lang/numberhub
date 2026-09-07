@@ -78,6 +78,45 @@ function calculateAutomaticPrice(supplierCost) {
   return Math.max(NUMBERHUB_MIN_AUTO_PRICE, tierPrice);
 }
 
+function calculateTextVerifiedOtherServicePrice(supplierCost) {
+  const costUSD = Number(supplierCost);
+
+  if (!Number.isFinite(costUSD) || costUSD <= 0) {
+    return null;
+  }
+
+  const costNGN = costUSD * FIVESIM_USD_TO_NGN;
+  let tierPrice;
+
+  if (costNGN <= 300) {
+    tierPrice = costNGN + 1000;
+  } else if (costNGN <= 400) {
+    tierPrice = 1600;
+  } else if (costNGN <= 500) {
+    tierPrice = 1800;
+  } else if (costNGN <= 700) {
+    tierPrice = 2100;
+  } else if (costNGN <= 1000) {
+    tierPrice = 2500;
+  } else if (costNGN <= 1500) {
+    tierPrice = 3100;
+  } else if (costNGN <= 2000) {
+    tierPrice = 3900;
+  } else if (costNGN <= 2500) {
+    tierPrice = 4700;
+  } else if (costNGN <= 3000) {
+    tierPrice = 5600;
+  } else if (costNGN <= 4000) {
+    tierPrice = 7200;
+  } else if (costNGN <= 5000) {
+    tierPrice = 8800;
+  } else {
+    tierPrice = costNGN + 4000;
+  }
+
+  return Math.max(NUMBERHUB_MIN_AUTO_PRICE, tierPrice);
+}
+
 function calculateTextVerifiedPrice(countryName, serviceName, supplierCost) {
   const countryPrices =
     TEXTVERIFIED_PRICES[String(countryName || "").trim()];
@@ -91,7 +130,7 @@ function calculateTextVerifiedPrice(countryName, serviceName, supplierCost) {
     return Number(countryPrices[serviceKey]);
   }
 
-  return calculateAutomaticPrice(supplierCost);
+  return calculateTextVerifiedOtherServicePrice(supplierCost);
 }
 
 function calculateFiveSimPrice(countryName, serviceName, supplierCost) {
