@@ -2197,7 +2197,7 @@ The wallet has NOT been credited. Verify the payment before approving the reques
 
       try {
         const purchaseResult = await pool.query(
-          `SELECT id, phone_number, status, sms_code, supplier_id
+          `SELECT id, phone_number, status, sms_code, supplier_id, provider
            FROM number_purchases
            WHERE user_id = $1
              AND supplier_id = $2
@@ -2229,12 +2229,24 @@ The wallet has NOT been credited. Verify the payment before approving the reques
           return;
         }
 
-        const cancelResult = await fiveSimRequest(
-          `/user/cancel/${encodeURIComponent(supplierId)}`,
-          { method: "GET" }
-        );
+        const provider = String(purchase.provider || "").trim().toLowerCase();
 
-        const supplierStatus = String(cancelResult?.status || "").toLowerCase();
+        let cancelResult;
+
+        if (provider === "textverified") {
+          cancelResult = await textVerifiedCancelVerification(supplierId);
+        } else {
+          cancelResult = await fiveSimRequest(
+            `/user/cancel/${encodeURIComponent(supplierId)}`,
+            { method: "GET" }
+          );
+        }
+
+        const supplierStatus = String(
+          cancelResult?.status ||
+          cancelResult?.data?.status ||
+          ""
+        ).toLowerCase();
 
         if (supplierStatus && supplierStatus !== "canceled") {
           sendJSON(res, 400, {
@@ -2288,12 +2300,13 @@ The wallet has NOT been credited. Verify the payment before approving the reques
             await refundClient.query(
               `INSERT INTO wallet_transactions
                  (user_id, type, amount, method, status, reference, description)
-               VALUES ($1, 'refund', $2, '5SIM', 'successful', $3, $4)`,
+               VALUES ($1, 'refund', $2, $5, 'successful', $3, $4)`,
               [
                 userId,
                 locked.price,
                 refundReference,
-                "Automatic refund for canceled number"
+                "Automatic refund for canceled number",
+                purchase.provider || "5SIM"
               ]
             );
           }
@@ -2328,7 +2341,7 @@ The wallet has NOT been credited. Verify the payment before approving the reques
         }
 
       } catch (error) {
-        console.error("5SIM number cancellation error:", error);
+        console.error("Number cancellation error:", error);
 
         sendJSON(res, 502, {
           error: error.message || "Unable to cancel number"
