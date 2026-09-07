@@ -1898,6 +1898,103 @@ The wallet has NOT been credited. Verify the payment before approving the reques
       }
     }
 
+    if (req.method === "GET" && req.url.startsWith("/api/numbers/5sim-options")) {
+      const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
+      const requestedCountry = String(
+        url.searchParams.get("country") || "United States"
+      ).trim();
+
+      const requestedService = String(
+        url.searchParams.get("service") || ""
+      ).trim().toLowerCase();
+
+      const requestedServer = String(
+        url.searchParams.get("server") || ""
+      ).trim();
+
+      const country = fiveSimCountryCode(requestedCountry);
+      const requestOrigin = req.headers.origin;
+
+      const productMap = {
+        whatsapp: "whatsapp",
+        facebook: "facebook",
+        instagram: "instagram",
+        telegram: "telegram",
+        tiktok: "tiktok",
+        google: "google",
+        twitter: "twitter",
+        x: "twitter"
+      };
+
+      const serverOperators = {
+        "Server C": ["virtual63", "virtual8"],
+        "Server D": ["virtual28", "virtual51"]
+      };
+
+      const product = productMap[requestedService];
+      const operatorsForServer = serverOperators[requestedServer];
+
+      if (!product || !operatorsForServer) {
+        sendJSON(res, 400, {
+          error: "Invalid server or service"
+        }, requestOrigin);
+        return;
+      }
+
+      try {
+        const prices = await fiveSimGetPrices(country, product);
+        const countryData = prices?.[country]?.[product];
+
+        if (!countryData || typeof countryData !== "object") {
+          sendJSON(res, 404, {
+            error: "No options found for this service"
+          }, requestOrigin);
+          return;
+        }
+
+        const options = operatorsForServer.map((operator, index) => {
+          const item = countryData[operator] || {};
+          const cost = Number(item.cost);
+          const count = Number(item.count || 0);
+
+          const customerPrice = calculateFiveSimPrice(
+            requestedCountry,
+            requestedService,
+            cost
+          );
+
+          return {
+            option: index + 1,
+            label: `${requestedService.charAt(0).toUpperCase()}${requestedService.slice(1)} — Option ${index + 1}`,
+            operator,
+            cost,
+            count,
+            inStock: count > 0,
+            customerPrice: Number.isFinite(customerPrice)
+              ? customerPrice
+              : null
+          };
+        });
+
+        sendJSON(res, 200, {
+          country: requestedCountry,
+          providerCountry: country,
+          service: requestedService,
+          server: requestedServer,
+          count: options.length,
+          options
+        }, requestOrigin);
+        return;
+
+      } catch (error) {
+        console.error("5SIM option lookup error:", error);
+        sendJSON(res, 502, {
+          error: "Unable to load options right now. Please try again."
+        }, requestOrigin);
+        return;
+      }
+    }
+
     if (req.method === "GET" && req.url.startsWith("/api/numbers/sms/")) {
       const cookies = String(req.headers.cookie || "");
       const match = cookies.match(/(?:^|;\s*)session=([^;]+)/);
@@ -2495,6 +2592,8 @@ The wallet has NOT been credited. Verify the payment before approving the reques
       const service = String(data.service || "").trim();
       const provider = String(data.provider || "").trim();
       const numberType = String(data.numberType || "").trim();
+      const requestedOption = Number(data.option);
+      const requestedOperator = String(data.operator || "").trim();
       const requestedCountry = String(
         data.country || "United States"
       ).trim();
@@ -2820,21 +2919,78 @@ The wallet has NOT been credited. Verify the payment before approving the reques
       }
 
       let option;
-
       try {
         const prices = await fiveSimGetPrices(country, product);
 
-        option = fiveSimCheapestAvailable(
-          prices,
-          country,
-          product
-        );
+        const isOtherUSAServer =
+          numberType === "otherUSA" &&
+          (provider === "Server C" || provider === "Server D");
 
-        if (!option) {
-          sendJSON(res, 400, {
-            error: `No ${service} numbers are currently available. Please choose another service or country.`
-          });
-          return;
+        if (isOtherUSAServer) {
+          const serverOperators = {
+            "Server C": ["virtual63", "virtual8"],
+            "Server D": ["virtual28", "virtual51"]
+          };
+
+          const allowedOperators = serverOperators[provider];
+
+          if (
+            !Number.isInteger(requestedOption) ||
+            requestedOption < 1 ||
+            requestedOption > allowedOperators.length ||
+            !allowedOperators.includes(requestedOperator)
+          ) {
+            sendJSON(res, 400, {
+              error: "Invalid number option selected"
+            });
+            return;
+          }
+
+          const selectedOperator =
+            allowedOperators[requestedOption - 1];
+
+          if (requestedOperator !== selectedOperator) {
+            sendJSON(res, 400, {
+              error: "Selected number option does not match the selected server"
+            });
+            return;
+          }
+
+          const countryData = prices?.[country]?.[product];
+          const selectedData = countryData?.[selectedOperator];
+
+          const selectedCost = Number(selectedData?.cost);
+          const selectedCount = Number(selectedData?.count || 0);
+
+          if (
+            !selectedData ||
+            !Number.isFinite(selectedCost) ||
+            selectedCount <= 0
+          ) {
+            sendJSON(res, 400, {
+              error: "The selected option is currently out of stock. Please choose another option."
+            });
+            return;
+          }
+
+          option = {
+            operator: selectedOperator,
+            cost: selectedCost,
+            count: selectedCount
+          };
+        } else {
+          option = fiveSimCheapestAvailable(
+            prices,
+            country,
+            product
+          );
+
+          if (!option) {
+            sendJSON(res, 400, {
+              error: `No ${service} numbers are currently available. Please choose another service or country.`
+            });
+            return;
+          }
         }
       } catch (supplierError) {
         console.error(

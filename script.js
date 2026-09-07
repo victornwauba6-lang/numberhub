@@ -109,6 +109,12 @@ function setupServiceAutocomplete() {
   }
 
   input.onfocus = () => {
+    if (!input.value.trim()) {
+      results.innerHTML = "";
+      results.style.display = "none";
+      return;
+    }
+
     if (Array.isArray(window.numberHubServices) && window.numberHubServices.length) {
       render(input.value);
     }
@@ -253,33 +259,8 @@ async function populateNumberServices() {
       serviceSearch.disabled = false;
       serviceSearch.placeholder = "🔎 Search service...";
 
-      serviceResults.innerHTML = window.numberHubServices
-        .slice(0, 50)
-        .map(item => `
-          <button
-            type="button"
-            data-service="${item.value.replace(/"/g, "&quot;")}"
-            style="
-              display:block;
-              width:100%;
-              padding:13px 14px;
-              border:0;
-              border-bottom:1px solid #f1f5f9;
-              background:#fff;
-              text-align:left;
-              cursor:pointer;
-              font-size:14px;
-            "
-          >
-            <div style="font-weight:800;">${item.label}</div>
-            <div style="font-size:12px;color:#64748b;margin-top:3px;">
-              ${item.stock.toLocaleString()} available
-            </div>
-          </button>
-        `).join("");
-
-      serviceResults.style.display =
-        window.numberHubServices.length ? "block" : "none";
+      serviceResults.innerHTML = "";
+      serviceResults.style.display = "none";
     }
 
     setupServiceAutocomplete();
