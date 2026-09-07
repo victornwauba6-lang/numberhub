@@ -462,6 +462,41 @@ async function textVerifiedGetServices() {
   );
 }
 
+
+async function runTextVerifiedInventoryTest(req, res, origin) {
+  const admin = await getAdminUserId(req);
+  if (admin.error) {
+    return sendJSON(res, admin.status, { error: admin.error }, origin);
+  }
+
+  try {
+    const services = await textVerifiedGetServices();
+
+    const whatsapp = services.filter((item) =>
+      String(item.serviceName || "").toLowerCase().includes("whatsapp") ||
+      String(item.description || "").toLowerCase().includes("whatsapp")
+    );
+
+    const result = {
+      success: true,
+      provider: "TextVerified",
+      numberType: "mobile",
+      reservationType: "verification",
+      whatsappServices: whatsapp,
+      totalServices: Array.isArray(services) ? services.length : 0
+    };
+
+    return sendJSON(res, 200, result, origin);
+  } catch (error) {
+    console.error("TextVerified inventory test failed:", error);
+    return sendJSON(res, 502, {
+      success: false,
+      provider: "TextVerified",
+      error: error.message
+    }, origin);
+  }
+}
+
 async function sendPasswordResetEmail(to, code) {
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -771,7 +806,11 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    if (req.method === "GET" && req.url === "/api/admin/textverified-test") {
+    if (req.method === "GET" && req.url === "/api/admin/textverified-inventory-test") {
+    return await runTextVerifiedInventoryTest(req, res, req.headers.origin);
+  }
+
+  if (req.method === "GET" && req.url === "/api/admin/textverified-test") {
       return await runTextVerifiedTest(req, res, req.headers.origin);
     }
 
