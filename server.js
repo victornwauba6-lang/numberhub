@@ -16,10 +16,7 @@ const TEXTVERIFIED_PRICES = {
   }
 };
 
-const FIVESIM_SERVICE_PRICES = {
-  facebook: 1600,
-  tiktok: 1500
-};
+const FIVESIM_SERVICE_PRICES = {};
 
 const FIVESIM_COUNTRY_PRICES = {
   "United Kingdom": {
