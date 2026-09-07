@@ -143,6 +143,55 @@ function calculateTextVerifiedPrice(countryName, serviceName, supplierCost) {
   return calculateTextVerifiedOtherServicePrice(supplierCost);
 }
 
+const USA_CD_PRICES = {
+  whatsapp: {
+    "Server C": { virtual63: 4200, virtual8: 4500 },
+    "Server D": { virtual28: 5500, virtual51: 4100 }
+  },
+  facebook: {
+    "Server C": { virtual63: 1600, virtual8: 1700 },
+    "Server D": { virtual28: 1500, virtual51: 2000 }
+  },
+  instagram: {
+    "Server C": { virtual63: 1500, virtual8: 1250 },
+    "Server D": { virtual28: 1500, virtual51: 1450 }
+  },
+  telegram: {
+    "Server C": { virtual63: 2200, virtual8: 2200 },
+    "Server D": { virtual28: 2500, virtual51: 2500 }
+  },
+  tiktok: {
+    "Server C": { virtual63: 1500, virtual8: 1500 },
+    "Server D": { virtual28: 1500, virtual51: 1500 }
+  },
+  google: {
+    "Server C": { virtual63: 1500, virtual8: 1800 },
+    "Server D": { virtual28: 1800, virtual51: 2000 }
+  },
+  twitter: {
+    "Server C": { virtual63: 1500, virtual8: 1500 },
+    "Server D": { virtual28: 1800, virtual51: 1050 }
+  }
+};
+
+function calculateUsaCdPrice(serviceName, serverName, operator, fallbackPrice) {
+  const serviceKey = String(serviceName || "").trim().toLowerCase();
+  const serverKey = String(serverName || "").trim();
+  const operatorKey = String(operator || "").trim();
+
+  const servicePrices = USA_CD_PRICES[serviceKey];
+  const serverPrices = servicePrices?.[serverKey];
+
+  if (
+    serverPrices &&
+    Object.prototype.hasOwnProperty.call(serverPrices, operatorKey)
+  ) {
+    return Number(serverPrices[operatorKey]);
+  }
+
+  return fallbackPrice;
+}
+
 function calculateFiveSimPrice(countryName, serviceName, supplierCost) {
   const serviceKey =
     String(serviceName || "").trim().toLowerCase();
@@ -1957,11 +2006,21 @@ The wallet has NOT been credited. Verify the payment before approving the reques
           const cost = Number(item.cost);
           const count = Number(item.count || 0);
 
-          const customerPrice = calculateFiveSimPrice(
+          const fallbackPrice = calculateFiveSimPrice(
             requestedCountry,
             requestedService,
             cost
           );
+
+          const customerPrice =
+            String(requestedCountry).trim().toLowerCase() === "united states"
+              ? calculateUsaCdPrice(
+                  requestedService,
+                  requestedServer,
+                  operator,
+                  fallbackPrice
+                )
+              : fallbackPrice;
 
           return {
             option: index + 1,
@@ -3004,11 +3063,22 @@ The wallet has NOT been credited. Verify the payment before approving the reques
         return;
       }
 
-      const price = calculateFiveSimPrice(
+      const fallbackPrice = calculateFiveSimPrice(
         countryName,
         service,
         option.cost
       );
+
+      const price =
+        numberType === "otherUSA" &&
+        (provider === "Server C" || provider === "Server D")
+          ? calculateUsaCdPrice(
+              service,
+              provider,
+              option.operator,
+              fallbackPrice
+            )
+          : fallbackPrice;
 
       if (!Number.isFinite(price) || price <= 0) {
         sendJSON(res, 400, {
