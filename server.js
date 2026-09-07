@@ -2985,7 +2985,21 @@ The wallet has NOT been credited. Verify the payment before approving the reques
           numberType === "otherUSA" &&
           (provider === "Server C" || provider === "Server D");
 
-        if (isOtherUSAServer) {
+        const cdOptionServices = [
+          "whatsapp",
+          "facebook",
+          "instagram",
+          "telegram",
+          "tiktok",
+          "google",
+          "twitter"
+        ];
+
+        const isOtherUSACustomService =
+          isOtherUSAServer &&
+          cdOptionServices.includes(serviceKey);
+
+        if (isOtherUSACustomService) {
           const serverOperators = {
             "Server C": ["virtual63", "virtual8"],
             "Server D": ["virtual28", "virtual51"]

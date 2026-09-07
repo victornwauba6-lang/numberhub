@@ -3352,7 +3352,23 @@ async function updateNumberPurchaseState() {
     selectedNumberType === "otherUSA" &&
     (selectedServer === "Server C" || selectedServer === "Server D");
 
-  if (isOtherUSAServer) {
+  const cdOptionServices = [
+    "whatsapp",
+    "facebook",
+    "instagram",
+    "telegram",
+    "tiktok",
+    "google",
+    "twitter"
+  ];
+
+  const isOtherUSACustomService =
+    isOtherUSAServer &&
+    cdOptionServices.includes(
+      String(service.value || "").trim().toLowerCase()
+    );
+
+  if (isOtherUSACustomService) {
     window.selectedCountry = country.value;
     window.selectedService = service.value;
 
@@ -3375,6 +3391,17 @@ async function updateNumberPurchaseState() {
 
     return;
   }
+
+  window.selectedFiveSimOption = null;
+
+  const optionsPanel =
+    document.getElementById("fiveSimOptionsPanel");
+
+  const optionsList =
+    document.getElementById("fiveSimOptionsList");
+
+  if (optionsPanel) optionsPanel.style.display = "none";
+  if (optionsList) optionsList.innerHTML = "";
 
   const prices = {
     "United States": {
@@ -3521,13 +3548,29 @@ async function purchaseSelectedNumber() {
     selectedNumberType === "otherUSA" &&
     (selectedServer === "Server C" || selectedServer === "Server D");
 
-  if (isOtherUSAServer && !selectedFiveSimOption) {
+  const cdOptionServices = [
+    "whatsapp",
+    "facebook",
+    "instagram",
+    "telegram",
+    "tiktok",
+    "google",
+    "twitter"
+  ];
+
+  const isOtherUSACustomService =
+    isOtherUSAServer &&
+    cdOptionServices.includes(
+      String(service.value || "").trim().toLowerCase()
+    );
+
+  if (isOtherUSACustomService && !selectedFiveSimOption) {
     alert("Please select an available option first.");
     return;
   }
 
   const selectedPurchasePrice =
-    isOtherUSAServer && selectedFiveSimOption
+    isOtherUSACustomService && selectedFiveSimOption
       ? Number(selectedFiveSimOption.customerPrice)
       : null;
 
@@ -3560,13 +3603,13 @@ async function purchaseSelectedNumber() {
             ? selectedServer
             : "",
           numberType: selectedNumberType,
-          option: isOtherUSAServer && selectedFiveSimOption
+          option: isOtherUSACustomService && selectedFiveSimOption
             ? selectedFiveSimOption.option
             : null,
-          operator: isOtherUSAServer && selectedFiveSimOption
+          operator: isOtherUSACustomService && selectedFiveSimOption
             ? selectedFiveSimOption.operator
             : null,
-          price: isOtherUSAServer && Number.isFinite(selectedPurchasePrice)
+          price: isOtherUSACustomService && Number.isFinite(selectedPurchasePrice)
             ? selectedPurchasePrice
             : null
         })
