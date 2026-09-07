@@ -846,7 +846,47 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    if (req.method === "GET" && req.url === "/api/admin/textverified-us-whatsapp-test") {
+    if (req.method === "GET" && req.url === "/api/admin/textverified-mock-success-test") {
+    const admin = await getAdminUserId(req);
+    if (admin.error) {
+      return sendJSON(res, admin.status, { error: admin.error }, req.headers.origin);
+    }
+
+    try {
+      const result = await textVerifiedRequest(
+        "/api/pub/v2/verifications",
+        {
+          method: "POST",
+          headers: {
+            "Idempotency-Key": "numberhub-mock-test-success-" + Date.now()
+          },
+          body: JSON.stringify({
+            capability: "Sms",
+            serviceName: "test_success"
+          })
+        }
+      );
+
+      return sendJSON(res, 200, {
+        success: true,
+        provider: "TextVerified",
+        mode: "mock",
+        test: "test_success",
+        verification: result
+      }, req.headers.origin);
+    } catch (error) {
+      console.error("TextVerified mock success test failed:", error);
+      return sendJSON(res, 502, {
+        success: false,
+        provider: "TextVerified",
+        mode: "mock",
+        test: "test_success",
+        error: error.message
+      }, req.headers.origin);
+    }
+  }
+
+  if (req.method === "GET" && req.url === "/api/admin/textverified-us-whatsapp-test") {
     const admin = await getAdminUserId(req);
     if (admin.error) {
       return sendJSON(res, admin.status, { error: admin.error }, req.headers.origin);
