@@ -7,55 +7,39 @@ const bcrypt = require("bcryptjs");
 
 const FIVESIM_BASE_URL = "https://5sim.net/v1";
 
-const NUMBERHUB_PRICES = {
+const TEXTVERIFIED_PRICES = {
   "United States": {
     whatsapp: 4500,
     facebook: 1700,
     tiktok: 2000,
     telegram: 3500
-  },
+  }
+};
+
+const FIVESIM_SERVICE_PRICES = {
+  facebook: 1600,
+  tiktok: 1500
+};
+
+const FIVESIM_COUNTRY_PRICES = {
   "United Kingdom": {
     whatsapp: 4000,
-    facebook: 2000,
-    tiktok: 1500,
     telegram: 4000
   },
   "Canada": {
     whatsapp: 4000,
-    facebook: 1300,
-    tiktok: 2000,
     telegram: 3000
   },
   "Philippines": {
     whatsapp: 3500,
-    facebook: 1100,
-    tiktok: 1200,
     telegram: 2500
   }
 };
 
-
-
-
-// Automatic pricing for countries without a manually configured price.
-// Existing NUMBERHUB_PRICES always take priority.
 const FIVESIM_USD_TO_NGN = 1500;
 const NUMBERHUB_MIN_AUTO_PRICE = 1000;
 
-function calculateNumberHubPrice(countryName, serviceName, supplierCost) {
-  const countryPrices =
-    NUMBERHUB_PRICES[String(countryName || "").trim()];
-  const serviceKey =
-    String(serviceName || "").trim().toLowerCase();
-
-  // Fixed prices always take priority.
-  if (
-    countryPrices &&
-    Object.prototype.hasOwnProperty.call(countryPrices, serviceKey)
-  ) {
-    return Number(countryPrices[serviceKey]);
-  }
-
+function calculateAutomaticPrice(supplierCost) {
   const costUSD = Number(supplierCost);
 
   if (!Number.isFinite(costUSD) || costUSD <= 0) {
@@ -63,11 +47,9 @@ function calculateNumberHubPrice(countryName, serviceName, supplierCost) {
   }
 
   const costNGN = costUSD * FIVESIM_USD_TO_NGN;
-
   let tierPrice;
 
   if (costNGN <= 300) {
-    // Numbers costing ₦300 or less: minimum ₦1,000 gain.
     tierPrice = costNGN + 1000;
   } else if (costNGN <= 400) {
     tierPrice = 1400;
@@ -90,11 +72,52 @@ function calculateNumberHubPrice(countryName, serviceName, supplierCost) {
   } else if (costNGN <= 5000) {
     tierPrice = 8500;
   } else {
-    // For very expensive numbers, keep a healthy margin.
     tierPrice = costNGN + 3500;
   }
 
   return Math.max(NUMBERHUB_MIN_AUTO_PRICE, tierPrice);
+}
+
+function calculateTextVerifiedPrice(countryName, serviceName, supplierCost) {
+  const countryPrices =
+    TEXTVERIFIED_PRICES[String(countryName || "").trim()];
+  const serviceKey =
+    String(serviceName || "").trim().toLowerCase();
+
+  if (
+    countryPrices &&
+    Object.prototype.hasOwnProperty.call(countryPrices, serviceKey)
+  ) {
+    return Number(countryPrices[serviceKey]);
+  }
+
+  return calculateAutomaticPrice(supplierCost);
+}
+
+function calculateFiveSimPrice(countryName, serviceName, supplierCost) {
+  const serviceKey =
+    String(serviceName || "").trim().toLowerCase();
+
+  if (
+    Object.prototype.hasOwnProperty.call(
+      FIVESIM_SERVICE_PRICES,
+      serviceKey
+    )
+  ) {
+    return Number(FIVESIM_SERVICE_PRICES[serviceKey]);
+  }
+
+  const countryPrices =
+    FIVESIM_COUNTRY_PRICES[String(countryName || "").trim()];
+
+  if (
+    countryPrices &&
+    Object.prototype.hasOwnProperty.call(countryPrices, serviceKey)
+  ) {
+    return Number(countryPrices[serviceKey]);
+  }
+
+  return calculateAutomaticPrice(supplierCost);
 }
 
 const FIVESIM_COUNTRY_MAP = {
@@ -1102,7 +1125,7 @@ const server = http.createServer(async (req, res) => {
         textVerifiedExtractPrice(result.pricing);
 
       const sellingPrice =
-        calculateNumberHubPrice(
+        calculateTextVerifiedPrice(
           "United States",
           service,
           supplierCostUSD
@@ -1739,7 +1762,7 @@ The wallet has NOT been credited. Verify the payment before approving the reques
 
         const servicesWithCustomerPrices = services.map(item => ({
           ...item,
-          customerPrice: calculateNumberHubPrice(
+          customerPrice: calculateFiveSimPrice(
             requestedCountry,
             item.product,
             item.cheapestCost
@@ -2357,7 +2380,7 @@ The wallet has NOT been credited. Verify the payment before approving the reques
           return;
         }
 
-        const price = calculateNumberHubPrice(
+        const price = calculateTextVerifiedPrice(
           countryName,
           service,
           supplierCostUSD
@@ -2640,7 +2663,7 @@ The wallet has NOT been credited. Verify the payment before approving the reques
         return;
       }
 
-      const price = calculateNumberHubPrice(
+      const price = calculateFiveSimPrice(
         countryName,
         service,
         option.cost
