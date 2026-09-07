@@ -853,7 +853,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     try {
-      const result = await textVerifiedRequest(
+      const created = await textVerifiedRequest(
         "/api/pub/v2/verifications",
         {
           method: "POST",
@@ -867,15 +867,53 @@ const server = http.createServer(async (req, res) => {
         }
       );
 
+      const verificationUrl =
+        created.href ||
+        created.url ||
+        created.links?.self?.href ||
+        created.links?.self;
+
+      if (!verificationUrl) {
+        throw new Error("Mock verification was created but no verification URL was returned");
+      }
+
+      const verificationPath = verificationUrl.startsWith("http")
+        ? new URL(verificationUrl).pathname + new URL(verificationUrl).search
+        : verificationUrl;
+
+      const verification = await textVerifiedRequest(
+        verificationPath,
+        { method: "GET" }
+      );
+
+      let sms = null;
+
+      const smsUrl =
+        verification.sms?.href ||
+        verification.sms?.url ||
+        verification.links?.sms?.href ||
+        verification.links?.sms;
+
+      if (smsUrl) {
+        const smsPath = smsUrl.startsWith("http")
+          ? new URL(smsUrl).pathname + new URL(smsUrl).search
+          : smsUrl;
+
+        sms = await textVerifiedRequest(smsPath, { method: "GET" });
+      }
+
       return sendJSON(res, 200, {
         success: true,
         provider: "TextVerified",
         mode: "mock",
         test: "test_success",
-        verification: result
+        created,
+        verification,
+        sms
       }, req.headers.origin);
+
     } catch (error) {
-      console.error("TextVerified mock success test failed:", error);
+      console.error("TextVerified mock complete flow test failed:", error);
       return sendJSON(res, 502, {
         success: false,
         provider: "TextVerified",
