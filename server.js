@@ -10,8 +10,8 @@ const FIVESIM_BASE_URL = "https://5sim.net/v1";
 const NUMBERHUB_PRICES = {
   "United States": {
     whatsapp: 4500,
-    facebook: 1600,
-    tiktok: 1500,
+    facebook: 1700,
+    tiktok: 2000,
     telegram: 3500
   },
   "United Kingdom": {
@@ -45,11 +45,10 @@ const NUMBERHUB_MIN_AUTO_PRICE = 1000;
 function calculateNumberHubPrice(countryName, serviceName, supplierCost) {
   const countryPrices =
     NUMBERHUB_PRICES[String(countryName || "").trim()];
-
   const serviceKey =
     String(serviceName || "").trim().toLowerCase();
 
-  // Keep manually configured prices unchanged.
+  // Fixed prices always take priority.
   if (
     countryPrices &&
     Object.prototype.hasOwnProperty.call(countryPrices, serviceKey)
@@ -63,38 +62,39 @@ function calculateNumberHubPrice(countryName, serviceName, supplierCost) {
     return null;
   }
 
-  // Convert the live 5SIM supplier cost to NGN.
   const costNGN = costUSD * FIVESIM_USD_TO_NGN;
 
   let tierPrice;
 
-  if (costNGN < 300) {
-    // Very cheap numbers: minimum ₦1,000 profit.
+  if (costNGN <= 300) {
+    // Numbers costing ₦300 or less: minimum ₦1,000 gain.
     tierPrice = costNGN + 1000;
-  } else if (costNGN < 500) {
-    tierPrice = 1300;
-  } else if (costNGN < 1000) {
-    tierPrice = 2000;
-  } else if (costNGN < 1500) {
+  } else if (costNGN <= 400) {
+    tierPrice = 1400;
+  } else if (costNGN <= 500) {
+    tierPrice = 1600;
+  } else if (costNGN <= 700) {
+    tierPrice = 1900;
+  } else if (costNGN <= 1000) {
+    tierPrice = 2300;
+  } else if (costNGN <= 1500) {
     tierPrice = 2800;
-  } else if (costNGN < 2000) {
-    tierPrice = 3500;
-  } else if (costNGN < 3000) {
+  } else if (costNGN <= 2000) {
+    tierPrice = 3700;
+  } else if (costNGN <= 2500) {
     tierPrice = 4500;
-  } else if (costNGN < 4000) {
+  } else if (costNGN <= 3000) {
     tierPrice = 5500;
+  } else if (costNGN <= 4000) {
+    tierPrice = 7000;
+  } else if (costNGN <= 5000) {
+    tierPrice = 8500;
   } else {
-    tierPrice = costNGN + 1500;
+    // For very expensive numbers, keep a healthy margin.
+    tierPrice = costNGN + 3500;
   }
 
-  // Safety rule: never price below supplier cost + ₦1,000.
-  const minimumProfitablePrice = costNGN + 1000;
-
-  return Math.max(
-    NUMBERHUB_MIN_AUTO_PRICE,
-    tierPrice,
-    minimumProfitablePrice
-  );
+  return Math.max(NUMBERHUB_MIN_AUTO_PRICE, tierPrice);
 }
 
 const FIVESIM_COUNTRY_MAP = {
@@ -537,6 +537,123 @@ async function textVerifiedCheckUSWhatsApp() {
   };
 }
 
+async function textVerifiedCheckUSService(serviceName) {
+  const normalizedService = String(serviceName || "").trim().toLowerCase();
+
+  if (!normalizedService) {
+    throw new Error("TextVerified service name is required");
+  }
+
+  const inventory = await textVerifiedRequest(
+    "/api/pub/v2/inventory/verifications",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        numberType: "mobile",
+        serviceName: normalizedService,
+        capability: "Sms"
+      })
+    }
+  );
+
+  const pricing = await textVerifiedRequest(
+    "/api/pub/v2/pricing/verifications",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        areaCode: false,
+        carrier: false,
+        numberType: "mobile",
+        serviceName: normalizedService,
+        capability: "Sms"
+      })
+    }
+  );
+
+  return {
+    serviceName: normalizedService,
+    numberType: "mobile",
+    reservationType: "verification",
+    inventory,
+    pricing
+  };
+}
+
+function textVerifiedExtractPrice(pricing) {
+  const candidates = [
+    pricing?.price,
+    pricing?.unitPrice,
+    pricing?.cost,
+    pricing?.amount,
+    pricing?.data?.price,
+    pricing?.data?.unitPrice,
+    pricing?.data?.cost,
+    pricing?.data?.amount
+  ];
+
+  for (const value of candidates) {
+    const number = Number(value);
+    if (Number.isFinite(number) && number > 0) {
+      return number;
+    }
+  }
+
+  throw new Error("TextVerified pricing response did not contain a valid price");
+}
+
+async function textVerifiedBuyVerification(serviceName, idempotencyKey) {
+  const normalizedService = String(serviceName || "").trim().toLowerCase();
+
+  if (!normalizedService) {
+    throw new Error("TextVerified service name is required");
+  }
+
+  const headers = {};
+
+  if (idempotencyKey) {
+    headers["Idempotency-Key"] = String(idempotencyKey);
+  }
+
+  return textVerifiedRequest(
+    "/api/pub/v2/verifications",
+    {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        capability: "Sms",
+        serviceName: normalizedService
+      })
+    }
+  );
+}
+
+async function textVerifiedGetVerification(verificationId) {
+  return textVerifiedRequest(
+    `/api/pub/v2/verifications/${encodeURIComponent(verificationId)}`,
+    {
+      method: "GET"
+    }
+  );
+}
+
+async function textVerifiedGetSMS(verificationId) {
+  return textVerifiedRequest(
+    `/api/pub/v2/sms?ReservationId=${encodeURIComponent(verificationId)}`,
+    {
+      method: "GET"
+    }
+  );
+}
+
+async function textVerifiedCancelVerification(verificationId) {
+  return textVerifiedRequest(
+    `/api/pub/v2/verifications/${encodeURIComponent(verificationId)}/cancel`,
+    {
+      method: "POST"
+    }
+  );
+}
+
 async function sendPasswordResetEmail(to, code) {
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -947,6 +1064,83 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === "GET" && req.url === "/api/admin/textverified-inventory-test") {
     return await runTextVerifiedInventoryTest(req, res, req.headers.origin);
+  }
+
+  if (
+    req.method === "GET" &&
+    req.url.startsWith("/api/admin/textverified-service-price-test")
+  ) {
+    const admin = await getAdminUserId(req);
+
+    if (admin.error) {
+      return sendJSON(
+        res,
+        admin.status,
+        { error: admin.error },
+        req.headers.origin
+      );
+    }
+
+    try {
+      const url = new URL(req.url, "http://localhost");
+      const service = String(
+        url.searchParams.get("service") || ""
+      ).trim().toLowerCase();
+
+      if (!service) {
+        return sendJSON(
+          res,
+          400,
+          { error: "Use ?service=whatsapp" },
+          req.headers.origin
+        );
+      }
+
+      const result = await textVerifiedCheckUSService(service);
+
+      const supplierCostUSD =
+        textVerifiedExtractPrice(result.pricing);
+
+      const sellingPrice =
+        calculateNumberHubPrice(
+          "United States",
+          service,
+          supplierCostUSD
+        );
+
+      return sendJSON(
+        res,
+        200,
+        {
+          success: true,
+          provider: "TextVerified",
+          country: "United States",
+          service,
+          inventory: result.inventory,
+          supplierCostUSD,
+          supplierCostNGN:
+            supplierCostUSD * FIVESIM_USD_TO_NGN,
+          numberHubSellingPrice: sellingPrice
+        },
+        req.headers.origin
+      );
+    } catch (error) {
+      console.error(
+        "TextVerified service price test failed:",
+        error
+      );
+
+      return sendJSON(
+        res,
+        502,
+        {
+          success: false,
+          provider: "TextVerified",
+          error: error.message
+        },
+        req.headers.origin
+      );
+    }
   }
 
   if (req.method === "GET" && req.url === "/api/admin/textverified-test") {
@@ -2069,7 +2263,8 @@ The wallet has NOT been credited. Verify the payment before approving the reques
         return;
       }
 
-      const tokenHash = crypto.createHash("sha256")
+      const tokenHash = crypto
+        .createHash("sha256")
         .update(match[1])
         .digest("hex");
 
@@ -2091,10 +2286,308 @@ The wallet has NOT been credited. Verify the payment before approving the reques
 
       const service = String(data.service || "").trim();
       const provider = String(data.provider || "").trim();
-      const countryName = String(
+      const numberType = String(data.numberType || "").trim();
+      const requestedCountry = String(
         data.country || "United States"
       ).trim();
 
+      /*
+       * USA Numbers (Servers A & B) use TextVerified.
+       * All other number types continue using 5SIM.
+       */
+      const useTextVerified = numberType === "usa";
+
+      if (useTextVerified) {
+        if (!service) {
+          sendJSON(res, 400, {
+            error: "Invalid purchase details"
+          });
+          return;
+        }
+
+        const countryName = "United States";
+        const serviceKey = service.toLowerCase();
+
+        let supplierInfo;
+
+        try {
+          supplierInfo = await textVerifiedCheckUSService(serviceKey);
+
+          const availableQuantity = Number(
+            supplierInfo?.inventory?.availableQuantity ??
+            supplierInfo?.inventory?.data?.availableQuantity ??
+            supplierInfo?.inventory?.quantity ??
+            supplierInfo?.inventory?.data?.quantity ??
+            0
+          );
+
+          if (!Number.isFinite(availableQuantity) || availableQuantity <= 0) {
+            sendJSON(res, 400, {
+              error: `No ${service} numbers are currently available. Please choose another service or try again later.`
+            });
+            return;
+          }
+        } catch (supplierError) {
+          console.error(
+            "TextVerified availability lookup error:",
+            supplierError
+          );
+
+          sendJSON(res, 502, {
+            error: "Unable to check TextVerified availability right now. Please try again."
+          });
+          return;
+        }
+
+        let supplierCostUSD;
+
+        try {
+          supplierCostUSD = textVerifiedExtractPrice(
+            supplierInfo.pricing
+          );
+        } catch (pricingError) {
+          console.error(
+            "TextVerified pricing extraction error:",
+            pricingError
+          );
+
+          sendJSON(res, 502, {
+            error: "Unable to determine the current number price. Please try again."
+          });
+          return;
+        }
+
+        const price = calculateNumberHubPrice(
+          countryName,
+          service,
+          supplierCostUSD
+        );
+
+        if (!Number.isFinite(price) || price <= 0) {
+          sendJSON(res, 400, {
+            error: "Unable to calculate the selling price"
+          });
+          return;
+        }
+
+        // Check the customer's wallet BEFORE purchasing from TextVerified.
+        const walletCheck = await pool.query(
+          `SELECT wallet
+           FROM users
+           WHERE id = $1`,
+          [userId]
+        );
+
+        if (walletCheck.rows.length === 0) {
+          sendJSON(res, 404, {
+            error: "User not found"
+          });
+          return;
+        }
+
+        const wallet = Number(walletCheck.rows[0].wallet || 0);
+
+        if (wallet < price) {
+          sendJSON(res, 400, {
+            error: "Insufficient wallet balance"
+          });
+          return;
+        }
+
+        const reference =
+          "NP-" +
+          Date.now().toString(36).toUpperCase() +
+          "-" +
+          crypto.randomBytes(4).toString("hex").toUpperCase();
+
+        let supplierPurchase;
+
+        try {
+          supplierPurchase = await textVerifiedBuyVerification(
+            serviceKey,
+            reference
+          );
+        } catch (supplierError) {
+          console.error(
+            "TextVerified purchase error:",
+            supplierError
+          );
+
+          sendJSON(res, 502, {
+            error: "Unable to purchase this number right now. Please try again."
+          });
+          return;
+        }
+
+        const phoneNumber = String(
+          supplierPurchase?.number ||
+          supplierPurchase?.phoneNumber ||
+          supplierPurchase?.phone ||
+          ""
+        ).trim();
+
+        const supplierId = String(
+          supplierPurchase?.id || ""
+        ).trim();
+
+        const supplierExpiresAt =
+          supplierPurchase?.endsAt ||
+          supplierPurchase?.expiresAt ||
+          null;
+
+        if (!phoneNumber || !supplierId) {
+          if (supplierId) {
+            try {
+              await textVerifiedCancelVerification(supplierId);
+            } catch (cancelError) {
+              console.error(
+                "Could not cancel TextVerified verification:",
+                cancelError
+              );
+            }
+          }
+
+          sendJSON(res, 502, {
+            error: "We couldn't complete the number purchase. Please try again."
+          });
+          return;
+        }
+
+        const dbClient = await pool.connect();
+
+        try {
+          await dbClient.query("BEGIN");
+
+          const lockedUser = await dbClient.query(
+            `SELECT wallet, purchases
+             FROM users
+             WHERE id = $1
+             FOR UPDATE`,
+            [userId]
+          );
+
+          if (lockedUser.rows.length === 0) {
+            await dbClient.query("ROLLBACK");
+
+            try {
+              await textVerifiedCancelVerification(supplierId);
+            } catch (cancelError) {
+              console.error(
+                "Could not cancel TextVerified verification:",
+                cancelError
+              );
+            }
+
+            sendJSON(res, 404, {
+              error: "User not found"
+            });
+            return;
+          }
+
+          const currentWallet = Number(
+            lockedUser.rows[0].wallet || 0
+          );
+
+          // Re-check after acquiring the database lock.
+          if (currentWallet < price) {
+            await dbClient.query("ROLLBACK");
+
+            try {
+              await textVerifiedCancelVerification(supplierId);
+            } catch (cancelError) {
+              console.error(
+                "Could not cancel TextVerified verification:",
+                cancelError
+              );
+            }
+
+            sendJSON(res, 400, {
+              error: "Insufficient wallet balance"
+            });
+            return;
+          }
+
+          const purchaseResult = await dbClient.query(
+            `INSERT INTO number_purchases
+               (user_id, phone_number, country, service, provider,
+                price, status, supplier_id, supplier_expires_at, supplier_cost_usd, reference)
+             VALUES ($1, $2, $3, $4, $5, $6, 'active', $7, $8, $9, $10)
+             RETURNING id, phone_number, country, service, provider,
+                       price, status, supplier_id, supplier_expires_at, supplier_cost_usd, reference, created_at`,
+            [
+              userId,
+              phoneNumber,
+              countryName,
+              service,
+              "TextVerified",
+              price.toFixed(2),
+              supplierId,
+              supplierExpiresAt,
+              supplierCostUSD,
+              reference
+            ]
+          );
+
+          await dbClient.query(
+            `UPDATE users
+             SET wallet = wallet - $1,
+                 purchases = purchases + 1
+             WHERE id = $2`,
+            [
+              price.toFixed(2),
+              userId
+            ]
+          );
+
+          await dbClient.query(
+            `INSERT INTO wallet_transactions
+               (user_id, type, amount, method, status, reference, description)
+             VALUES ($1, 'purchase', $2, 'Wallet', 'successful', $3, $4)`,
+            [
+              userId,
+              price.toFixed(2),
+              reference,
+              "Number purchase"
+            ]
+          );
+
+          await dbClient.query("COMMIT");
+
+          sendJSON(res, 201, {
+            message: "Number purchased successfully",
+            purchase: purchaseResult.rows[0],
+            supplier: {
+              id: supplierId,
+              provider: "TextVerified"
+            }
+          });
+
+          return;
+        } catch (dbError) {
+          try {
+            await dbClient.query("ROLLBACK");
+          } catch (_) {}
+
+          try {
+            await textVerifiedCancelVerification(supplierId);
+          } catch (cancelError) {
+            console.error(
+              "Could not cancel TextVerified verification:",
+              cancelError
+            );
+          }
+
+          throw dbError;
+        } finally {
+          dbClient.release();
+        }
+      }
+
+      /*
+       * Existing 5SIM purchase flow.
+       * Used for Other USA, All Countries and More Countries.
+       */
+      const countryName = requestedCountry;
       const country = fiveSimCountryCode(countryName);
       const serviceKey = service.toLowerCase();
 
@@ -2136,7 +2629,10 @@ The wallet has NOT been credited. Verify the payment before approving the reques
           return;
         }
       } catch (supplierError) {
-        console.error("5SIM price lookup error:", supplierError);
+        console.error(
+          "5SIM price lookup error:",
+          supplierError
+        );
 
         sendJSON(res, 502, {
           error: "Unable to check availability right now. Please try again."
@@ -2172,7 +2668,9 @@ The wallet has NOT been credited. Verify the payment before approving the reques
         return;
       }
 
-      const wallet = Number(walletCheck.rows[0].wallet || 0);
+      const wallet = Number(
+        walletCheck.rows[0].wallet || 0
+      );
 
       if (wallet < price) {
         sendJSON(res, 400, {
@@ -2190,7 +2688,10 @@ The wallet has NOT been credited. Verify the payment before approving the reques
           option.operator
         );
       } catch (supplierError) {
-        console.error("5SIM purchase error:", supplierError);
+        console.error(
+          "5SIM purchase error:",
+          supplierError
+        );
 
         sendJSON(res, 502, {
           error: "Unable to purchase this number right now. Please try again."
@@ -2205,7 +2706,8 @@ The wallet has NOT been credited. Verify the payment before approving the reques
       ).trim();
 
       const supplierId = supplierPurchase.id;
-      const supplierExpiresAt = supplierPurchase.expires || null;
+      const supplierExpiresAt =
+        supplierPurchase.expires || null;
 
       if (!phoneNumber || !supplierId) {
         sendJSON(res, 502, {
@@ -2231,9 +2733,10 @@ The wallet has NOT been credited. Verify the payment before approving the reques
           await dbClient.query("ROLLBACK");
 
           try {
-            await fiveSimRequest(`/user/cancel/${supplierId}`, {
-              method: "GET"
-            });
+            await fiveSimRequest(
+              `/user/cancel/${supplierId}`,
+              { method: "GET" }
+            );
           } catch (cancelError) {
             console.error(
               "Could not cancel 5SIM order:",
@@ -2256,9 +2759,10 @@ The wallet has NOT been credited. Verify the payment before approving the reques
           await dbClient.query("ROLLBACK");
 
           try {
-            await fiveSimRequest(`/user/cancel/${supplierId}`, {
-              method: "GET"
-            });
+            await fiveSimRequest(
+              `/user/cancel/${supplierId}`,
+              { method: "GET" }
+            );
           } catch (cancelError) {
             console.error(
               "Could not cancel 5SIM order:",
@@ -2335,12 +2839,15 @@ The wallet has NOT been credited. Verify the payment before approving the reques
 
         return;
       } catch (dbError) {
-        await dbClient.query("ROLLBACK");
+        try {
+          await dbClient.query("ROLLBACK");
+        } catch (_) {}
 
         try {
-          await fiveSimRequest(`/user/cancel/${supplierId}`, {
-            method: "GET"
-          });
+          await fiveSimRequest(
+            `/user/cancel/${supplierId}`,
+            { method: "GET" }
+          );
         } catch (cancelError) {
           console.error(
             "Could not cancel 5SIM order:",
@@ -2353,6 +2860,7 @@ The wallet has NOT been credited. Verify the payment before approving the reques
         dbClient.release();
       }
     }
+
     if (req.method === "GET" && req.url === "/api/numbers/history") {
       const cookies = String(req.headers.cookie || "");
       const match = cookies.match(/(?:^|;\s*)session=([^;]+)/);
