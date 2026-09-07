@@ -3132,8 +3132,8 @@ function updateNumberPurchaseState() {
   const prices = {
     "United States": {
       whatsapp: 4500,
-      facebook: 1600,
-      tiktok: 1500,
+      facebook: 1700,
+      tiktok: 2000,
       telegram: 3500
     },
     "United Kingdom": {
@@ -3165,7 +3165,16 @@ function updateNumberPurchaseState() {
   const countryPrices = prices[country.value];
   const serviceKey = service.value.toLowerCase();
 
-  if (livePrice >= 1000) {
+  const selectedNumberType = window.selectedNumberType || "usa";
+
+  if (
+    selectedNumberType === "usa" &&
+    country.value === "United States" &&
+    countryPrices &&
+    Number.isFinite(countryPrices[serviceKey])
+  ) {
+    price.textContent = money(countryPrices[serviceKey]);
+  } else if (livePrice >= 1000) {
     price.textContent = money(livePrice);
   } else if (
     countryPrices &&
