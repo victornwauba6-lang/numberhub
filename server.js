@@ -88,30 +88,40 @@ function calculateTextVerifiedOtherServicePrice(supplierCost) {
   const costNGN = costUSD * FIVESIM_USD_TO_NGN;
   let tierPrice;
 
-  if (costNGN <= 300) {
-    tierPrice = costNGN + 1000;
-  } else if (costNGN <= 400) {
+  if (costNGN <= 100) {
+    tierPrice = 1200;
+  } else if (costNGN <= 150) {
+    tierPrice = 1250;
+  } else if (costNGN <= 200) {
+    tierPrice = 1300;
+  } else if (costNGN <= 250) {
+    tierPrice = 1400;
+  } else if (costNGN <= 300) {
+    tierPrice = 1500;
+  } else if (costNGN <= 350) {
     tierPrice = 1600;
+  } else if (costNGN <= 400) {
+    tierPrice = 1700;
   } else if (costNGN <= 500) {
-    tierPrice = 1800;
-  } else if (costNGN <= 700) {
+    tierPrice = 1900;
+  } else if (costNGN <= 600) {
     tierPrice = 2100;
-  } else if (costNGN <= 1000) {
+  } else if (costNGN <= 700) {
+    tierPrice = 2300;
+  } else if (costNGN <= 800) {
     tierPrice = 2500;
+  } else if (costNGN <= 900) {
+    tierPrice = 2700;
+  } else if (costNGN <= 1000) {
+    tierPrice = 2900;
+  } else if (costNGN <= 1200) {
+    tierPrice = 3200;
   } else if (costNGN <= 1500) {
-    tierPrice = 3100;
+    tierPrice = 3600;
   } else if (costNGN <= 2000) {
-    tierPrice = 3900;
-  } else if (costNGN <= 2500) {
-    tierPrice = 4700;
-  } else if (costNGN <= 3000) {
-    tierPrice = 5600;
-  } else if (costNGN <= 4000) {
-    tierPrice = 7200;
-  } else if (costNGN <= 5000) {
-    tierPrice = 8800;
+    tierPrice = 4200;
   } else {
-    tierPrice = costNGN + 4000;
+    tierPrice = costNGN + 2200;
   }
 
   return Math.max(NUMBERHUB_MIN_AUTO_PRICE, tierPrice);
@@ -1122,6 +1132,68 @@ const server = http.createServer(async (req, res) => {
         error: error.message
       }, req.headers.origin);
     }
+  }
+
+  if (
+    req.method === "GET" &&
+    req.url.startsWith("/api/numbers/textverified-price")
+  ) {
+    try {
+      const url = new URL(req.url, "http://localhost");
+      const service = String(
+        url.searchParams.get("service") || ""
+      ).trim().toLowerCase();
+
+      if (!service) {
+        sendJSON(res, 400, { error: "Service is required" }, req.headers.origin);
+        return;
+      }
+
+      const supplierInfo = await textVerifiedCheckUSService(service);
+      const supplierCostUSD = textVerifiedExtractPrice(
+        supplierInfo.pricing
+      );
+
+      const sellingPrice = calculateTextVerifiedPrice(
+        "United States",
+        service,
+        supplierCostUSD
+      );
+
+      if (!Number.isFinite(sellingPrice) || sellingPrice <= 0) {
+        sendJSON(
+          res,
+          400,
+          { error: "Unable to calculate selling price" },
+          req.headers.origin
+        );
+        return;
+      }
+
+      sendJSON(
+        res,
+        200,
+        {
+          success: true,
+          provider: "TextVerified",
+          country: "United States",
+          service,
+          numberHubSellingPrice: sellingPrice
+        },
+        req.headers.origin
+      );
+    } catch (error) {
+      console.error("TextVerified customer price lookup error:", error);
+
+      sendJSON(
+        res,
+        502,
+        { error: "Unable to get the current TextVerified price" },
+        req.headers.origin
+      );
+    }
+
+    return;
   }
 
   if (req.method === "GET" && req.url === "/api/admin/textverified-inventory-test") {

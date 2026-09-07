@@ -3110,7 +3110,7 @@ function selectServiceFromQuick(serviceName) {
   window.quickSelectedService = serviceName;
 }
 
-function updateNumberPurchaseState() {
+async function updateNumberPurchaseState() {
   const country = document.getElementById("numberCountry");
   const service = document.getElementById("numberService");
   const price = document.getElementById("numberPrice");
@@ -3169,11 +3169,46 @@ function updateNumberPurchaseState() {
 
   if (
     selectedNumberType === "usa" &&
-    country.value === "United States" &&
-    countryPrices &&
-    Number.isFinite(countryPrices[serviceKey])
+    country.value === "United States"
   ) {
-    price.textContent = money(countryPrices[serviceKey]);
+    const fixedTextVerifiedServices = [
+      "whatsapp",
+      "facebook",
+      "tiktok",
+      "telegram"
+    ];
+
+    if (
+      fixedTextVerifiedServices.includes(serviceKey) &&
+      countryPrices &&
+      Number.isFinite(countryPrices[serviceKey])
+    ) {
+      price.textContent = money(countryPrices[serviceKey]);
+    } else {
+      price.textContent = "Price coming soon";
+
+      try {
+        const response = await fetch(
+          "https://numberhub.onrender.com/api/numbers/textverified-price?service=" +
+          encodeURIComponent(serviceKey)
+        );
+
+        const result = await response.json();
+
+        if (
+          response.ok &&
+          Number.isFinite(Number(result.numberHubSellingPrice)) &&
+          Number(result.numberHubSellingPrice) > 0
+        ) {
+          price.textContent = money(Number(result.numberHubSellingPrice));
+        } else {
+          price.textContent = "Price coming soon";
+        }
+      } catch (error) {
+        console.error("TextVerified customer price lookup failed:", error);
+        price.textContent = "Price coming soon";
+      }
+    }
   } else if (livePrice >= 1000) {
     price.textContent = money(livePrice);
   } else if (
