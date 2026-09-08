@@ -4153,7 +4153,9 @@ async function restoreActiveNumberPurchase() {
     const activePurchase = purchases.find((purchase) => {
       const status = String(purchase.status || "").toLowerCase();
       return (
-        (status === "active" || status === "pending") &&
+        (status === "active" ||
+         status === "pending" ||
+         status === "received") &&
         purchase.supplier_id
       );
     });
