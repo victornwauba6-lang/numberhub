@@ -3145,6 +3145,11 @@ The wallet has NOT been credited. Verify the payment before approving the reques
         return;
       }
 
+      console.log(
+        "5SIM purchase response:",
+        JSON.stringify(supplierPurchase)
+      );
+
       const phoneNumber = String(
         supplierPurchase.phone ||
         supplierPurchase.number ||
