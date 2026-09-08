@@ -1894,7 +1894,6 @@ document.getElementById("loginForm")?.addEventListener("submit", async e => {
     if (r.ok) {
       localStorage.setItem("numberhubLoggedIn", "true");
       localStorage.setItem("numberhubUser", JSON.stringify(d.user));
-      alert("LOGIN DATA:\n" + JSON.stringify(d.user, null, 2));
       message.textContent = "Login successful. Welcome back, " + d.user.name + "!";
 
       applyUserToDashboard(d.user);
