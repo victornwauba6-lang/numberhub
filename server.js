@@ -2102,7 +2102,7 @@ The wallet has NOT been credited. Verify the payment before approving the reques
       }
 
       const purchaseResult = await pool.query(
-        `SELECT id, phone_number, country, service, provider, status, sms_code, price, reference
+        `SELECT id, phone_number, country, service, provider, status, sms_code, price, reference, supplier_expires_at
          FROM number_purchases
          WHERE user_id = $1
            AND supplier_id = $2
@@ -2203,13 +2203,29 @@ The wallet has NOT been credited. Verify the payment before approving the reques
           ).trim();
         }
 
-        const terminalStatus = String(status).toLowerCase();
+        const supplierExpiryTime = purchaseResult.rows[0].supplier_expires_at
+    ? new Date(purchaseResult.rows[0].supplier_expires_at).getTime()
+    : NaN;
 
-        if (
-          (terminalStatus === "canceled" || terminalStatus === "timeout") &&
-          !smsCode &&
-          !purchaseResult.rows[0].sms_code
-        ) {
+  const localNumberExpired =
+    Number.isFinite(supplierExpiryTime) &&
+    Date.now() >= supplierExpiryTime;
+
+  const supplierStatus = String(status).toLowerCase();
+
+  const terminalStatus = localNumberExpired
+    ? "timeout"
+    : (!smsCode &&
+       !purchaseResult.rows[0].sms_code &&
+       (supplierStatus === "canceled" || supplierStatus === "timeout"))
+      ? "active"
+      : supplierStatus;
+
+  if (
+    localNumberExpired &&
+    !smsCode &&
+    !purchaseResult.rows[0].sms_code
+  ) {
           const refundClient = await pool.connect();
 
           try {
