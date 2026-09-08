@@ -2966,7 +2966,7 @@ The wallet has NOT been credited. Verify the payment before approving the reques
         x: "twitter"
       };
 
-      const product = productMap[serviceKey];
+      const product = productMap[serviceKey] || serviceKey;
 
       if (!service || !product) {
         sendJSON(res, 400, {
