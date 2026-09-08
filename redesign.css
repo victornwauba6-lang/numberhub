@@ -1198,3 +1198,100 @@ vvvvvvv.wallet strong{
   font-size: 12px;
   color: #6b7280;
 }
+
+/* Number History order cards */
+.nh-history-order-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px;
+  margin-bottom: 9px;
+  border: 1px solid #e5eee8;
+  border-radius: 15px;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(20, 60, 40, 0.04);
+}
+
+.nh-history-order-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.nh-history-order-main strong {
+  font-size: 14px;
+  color: #17251c;
+  word-break: break-word;
+}
+
+.nh-history-order-main span {
+  font-size: 12px;
+  color: #4b6354;
+}
+
+.nh-history-order-main small {
+  font-size: 11px;
+  color: #7a8b80;
+}
+
+.nh-history-order-side {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+}
+
+.nh-history-order-side strong {
+  font-size: 13px;
+  color: #17251c;
+}
+
+.nh-history-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.nh-status-active {
+  background: #eef8f1;
+  color: #187a42;
+}
+
+.nh-status-completed {
+  background: #eef4ff;
+  color: #2457a6;
+}
+
+.nh-status-cancelled {
+  background: #fff2f2;
+  color: #c0392b;
+}
+
+.nh-status-expired {
+  background: #fff7e8;
+  color: #a56a00;
+}
+
+@media (max-width: 520px) {
+  .nh-history-order-card {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .nh-history-order-main strong {
+    font-size: 13px;
+  }
+
+  .nh-history-order-side strong {
+    font-size: 12px;
+  }
+}

@@ -129,6 +129,180 @@ h1{margin:5px 0;font-size:30px}
 </script>
 <script>async function showTransactionHistory(){const s=document.getElementById("transactionHistorySection"),m=document.getElementById("transactionHistoryMessage"),l=document.getElementById("transactionHistoryList");s.style.display="block";m.textContent="Loading transactions...";l.innerHTML="";try{const r=await fetch("https://numberhub.onrender.com/api/wallet/transactions",{credentials:"include"}),d=await r.json();if(!r.ok){m.textContent=d.error||"Could not load transactions.";return}if(!d.transactions||!d.transactions.length){m.textContent="No transactions yet.";return}m.textContent="";l.innerHTML=d.transactions.map(t=>`<div style="border:1px solid #e5e7eb;border-radius:12px;padding:15px;margin:10px 0;background:#fff"><strong>₦${Number(t.amount).toFixed(2)}</strong> — <strong>${t.status}</strong><br>Method: ${t.method||"—"}<br>Type: ${t.type}<br>Reference: ${t.reference}<br><small>${new Date(t.created_at).toLocaleString()}</small></div>`).join("")}catch(e){console.error(e);m.textContent="Could not connect to the transaction server."}}</script>
 <script>
+async function loadNumbersHistory(){
+  const historyOrders = document.getElementById("nhHistoryOrders");
+  const recentPurchases = document.getElementById("nhRecentPurchases");
+  const countEl = document.getElementById("nhHistoryOrderCount");
+
+  try {
+    const response = await fetch(
+      "https://numberhub.onrender.com/api/numbers/history",
+      { credentials: "include" }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || "Unable to load number history");
+    }
+
+    const purchases = Array.isArray(result.purchases)
+      ? result.purchases
+      : [];
+
+    if (countEl) {
+      countEl.textContent = "(" + purchases.length + ")";
+    }
+
+    const serviceFilter = document.getElementById("nhHistoryService");
+    const statusFilter = document.getElementById("nhHistoryStatus");
+
+    function displayStatus(status) {
+      const value = String(status || "").toLowerCase();
+
+      if (value === "canceled" || value === "cancelled") return "Cancelled";
+      if (value === "finished" || value === "completed") return "Completed";
+      if (value === "timeout" || value === "expired") return "Expired";
+      return "Active";
+    }
+
+    function renderPurchase(purchase) {
+      const status = displayStatus(purchase.status);
+      const phone = purchase.phone_number || "Number unavailable";
+      const service = purchase.service || "Unknown service";
+      const country = purchase.country || "Unknown country";
+      const provider = purchase.provider || "";
+      const price = Number(purchase.price);
+
+      let dateText = "";
+      if (purchase.created_at) {
+        const date = new Date(purchase.created_at);
+        if (!Number.isNaN(date.getTime())) {
+          dateText = date.toLocaleString();
+        }
+      }
+
+      const card = document.createElement("div");
+      card.className = "nh-history-order-card";
+
+      const main = document.createElement("div");
+      main.className = "nh-history-order-main";
+
+      const phoneEl = document.createElement("strong");
+      phoneEl.textContent = phone;
+
+      const serviceEl = document.createElement("span");
+      serviceEl.textContent = service + " • " + country;
+
+      main.appendChild(phoneEl);
+      main.appendChild(serviceEl);
+
+      if (provider) {
+        const providerEl = document.createElement("small");
+        providerEl.textContent = provider;
+        main.appendChild(providerEl);
+      }
+
+      if (dateText) {
+        const dateEl = document.createElement("small");
+        dateEl.textContent = dateText;
+        main.appendChild(dateEl);
+      }
+
+      const side = document.createElement("div");
+      side.className = "nh-history-order-side";
+
+      const priceEl = document.createElement("strong");
+      priceEl.textContent =
+        Number.isFinite(price) ? money(price) : "";
+
+      const statusEl = document.createElement("span");
+      statusEl.className =
+        "nh-history-status nh-status-" + status.toLowerCase();
+      statusEl.textContent = status;
+
+      side.appendChild(priceEl);
+      side.appendChild(statusEl);
+
+      card.appendChild(main);
+      card.appendChild(side);
+
+      return card;
+    }
+
+    function renderList(container, items) {
+      if (!container) return;
+
+      container.innerHTML = "";
+
+      if (!items.length) {
+        container.innerHTML = `
+          <div class="nh-empty-history">
+            <div class="nh-empty-history-icon">🕐</div>
+            <strong>No number orders found</strong>
+            <span>Your purchased numbers will appear here.</span>
+          </div>
+        `;
+        return;
+      }
+
+      items.forEach((purchase) => {
+        container.appendChild(renderPurchase(purchase));
+      });
+    }
+
+    function applyHistoryFilters() {
+      const selectedService =
+        String(serviceFilter?.value || "").trim().toLowerCase();
+
+      const selectedStatus =
+        String(statusFilter?.value || "").trim().toLowerCase();
+
+      const filtered = purchases.filter((purchase) => {
+        const service =
+          String(purchase.service || "").trim().toLowerCase();
+
+        const status =
+          displayStatus(purchase.status).toLowerCase();
+
+        return (
+          (!selectedService || service === selectedService) &&
+          (!selectedStatus || status === selectedStatus)
+        );
+      });
+
+      renderList(historyOrders, filtered);
+    }
+
+    if (serviceFilter) {
+      serviceFilter.onchange = applyHistoryFilters;
+    }
+
+    if (statusFilter) {
+      statusFilter.onchange = applyHistoryFilters;
+    }
+
+    renderList(historyOrders, purchases);
+    renderList(recentPurchases, purchases.slice(0, 5));
+
+  } catch (error) {
+    console.error("Number history error:", error);
+
+    if (countEl) countEl.textContent = "(0)";
+
+    const errorHTML = `
+      <div class="nh-empty-history">
+        <div class="nh-empty-history-icon">⚠️</div>
+        <strong>Unable to load number history</strong>
+        <span>${error.message || "Please try again later."}</span>
+      </div>
+    `;
+
+    if (historyOrders) historyOrders.innerHTML = errorHTML;
+    if (recentPurchases) recentPurchases.innerHTML = errorHTML;
+  }
+}
+
 function showNumbersHistory(){
   const dashboard = document.getElementById("dashboardMain");
   const historyPage = document.getElementById("nhNumberHistoryPage");
@@ -141,6 +315,8 @@ function showNumbersHistory(){
 
   historyPage.style.display = "block";
   historyPage.scrollIntoView({behavior:"smooth", block:"start"});
+
+  loadNumbersHistory();
 }
 
 function closeNumberHistoryPage(){

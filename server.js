@@ -3322,11 +3322,12 @@ The wallet has NOT been credited. Verify the payment before approving the reques
     }
 
     if (req.method === "GET" && req.url === "/api/numbers/history") {
+      const origin = req.headers.origin;
       const cookies = String(req.headers.cookie || "");
       const match = cookies.match(/(?:^|;\s*)session=([^;]+)/);
 
       if (!match) {
-        sendJSON(res, 401, { error: "Not authenticated" });
+        sendJSON(res, 401, { error: "Not authenticated" }, origin);
         return;
       }
 
@@ -3341,7 +3342,7 @@ The wallet has NOT been credited. Verify the payment before approving the reques
       );
 
       if (sessionResult.rows.length === 0) {
-        sendJSON(res, 401, { error: "Session expired or invalid" });
+        sendJSON(res, 401, { error: "Session expired or invalid" }, origin);
         return;
       }
 
@@ -3355,7 +3356,7 @@ The wallet has NOT been credited. Verify the payment before approving the reques
         [sessionResult.rows[0].user_id]
       );
 
-      sendJSON(res, 200, { purchases: result.rows });
+      sendJSON(res, 200, { purchases: result.rows }, origin);
       return;
     }
 
