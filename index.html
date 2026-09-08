@@ -4286,9 +4286,6 @@ async function restoreActiveNumberPurchase() {
       startNumberCountdown(activePurchase.supplier_expires_at);
     }
 
-    if (typeof updateNumberPurchaseState === "function") {
-      await updateNumberPurchaseState();
-    }
 
     if (purchasePanel) {
       purchasePanel.style.display = "block";
