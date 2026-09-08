@@ -3382,7 +3382,7 @@ The wallet has NOT been credited. Verify the payment before approving the reques
 
       const result = await pool.query(
         `SELECT id, phone_number, country, service, provider,
-                price, status, sms_code, reference, created_at
+                price, status, sms_code, reference, created_at, supplier_id, supplier_expires_at, number_type, server_name
          FROM number_purchases
          WHERE user_id = $1
          ORDER BY created_at DESC
