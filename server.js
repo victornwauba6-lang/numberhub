@@ -1023,8 +1023,9 @@ async function runTextVerifiedTest(req, res, origin) {
 
 const server = http.createServer(async (req, res) => {
   try {
+    const origin = req.headers.origin;
+
     if (req.method === "OPTIONS") {
-      const origin = req.headers.origin;
       const allowedOrigin =
         origin === "http://localhost:3000" ||
         origin === "https://numberhub.onrender.com"
@@ -2620,7 +2621,7 @@ The wallet has NOT been credited. Verify the payment before approving the reques
       const match = cookies.match(/(?:^|;\s*)session=([^;]+)/);
 
       if (!match) {
-        sendJSON(res, 401, { error: "Not authenticated" });
+        sendJSON(res, 401, { error: "Not authenticated" }, origin);
         return;
       }
 
@@ -2638,7 +2639,7 @@ The wallet has NOT been credited. Verify the payment before approving the reques
       );
 
       if (sessionResult.rows.length === 0) {
-        sendJSON(res, 401, { error: "Session expired or invalid" });
+        sendJSON(res, 401, { error: "Session expired or invalid" }, origin);
         return;
       }
 
@@ -2664,7 +2665,7 @@ The wallet has NOT been credited. Verify the payment before approving the reques
         if (!service) {
           sendJSON(res, 400, {
             error: "Invalid purchase details"
-          });
+          }, origin);
           return;
         }
 
