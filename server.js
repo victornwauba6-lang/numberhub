@@ -994,6 +994,16 @@ async function initDatabase() {
     ADD COLUMN IF NOT EXISTS supplier_cost_usd NUMERIC(12,4)
   `);
 
+  await pool.query(`
+    ALTER TABLE number_purchases
+    ADD COLUMN IF NOT EXISTS number_type TEXT
+  `);
+
+  await pool.query(`
+    ALTER TABLE number_purchases
+    ADD COLUMN IF NOT EXISTS server_name TEXT
+  `);
+
   console.log("PostgreSQL database ready");
 }
 
@@ -2877,10 +2887,12 @@ The wallet has NOT been credited. Verify the payment before approving the reques
           const purchaseResult = await dbClient.query(
             `INSERT INTO number_purchases
                (user_id, phone_number, country, service, provider,
-                price, status, supplier_id, supplier_expires_at, supplier_cost_usd, reference)
-             VALUES ($1, $2, $3, $4, $5, $6, 'active', $7, $8, $9, $10)
+                price, status, supplier_id, supplier_expires_at, supplier_cost_usd, reference,
+                number_type, server_name)
+             VALUES ($1, $2, $3, $4, $5, $6, 'active', $7, $8, $9, $10, $11, $12)
              RETURNING id, phone_number, country, service, provider,
-                       price, status, supplier_id, supplier_expires_at, supplier_cost_usd, reference, created_at`,
+                       price, status, supplier_id, supplier_expires_at, supplier_cost_usd, reference,
+                       number_type, server_name, created_at`,
             [
               userId,
               phoneNumber,
@@ -2891,7 +2903,9 @@ The wallet has NOT been credited. Verify the payment before approving the reques
               supplierId,
               supplierExpiresAt,
               supplierCostUSD,
-              reference
+              reference,
+              numberType,
+              provider || ""
             ]
           );
 
@@ -3245,10 +3259,12 @@ The wallet has NOT been credited. Verify the payment before approving the reques
         const purchaseResult = await dbClient.query(
           `INSERT INTO number_purchases
              (user_id, phone_number, country, service, provider,
-              price, status, supplier_id, supplier_expires_at, supplier_cost_usd, reference)
-           VALUES ($1, $2, $3, $4, $5, $6, 'active', $7, $8, $9, $10)
+              price, status, supplier_id, supplier_expires_at, supplier_cost_usd, reference,
+              number_type, server_name)
+           VALUES ($1, $2, $3, $4, $5, $6, 'active', $7, $8, $9, $10, $11, $12)
            RETURNING id, phone_number, country, service, provider,
-                     price, status, supplier_id, supplier_expires_at, supplier_cost_usd, reference, created_at`,
+                     price, status, supplier_id, supplier_expires_at, supplier_cost_usd, reference,
+                     number_type, server_name, created_at`,
           [
             userId,
             phoneNumber,
@@ -3259,7 +3275,9 @@ The wallet has NOT been credited. Verify the payment before approving the reques
             supplierId,
             supplierExpiresAt,
             Number(option.cost),
-            reference
+            reference,
+            numberType,
+            provider || ""
           ]
         );
 

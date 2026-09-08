@@ -157,17 +157,34 @@ async function loadNumbersHistory(){
     const serviceFilter = document.getElementById("nhHistoryService");
     const statusFilter = document.getElementById("nhHistoryStatus");
 
-    function displayStatus(status) {
+    function displayStatus(status, purchase) {
       const value = String(status || "").toLowerCase();
 
-      if (value === "canceled" || value === "cancelled") return "Cancelled";
-      if (value === "finished" || value === "completed") return "Completed";
-      if (value === "timeout" || value === "expired") return "Expired";
+      if (purchase && purchase.sms_code) {
+        return "OTP Received";
+      }
+
+      if (value === "canceled" || value === "cancelled") {
+        return "Cancelled";
+      }
+
+      if (value === "timeout" || value === "expired") {
+        return "Expired";
+      }
+
+      if (value === "finished" || value === "completed") {
+        return "Completed";
+      }
+
+      if (value === "active" || value === "pending") {
+        return "Waiting for OTP";
+      }
+
       return "Active";
     }
 
     function renderPurchase(purchase) {
-      const status = displayStatus(purchase.status);
+      const status = displayStatus(purchase.status, purchase);
       const phone = purchase.phone_number || "Number unavailable";
       const service = purchase.service || "Unknown service";
       const country = purchase.country || "Unknown country";
@@ -217,14 +234,25 @@ async function loadNumbersHistory(){
         Number.isFinite(price) ? money(price) : "";
 
       const statusEl = document.createElement("span");
-      statusEl.className =
-        "nh-history-status nh-status-" + status.toLowerCase();
-      statusEl.textContent = status;
+    const statusClass = status
+      .toLowerCase()
+      .replace(/\s+/g, "-");
 
-      side.appendChild(priceEl);
-      side.appendChild(statusEl);
+    statusEl.className =
+      "nh-history-status nh-status-" + statusClass;
+    statusEl.textContent = status;
 
-      card.appendChild(main);
+    side.appendChild(priceEl);
+    side.appendChild(statusEl);
+
+    if (purchase.sms_code) {
+      const otpEl = document.createElement("small");
+      otpEl.className = "nh-history-otp";
+      otpEl.textContent = "OTP: " + purchase.sms_code;
+      side.appendChild(otpEl);
+    }
+
+    card.appendChild(main);
       card.appendChild(side);
 
       return card;
@@ -263,7 +291,7 @@ async function loadNumbersHistory(){
           String(purchase.service || "").trim().toLowerCase();
 
         const status =
-          displayStatus(purchase.status).toLowerCase();
+          displayStatus(purchase.status, purchase).toLowerCase();
 
         return (
           (!selectedService || service === selectedService) &&
@@ -3870,10 +3898,20 @@ function startNumberCountdown(expiresAt) {
       clearInterval(numberCountdownTimer);
       numberCountdownTimer = null;
       countdown.textContent = "⌛ Number expired";
+
       const waiting = document.getElementById("otpWaiting");
       if (waiting) waiting.textContent = "⌛ Number expired";
+
       const cancelButton = document.getElementById("cancelNumberButton");
       if (cancelButton) cancelButton.style.display = "none";
+
+      // Perform one final supplier/backend check so an expired
+      // number is permanently finalized in Number History.
+      if (typeof checkPurchasedOtp === "function") {
+        checkPurchasedOtp().catch((error) => {
+          console.error("Final number expiry check failed:", error);
+        });
+      }
     }
   }
 
@@ -4090,6 +4128,195 @@ function backToNumberTypes() {
 
 
 </script>
+
+<script>
+async function restoreActiveNumberPurchase() {
+  try {
+    const response = await fetch(
+      "https://numberhub.onrender.com/api/numbers/history",
+      {
+        method: "GET",
+        credentials: "include",
+        cache: "no-store"
+      }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok || !Array.isArray(result.purchases)) {
+      return;
+    }
+
+    const purchases = result.purchases;
+
+    const activePurchase = purchases.find((purchase) => {
+      const status = String(purchase.status || "").toLowerCase();
+      return (
+        (status === "active" || status === "pending") &&
+        purchase.supplier_id
+      );
+    });
+
+    if (!activePurchase) {
+      return;
+    }
+
+    window.currentNumberPurchase = activePurchase;
+    window.currentSupplierId = activePurchase.supplier_id;
+
+    const numberType =
+      activePurchase.number_type ||
+      (activePurchase.server_name === "Server C" ||
+       activePurchase.server_name === "Server D"
+        ? "otherUSA"
+        : activePurchase.country === "United States"
+          ? "usa"
+          : "allCountries");
+
+    const serverName =
+      activePurchase.server_name ||
+      (numberType === "usa" ? "Server A" : "");
+
+    window.selectedNumberType = numberType;
+    window.selectedServer = serverName;
+    window.selectedCountry = activePurchase.country || null;
+    window.selectedService = activePurchase.service || null;
+
+    showNumberInterface(numberType);
+
+    if (numberType === "usa" || numberType === "otherUSA" || numberType === "allCountries") {
+      showCountryServiceInterface(numberType, serverName);
+    }
+
+    const country = document.getElementById("numberCountry");
+    const service = document.getElementById("numberService");
+    const countrySearch = document.getElementById("countrySearch");
+    const serviceSearch = document.getElementById("serviceSearch");
+    const serviceText = document.getElementById("serviceSelectorText");
+
+    if (!country || !service) {
+      return;
+    }
+
+    country.value = activePurchase.country || "";
+    window.selectedCountry = country.value;
+
+    if (countrySearch) {
+      countrySearch.value = activePurchase.country || "";
+    }
+
+    await populateNumberServices();
+
+    service.value = activePurchase.service || "";
+    window.selectedService = service.value;
+
+    if (serviceSearch) {
+      const selectedOption =
+        service.options[service.selectedIndex];
+
+      serviceSearch.value =
+        selectedOption?.textContent?.trim() ||
+        activePurchase.service ||
+        "";
+      serviceSearch.disabled = false;
+    }
+
+    if (serviceText) {
+      serviceText.textContent =
+        "✓ " +
+        (serviceSearch?.value || activePurchase.service || "Selected service");
+    }
+
+    const purchasePanel =
+      document.getElementById("numberPurchasePanel");
+    const purchaseButton =
+      document.getElementById("buyNumberButton");
+    const statusBox =
+      document.getElementById("purchaseStatus");
+    const purchasedNumber =
+      document.getElementById("purchasedNumber");
+    const otpWaiting =
+      document.getElementById("otpWaiting");
+    const otpCode =
+      document.getElementById("otpCode");
+    const otpValue =
+      document.getElementById("otpValue");
+    const cancelButton =
+      document.getElementById("cancelNumberButton");
+
+    if (purchasePanel) {
+      purchasePanel.style.display = "block";
+    }
+
+    if (purchaseButton) {
+      purchaseButton.style.display = "none";
+      purchaseButton.disabled = true;
+    }
+
+    if (statusBox) {
+      statusBox.style.display = "block";
+    }
+
+    if (purchasedNumber) {
+      purchasedNumber.textContent =
+        activePurchase.phone_number || "—";
+    }
+
+    if (otpCode && otpValue && activePurchase.sms_code) {
+      otpCode.style.display = "block";
+      otpValue.textContent = activePurchase.sms_code;
+    } else if (otpCode) {
+      otpCode.style.display = "none";
+    }
+
+    if (otpWaiting) {
+      otpWaiting.textContent = activePurchase.sms_code
+        ? "✅ OTP received"
+        : "⏳ Waiting for OTP...";
+    }
+
+    if (cancelButton) {
+      cancelButton.style.display =
+        activePurchase.sms_code ? "none" : "block";
+      cancelButton.disabled = Boolean(activePurchase.sms_code);
+    }
+
+    if (typeof startNumberCountdown === "function") {
+      startNumberCountdown(activePurchase.supplier_expires_at);
+    }
+
+    if (typeof updateNumberPurchaseState === "function") {
+      await updateNumberPurchaseState();
+    }
+
+    if (purchasePanel) {
+      purchasePanel.style.display = "block";
+    }
+
+    if (purchaseButton) {
+      purchaseButton.style.display = "none";
+      purchaseButton.disabled = true;
+    }
+
+    if (statusBox) {
+      statusBox.style.display = "block";
+    }
+
+    await checkPurchasedOtp();
+
+    console.log(
+      "NumberHub active number restored:",
+      activePurchase.phone_number
+    );
+  } catch (error) {
+    console.error(
+      "NumberHub active number restoration failed:",
+      error
+    );
+  }
+}
+</script>
+
 <script>document.addEventListener("DOMContentLoaded", async () => {
   const savedUser = localStorage.getItem("numberhubUser");
   if (savedUser) {
@@ -4102,7 +4329,11 @@ function backToNumberTypes() {
       console.error("Saved user restore failed:", e);
     }
   }
-  await loadCurrentUser();
+  const authenticated = await loadCurrentUser();
+
+  if (authenticated) {
+    await restoreActiveNumberPurchase();
+  }
 });</script>
 </body>
 </html>
