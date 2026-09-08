@@ -19,9 +19,12 @@ const TEXTVERIFIED_PRICES = {
 const FIVESIM_SERVICE_PRICES = {};
 
 const FIVESIM_COUNTRY_PRICES = {
+  "United States": {
+    whatsapp: 4000
+  },
   "United Kingdom": {
     whatsapp: 4000,
-    telegram: 4000
+    telegram: 3000
   },
   "Canada": {
     whatsapp: 4000,
