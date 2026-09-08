@@ -3145,10 +3145,16 @@ The wallet has NOT been credited. Verify the payment before approving the reques
         return;
       }
 
-      console.log(
-        "5SIM purchase response:",
-        JSON.stringify(supplierPurchase)
-      );
+      const supplierRawResponse = String(
+        supplierPurchase?.raw || ""
+      ).trim().toLowerCase();
+
+      if (supplierRawResponse === "no free phones") {
+        sendJSON(res, 400, {
+          error: `No ${service} numbers are currently available. Please choose another service or try again later.`
+        });
+        return;
+      }
 
       const phoneNumber = String(
         supplierPurchase.phone ||
