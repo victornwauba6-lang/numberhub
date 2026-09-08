@@ -3523,6 +3523,8 @@ async function purchaseSelectedNumber() {
   const button = document.getElementById("buyNumberButton");
   const panel = document.getElementById("numberPurchasePanel");
   const statusBox = document.getElementById("purchaseStatus");
+  const selectedNumberType = window.selectedNumberType || "usa";
+  const selectedServer = window.selectedServer || "";
 
   if (!country || !service || !price || !button) return;
 
