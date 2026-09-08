@@ -4333,6 +4333,7 @@ async function restoreActiveNumberPurchase() {
   const authenticated = await loadCurrentUser();
 
   if (authenticated) {
+    await loadNumbersHistory();
     await restoreActiveNumberPurchase();
   }
 });</script>
