@@ -1861,6 +1861,11 @@ function applyUserToDashboard(user) {
     profileName.textContent = user.name;
   }
 
+  const welcomeTitle = document.querySelector(".nh-welcome-title");
+  if (welcomeTitle) {
+    welcomeTitle.textContent = "Welcome back, " + (user.name || "there") + " 👋";
+  }
+
   const walletTop = document.querySelector(".wallet strong");
   if (walletTop) {
     walletTop.textContent = "₦" + Number(user.wallet || 0).toFixed(2);
