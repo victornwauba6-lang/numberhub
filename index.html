@@ -2284,6 +2284,7 @@ async function logoutNumberHub() {
   }
 
   localStorage.removeItem("numberhubLoggedIn");
+  localStorage.removeItem("numberhubUser");
 
   const app = document.querySelector(".app");
   if (app) app.style.setProperty("display", "none", "important");
