@@ -4060,7 +4060,7 @@ The wallet has NOT been credited. Verify the payment before approving the reques
     if (req.method === "GET") {
       const requestedPath = decodeURIComponent((req.url || "/").split("?")[0]);
 
-      if (/^\/(redesign\.css|style\.css|script\.js)$/.test(requestedPath)) {
+      if (/^\/(redesign\.css|style\.css|script\.js|whatsapp-float\.js)$/.test(requestedPath)) {
         const filePath = path.join(__dirname, requestedPath.slice(1));
 
         if (fs.existsSync(filePath)) {
