@@ -127,7 +127,7 @@ h1{margin:5px 0;font-size:30px}
   window.addEventListener("load", updateMobileWallet);
 })();
 </script>
-<script>async function showTransactionHistory(){const s=document.getElementById("transactionHistorySection"),m=document.getElementById("transactionHistoryMessage"),l=document.getElementById("transactionHistoryList");s.style.display="block";m.textContent="Loading transactions...";l.innerHTML="";try{const r=await fetch("https://numberhub.onrender.com/api/wallet/transactions",{credentials:"include"}),d=await r.json();if(!r.ok){m.textContent=d.error||"Could not load transactions.";return}if(!d.transactions||!d.transactions.length){m.textContent="No transactions yet.";return}m.textContent="";l.innerHTML=d.transactions.map(t=>`<div style="border:1px solid #e5e7eb;border-radius:12px;padding:15px;margin:10px 0;background:#fff"><strong>₦${Number(t.amount).toFixed(2)}</strong> — <strong>${t.status}</strong><br>Method: ${t.method||"—"}<br>Type: ${t.type}<br>Reference: ${t.reference}<br><small>${new Date(t.created_at).toLocaleString()}</small></div>`).join("")}catch(e){console.error(e);m.textContent="Could not connect to the transaction server."}}</script>
+<script>async function showTransactionHistory(fromHistory=false){if(!fromHistory){navigateNumberHub("transactionHistory",null,null);return}const s=document.getElementById("transactionHistorySection"),m=document.getElementById("transactionHistoryMessage"),l=document.getElementById("transactionHistoryList");s.style.display="block";m.textContent="Loading transactions...";l.innerHTML="";try{const r=await fetch("https://numberhub.onrender.com/api/wallet/transactions",{credentials:"include"}),d=await r.json();if(!r.ok){m.textContent=d.error||"Could not load transactions.";return}if(!d.transactions||!d.transactions.length){m.textContent="No transactions yet.";return}m.textContent="";l.innerHTML=d.transactions.map(t=>`<div style="border:1px solid #e5e7eb;border-radius:12px;padding:15px;margin:10px 0;background:#fff"><strong>₦${Number(t.amount).toFixed(2)}</strong> — <strong>${t.status}</strong><br>Method: ${t.method||"—"}<br>Type: ${t.type}<br>Reference: ${t.reference}<br><small>${new Date(t.created_at).toLocaleString()}</small></div>`).join("")}catch(e){console.error(e);m.textContent="Could not connect to the transaction server."}}</script>
 <script>
 async function loadNumbersHistory(){
   const historyOrders = document.getElementById("nhHistoryOrders");
@@ -331,7 +331,12 @@ async function loadNumbersHistory(){
   }
 }
 
-function showNumbersHistory(){
+function showNumbersHistory(fromHistory = false){
+  if (!fromHistory) {
+    navigateNumberHub("numbersHistory", null, null);
+    return;
+  }
+
   const dashboard = document.getElementById("dashboardMain");
   const historyPage = document.getElementById("nhNumberHistoryPage");
 
@@ -348,6 +353,15 @@ function showNumbersHistory(){
 }
 
 function closeNumberHistoryPage(){
+  if (
+    window.history.state &&
+    window.history.state.numberHub === true &&
+    window.history.state.screen === "numbersHistory"
+  ) {
+    window.history.back();
+    return;
+  }
+
   const dashboard = document.getElementById("dashboardMain");
   const historyPage = document.getElementById("nhNumberHistoryPage");
 
@@ -1132,7 +1146,12 @@ if (fundButton) {
 }
 document.getElementById("modal").classList.add("show");
 }
-function fund(){
+function fund(fromHistory = false){
+if (!fromHistory) {
+  navigateNumberHub("fundWallet", null, null);
+  return;
+}
+
 document.getElementById("modalTitle").textContent="Fund Wallet";
 
 const fundButton = document.querySelector("#modal .confirm");
@@ -1243,12 +1262,28 @@ document.getElementById("modalText").textContent="Error: "+(err && err.message ?
 }
 }
 
-function closeModal(){document.getElementById("modal").classList.remove("show")}
+function closeModal(){
+  if (
+    window.history.state &&
+    window.history.state.numberHub === true &&
+    window.history.state.screen === "fundWallet"
+  ) {
+    window.history.back();
+    return;
+  }
+
+  document.getElementById("modal").classList.remove("show");
+}
 // render("WhatsApp");
 </script>
 
 <script>
-async function openMyProfile() {
+async function openMyProfile(fromHistory = false) {
+  if (!fromHistory) {
+    navigateNumberHub("profile", null, null);
+    return;
+  }
+
   const dashboard = document.getElementById("dashboardMain");
   const profile = document.getElementById("profileStandalone");
 
@@ -1344,6 +1379,15 @@ async function openMyProfile() {
 }
 
 function closeMyProfile() {
+  if (
+    window.history.state &&
+    window.history.state.numberHub === true &&
+    window.history.state.screen === "profile"
+  ) {
+    window.history.back();
+    return;
+  }
+
   const profile = document.getElementById("profileStandalone");
   const dashboard = document.getElementById("dashboardMain");
 
@@ -1359,7 +1403,12 @@ function closeMyProfile() {
   });
 }
 
-function openFAQs() {
+function openFAQs(fromHistory = false) {
+  if (!fromHistory) {
+    navigateNumberHub("faq", null, null);
+    return;
+  }
+
   const dashboard = document.getElementById("dashboardMain");
   const profile = document.getElementById("profileStandalone");
   const faq = document.getElementById("faqStandalone");
@@ -1388,6 +1437,15 @@ function openFAQs() {
 }
 
 function closeFAQs() {
+  if (
+    window.history.state &&
+    window.history.state.numberHub === true &&
+    window.history.state.screen === "faq"
+  ) {
+    window.history.back();
+    return;
+  }
+
   const faq = document.getElementById("faqStandalone");
   const dashboard = document.getElementById("dashboardMain");
 
@@ -1404,6 +1462,15 @@ function closeFAQs() {
 }
 
 function closeAdminPanel() {
+  if (
+    window.history.state &&
+    window.history.state.numberHub === true &&
+    window.history.state.screen === "admin"
+  ) {
+    window.history.back();
+    return;
+  }
+
   const admin = document.getElementById("adminPanelSection");
   const dashboard = document.getElementById("dashboardMain");
 
@@ -1428,7 +1495,12 @@ function escapeHTML(value) {
     .replace(/'/g, "&#039;");
 }
 
-async function openAdminPanel() {
+async function openAdminPanel(fromHistory = false) {
+  if (!fromHistory) {
+    navigateNumberHub("admin", null, null);
+    return;
+  }
+
   const admin = document.getElementById("adminPanelSection");
   const dashboard = document.getElementById("dashboardMain");
   const message = document.getElementById("adminDepositsMessage");
@@ -2598,7 +2670,290 @@ const numberInterfaceConfigs = {
 };
 
 
-function openStandaloneAllCountries() {
+window.numberHubNavState = {
+  screen: "dashboard",
+  numberType: null,
+  server: null
+};
+
+let numberHubExitPromptTime = 0;
+window.numberHubAllowExit = false;
+
+function getNumberHubState() {
+  return {
+    numberHub: true,
+    screen: window.numberHubNavState?.screen || "dashboard",
+    numberType: window.numberHubNavState?.numberType || null,
+    server: window.numberHubNavState?.server || null
+  };
+}
+
+function navigateNumberHub(screen, numberType = null, server = null, replace = false) {
+  const state = {
+    numberHub: true,
+    screen,
+    numberType,
+    server
+  };
+
+  window.numberHubNavState = {
+    screen,
+    numberType,
+    server
+  };
+
+  if (replace) {
+    window.history.replaceState(state, "", window.location.href);
+  } else {
+    window.history.pushState(state, "", window.location.href);
+  }
+
+  renderNumberHubState(state);
+}
+
+function setNumberHubNavState(screen, numberType = null, server = null, replace = false) {
+  navigateNumberHub(screen, numberType, server, replace);
+}
+
+function showNumberHubExitPrompt() {
+  let toast = document.getElementById("numberHubExitToast");
+
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.id = "numberHubExitToast";
+    toast.textContent = "Press back again to exit NumberHub";
+
+    toast.style.cssText = `
+      position: fixed;
+      left: 50%;
+      bottom: 28px;
+      transform: translateX(-50%);
+      z-index: 999999;
+      background: rgba(0,0,0,0.88);
+      color: #fff;
+      padding: 12px 18px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      text-align: center;
+      white-space: nowrap;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    `;
+
+    document.body.appendChild(toast);
+  }
+
+  toast.style.display = "block";
+
+  clearTimeout(window.numberHubExitToastTimer);
+
+  window.numberHubExitToastTimer = setTimeout(() => {
+    toast.style.display = "none";
+  }, 2200);
+
+  return true;
+}
+
+function renderNumberHubState(state) {
+  if (!state || state.numberHub !== true) {
+    return;
+  }
+
+  const screen = state.screen;
+  const type = state.numberType;
+  const server = state.server;
+
+  window.numberHubNavState = {
+    screen,
+    numberType: type,
+    server
+  };
+
+  if (screen === "dashboard") {
+    backToNumberTypes();
+    return;
+  }
+
+  if (screen === "server" && type) {
+    showNumberInterface(type, true);
+    return;
+  }
+
+  if (screen === "country" && type && server) {
+    showNumberInterface(type, true);
+    showCountryServiceInterface(type, server, true);
+    return;
+  }
+
+  if (screen === "numbersHistory") {
+    showNumbersHistory(true);
+    return;
+  }
+
+  if (screen === "transactionHistory") {
+    showTransactionHistory(true);
+    return;
+  }
+
+  if (screen === "profile") {
+    openMyProfile(true);
+    return;
+  }
+
+  if (screen === "faq") {
+    openFAQs(true);
+    return;
+  }
+
+  if (screen === "admin") {
+    openAdminPanel(true);
+    return;
+  }
+
+  if (screen === "buyNumbers") {
+    showBuyNumberTypes(true);
+    return;
+  }
+
+  if (screen === "fundWallet") {
+    fund(true);
+    return;
+  }
+
+  backToNumberTypes();
+}
+
+window.addEventListener("popstate", function(event) {
+  const previousScreen =
+    window.numberHubNavState?.screen || "dashboard";
+
+  if (event.state && event.state.numberHub === true) {
+    const nextScreen = event.state.screen || "dashboard";
+
+    /*
+     * Returning to the dashboard from another NumberHub screen
+     * is normal internal navigation. Do not trigger the exit guard.
+     */
+    if (
+      nextScreen === "dashboard" &&
+      previousScreen !== "dashboard"
+    ) {
+      renderNumberHubState(event.state);
+      return;
+    }
+
+    /*
+     * Dashboard -> Back reaches the dashboard history entry.
+     * This is the actual exit gesture, so require a second Back
+     * within 2.5 seconds.
+     */
+    if (
+      nextScreen === "dashboard" &&
+      previousScreen === "dashboard"
+    ) {
+      const now = Date.now();
+
+      if (now - numberHubExitPromptTime < 2500) {
+        numberHubExitPromptTime = 0;
+        window.history.back();
+        return;
+      }
+
+      numberHubExitPromptTime = now;
+      showNumberHubExitPrompt();
+
+      window.history.pushState(
+        {
+          numberHub: true,
+          screen: "dashboard",
+          numberType: null,
+          server: null,
+          exitGuard: true
+        },
+        "",
+        window.location.href
+      );
+
+      return;
+    }
+
+    renderNumberHubState(event.state);
+    return;
+  }
+
+  /*
+   * If the browser reaches a non-NumberHub history entry,
+   * allow normal browser navigation.
+   */
+});
+window.history.replaceState(
+  {
+    numberHub: true,
+    screen: "dashboard",
+    numberType: null,
+    server: null
+  },
+  "",
+  window.location.href
+);
+
+window.history.pushState(
+  {
+    numberHub: true,
+    screen: "dashboard",
+    numberType: null,
+    server: null,
+    exitGuard: true
+  },
+  "",
+  window.location.href
+);
+
+function showBuyNumberTypes(fromHistory = false) {
+  const dashboard = document.getElementById("dashboardMain");
+  const buyPanel = document.getElementById("buyNumbersPanel");
+  const buyTypes = document.getElementById("buyNumberTypes");
+  const buyInterface = document.getElementById("buyNumberInterface");
+
+  if (!dashboard || !buyPanel || !buyTypes) return;
+
+  if (!fromHistory) {
+    navigateNumberHub("buyNumbers", null, null);
+    return;
+  }
+
+  dashboard.style.setProperty("display", "block", "important");
+
+  Array.from(dashboard.children).forEach(child => {
+    child.style.setProperty("display", "none", "important");
+  });
+
+  buyPanel.style.setProperty("display", "block", "important");
+  buyPanel.style.setProperty("width", "100%", "important");
+
+  buyTypes.style.display = "grid";
+
+  if (buyInterface) {
+    buyInterface.style.display = "none";
+  }
+
+  window.selectedNumberType = null;
+  window.selectedServer = null;
+  window.selectedCountry = null;
+  window.selectedService = null;
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
+}
+
+function openStandaloneAllCountries(fromHistory = false) {
+  if (!fromHistory) {
+    navigateNumberHub("server", "allCountries", null);
+    return;
+  }
+
   const dashboard = document.getElementById("dashboardMain");
   const buyPanel = document.getElementById("buyNumbersPanel");
   const buyTypes = document.getElementById("buyNumberTypes");
@@ -2627,7 +2982,7 @@ function openStandaloneAllCountries() {
   }
 
   // Open the existing All Countries server-selection interface.
-  showNumberInterface("allCountries");
+  showNumberInterface("allCountries", true);
 
   window.scrollTo({
     top: 0,
@@ -2635,7 +2990,7 @@ function openStandaloneAllCountries() {
   });
 }
 
-function showNumberInterface(type) {
+function showNumberInterface(type, fromHistory = false) {
   const config = numberInterfaceConfigs[type];
   const types = document.getElementById("buyNumberTypes");
   const box = document.getElementById("buyNumberInterface");
@@ -2663,6 +3018,11 @@ function showNumberInterface(type) {
 
   types.style.display = "none";
   box.style.display = "block";
+
+  if (!fromHistory) {
+    navigateNumberHub("server", type, null);
+    return;
+  }
 
   title.textContent = config.title;
 
@@ -2770,7 +3130,7 @@ function selectNumberServer(type, serverName, card) {
   window.selectedNumberType = type;
   window.selectedServer = serverName;
 
-  showCountryServiceInterface(type, serverName);
+  navigateNumberHub("country", type, serverName);
 }
 
 function showCountryServiceInterface(type, serverName) {
@@ -4062,18 +4422,23 @@ async function checkPurchasedOtp() {
 }
 
 function backToServerSelection() {
+  if (window.history.state && window.history.state.numberHub === true) {
+    window.history.back();
+    return;
+  }
+
   if (window.selectedNumberType) {
-    showNumberInterface(window.selectedNumberType);
+    showNumberInterface(window.selectedNumberType, true);
   }
 }
 
 function backToNumberTypes() {
   const box = document.getElementById("buyNumberInterface");
   const buyPanel = document.getElementById("buyNumbersPanel");
+  const buyTypes = document.getElementById("buyNumberTypes");
   const dashboard = document.getElementById("dashboardMain");
   const historyPage = document.getElementById("nhNumberHistoryPage");
 
-  // Close the standalone number interface.
   if (box) {
     box.style.display = "none";
     box.innerHTML = "";
@@ -4083,50 +4448,70 @@ function backToNumberTypes() {
     buyPanel.style.display = "none";
   }
 
-  // Make sure Number History is not left visible.
+  if (buyTypes) {
+    buyTypes.style.display = "none";
+  }
+
   if (historyPage) {
     historyPage.style.setProperty("display", "none", "important");
   }
 
-  // Reset number selection state.
   window.selectedNumberType = null;
   window.selectedServer = null;
   window.selectedCountry = null;
   window.selectedService = null;
 
-  // Restore the normal dashboard.
   if (dashboard) {
     dashboard.style.setProperty("display", "block", "important");
 
     const nhDashboard = dashboard.querySelector(".nh-dashboard");
 
     if (nhDashboard) {
-      nhDashboard.style.setProperty("display", "block", "important");
+      nhDashboard.style.setProperty(
+        "display",
+        "block",
+        "important"
+      );
     }
 
-    const transactionHistory = document.getElementById("transactionHistorySection");
-    const availableNumbers = document.getElementById("availableNumbersPanel");
-    const operatorPanel = document.getElementById("operatorPanel");
+    const transactionHistory =
+      document.getElementById("transactionHistorySection");
+
+    const availableNumbers =
+      document.getElementById("availableNumbersPanel");
+
+    const operatorPanel =
+      document.getElementById("operatorPanel");
 
     if (transactionHistory) {
-      transactionHistory.style.setProperty("display", "none", "important");
+      transactionHistory.style.setProperty(
+        "display",
+        "none",
+        "important"
+      );
     }
 
     if (availableNumbers) {
-      availableNumbers.style.setProperty("display", "none", "important");
+      availableNumbers.style.setProperty(
+        "display",
+        "none",
+        "important"
+      );
     }
 
     if (operatorPanel) {
-      operatorPanel.style.setProperty("display", "none", "important");
+      operatorPanel.style.setProperty(
+        "display",
+        "none",
+        "important"
+      );
     }
   }
 
-  // Return to the top of the dashboard.
   document.documentElement.scrollTop = 0;
   document.body.scrollTop = 0;
   window.scrollTo(0, 0);
 }
-
 
 </script>
 
