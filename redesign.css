@@ -1317,3 +1317,167 @@ vvvvvvv.wallet strong{
     font-size: 12px;
   }
 }
+
+/* ===== NumberHub Compact Recent Dashboard ===== */
+.nh-recent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nh-recent-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 14px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+}
+
+.nh-recent-item-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.nh-recent-item-title {
+  display: block;
+  font-size: 14px;
+  font-weight: 800;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nh-recent-item-meta {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.nh-recent-item-side {
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.nh-recent-item-amount {
+  display: block;
+  font-size: 14px;
+  font-weight: 800;
+  color: #111827;
+}
+
+.nh-recent-item-date {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.nh-recent-item-amount.positive {
+  color: #16a34a;
+}
+
+.nh-recent-item-amount.negative {
+  color: #dc2626;
+}
+
+.nh-recent-transactions-section {
+  margin-top: 26px !important;
+}
+
+@media (max-width: 520px) {
+  .nh-recent-item {
+    padding: 12px;
+  }
+
+  .nh-recent-item-title {
+    font-size: 13px;
+  }
+
+  .nh-recent-item-amount {
+    font-size: 13px;
+  }
+}
+
+/* ===== Transaction History Interface ===== */
+#transactionHistorySection {
+  background: #f8fafc;
+  border: 0;
+  border-radius: 0;
+  padding: 16px;
+  min-height: 60vh;
+}
+
+#transactionHistorySection .nh-history-topbar {
+  margin-bottom: 18px;
+}
+
+#transactionHistoryMessage {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.nh-transaction-history-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 15px;
+  margin-bottom: 10px;
+}
+
+.nh-transaction-history-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.nh-transaction-history-top strong:first-child {
+  font-size: 17px;
+  color: #111827;
+}
+
+.nh-transaction-history-top span {
+  font-size: 12px;
+  font-weight: 700;
+  color: #16a34a;
+  text-transform: capitalize;
+}
+
+.nh-transaction-history-details {
+  display: grid;
+  gap: 8px;
+}
+
+.nh-transaction-history-details > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.nh-transaction-history-details span {
+  color: #6b7280;
+}
+
+.nh-transaction-history-details strong {
+  color: #111827;
+  text-align: right;
+  word-break: break-word;
+}
+
+@media (max-width: 520px) {
+  #transactionHistorySection {
+    padding: 14px 12px;
+  }
+
+  .nh-transaction-history-card {
+    padding: 13px;
+  }
+}
+

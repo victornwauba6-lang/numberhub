@@ -127,7 +127,93 @@ h1{margin:5px 0;font-size:30px}
   window.addEventListener("load", updateMobileWallet);
 })();
 </script>
-<script>async function showTransactionHistory(fromHistory=false){if(!fromHistory){navigateNumberHub("transactionHistory",null,null);return}const s=document.getElementById("transactionHistorySection"),m=document.getElementById("transactionHistoryMessage"),l=document.getElementById("transactionHistoryList");s.style.display="block";m.textContent="Loading transactions...";l.innerHTML="";try{const r=await fetch("https://numberhub.onrender.com/api/wallet/transactions",{credentials:"include"}),d=await r.json();if(!r.ok){m.textContent=d.error||"Could not load transactions.";return}if(!d.transactions||!d.transactions.length){m.textContent="No transactions yet.";return}m.textContent="";l.innerHTML=d.transactions.map(t=>`<div style="border:1px solid #e5e7eb;border-radius:12px;padding:15px;margin:10px 0;background:#fff"><strong>₦${Number(t.amount).toFixed(2)}</strong> — <strong>${t.status}</strong><br>Method: ${t.method||"—"}<br>Type: ${t.type}<br>Reference: ${t.reference}<br><small>${new Date(t.created_at).toLocaleString()}</small></div>`).join("")}catch(e){console.error(e);m.textContent="Could not connect to the transaction server."}}</script>
+<script>
+async function showTransactionHistory(fromHistory=false){
+  if(!fromHistory){
+    navigateNumberHub("transactionHistory",null,null);
+    return;
+  }
+
+  const dashboard = document.getElementById("dashboardMain");
+  const section = document.getElementById("transactionHistorySection");
+  const message = document.getElementById("transactionHistoryMessage");
+  const list = document.getElementById("transactionHistoryList");
+  const numberHistory = document.getElementById("nhNumberHistoryPage");
+  const profile = document.getElementById("profileStandalone");
+  const faq = document.getElementById("faqStandalone");
+  const admin = document.getElementById("adminPanelSection");
+
+  if(!dashboard || !section) return;
+
+  const mainDashboard = dashboard.querySelector(".nh-dashboard");
+  if(mainDashboard) mainDashboard.style.display = "none";
+
+  if(numberHistory) numberHistory.style.display = "none";
+  if(profile) profile.style.display = "none";
+  if(faq) faq.style.display = "none";
+  if(admin) admin.style.display = "none";
+
+  section.style.display = "block";
+  section.scrollIntoView({behavior:"smooth",block:"start"});
+
+  message.textContent = "Loading transactions...";
+  list.innerHTML = "";
+
+  try{
+    const r = await fetch(
+      "https://numberhub.onrender.com/api/wallet/transactions",
+      {credentials:"include"}
+    );
+
+    const d = await r.json();
+
+    if(!r.ok){
+      message.textContent = d.error || "Could not load transactions.";
+      return;
+    }
+
+    if(!d.transactions || !d.transactions.length){
+      message.textContent = "No transactions yet.";
+      return;
+    }
+
+    message.textContent = "";
+
+    list.innerHTML = d.transactions.map(t => `
+      <div class="nh-transaction-history-card">
+        <div class="nh-transaction-history-top">
+          <strong>₦${Number(t.amount).toFixed(2)}</strong>
+          <span>${t.status || "—"}</span>
+        </div>
+        <div class="nh-transaction-history-details">
+          <div><span>Method</span><strong>${t.method || "—"}</strong></div>
+          <div><span>Type</span><strong>${t.type || "—"}</strong></div>
+          <div><span>Reference</span><strong>${t.reference || "—"}</strong></div>
+          <div><span>Date</span><strong>${t.created_at ? new Date(t.created_at).toLocaleString() : "—"}</strong></div>
+        </div>
+      </div>
+    `).join("");
+
+  }catch(e){
+    console.error(e);
+    message.textContent = "Could not connect to the transaction server.";
+  }
+}
+
+function closeTransactionHistoryPage(){
+  const dashboard = document.getElementById("dashboardMain");
+  const section = document.getElementById("transactionHistorySection");
+
+  if(section) section.style.display = "none";
+
+  if(dashboard){
+    const mainDashboard = dashboard.querySelector(".nh-dashboard");
+    if(mainDashboard) mainDashboard.style.display = "";
+  }
+
+  navigateNumberHub("dashboard",null,null);
+}
+</script>
 <script>
 async function loadNumbersHistory(){
   const historyOrders = document.getElementById("nhHistoryOrders");
@@ -311,7 +397,7 @@ async function loadNumbersHistory(){
     }
 
     renderList(historyOrders, purchases);
-    renderList(recentPurchases, purchases.slice(0, 5));
+    renderRecentDashboardPurchases(purchases);
 
   } catch (error) {
     console.error("Number history error:", error);
@@ -329,6 +415,161 @@ async function loadNumbersHistory(){
     if (historyOrders) historyOrders.innerHTML = errorHTML;
     if (recentPurchases) recentPurchases.innerHTML = errorHTML;
   }
+}
+
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+async function loadRecentDashboardTransactions() {
+  const container = document.getElementById("nhRecentTransactions");
+  if (!container) return;
+
+  try {
+    const response = await fetch(
+      "https://numberhub.onrender.com/api/wallet/transactions",
+      { credentials: "include" }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || "Unable to load transactions");
+    }
+
+    const transactions = Array.isArray(result.transactions)
+      ? result.transactions.slice(0, 5)
+      : [];
+
+    if (!transactions.length) {
+      container.innerHTML = `
+        <div class="nh-empty-history">
+          <div class="nh-empty-history-icon">💳</div>
+          <strong>No recent transactions</strong>
+          <span>Your latest wallet activity will appear here.</span>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = transactions.map((transaction) => {
+      const type = String(transaction.type || "").toLowerCase();
+
+      let sign = "";
+      let amountClass = "";
+
+      if (type === "deposit" || type === "refund") {
+        sign = "+";
+        amountClass = "positive";
+      } else if (type === "purchase") {
+        sign = "-";
+        amountClass = "negative";
+      }
+
+      const amount = Number(transaction.amount);
+      const amountText = Number.isFinite(amount)
+        ? sign + money(amount)
+        : "—";
+
+      const method =
+        transaction.method ||
+        transaction.description ||
+        transaction.type ||
+        "Transaction";
+
+      const date = transaction.created_at
+        ? new Date(transaction.created_at)
+        : null;
+
+      const dateText =
+        date && !Number.isNaN(date.getTime())
+          ? date.toLocaleDateString()
+          : "—";
+
+      return `
+        <div class="nh-recent-item">
+          <div class="nh-recent-item-main">
+            <span class="nh-recent-item-title">${escapeHtml(method)}</span>
+            <span class="nh-recent-item-meta">${escapeHtml(
+              transaction.description || transaction.type || "Wallet transaction"
+            )}</span>
+          </div>
+          <div class="nh-recent-item-side">
+            <span class="nh-recent-item-amount ${amountClass}">${escapeHtml(amountText)}</span>
+            <span class="nh-recent-item-date">${escapeHtml(dateText)}</span>
+          </div>
+        </div>
+      `;
+    }).join("");
+  } catch (error) {
+    console.error("Recent transactions error:", error);
+
+    container.innerHTML = `
+      <div class="nh-empty-history">
+        <div class="nh-empty-history-icon">⚠️</div>
+        <strong>Unable to load transactions</strong>
+        <span>Please try again later.</span>
+      </div>
+    `;
+  }
+}
+
+function renderRecentDashboardPurchases(purchases) {
+  const container = document.getElementById("nhRecentPurchases");
+  if (!container) return;
+
+  const recent = Array.isArray(purchases)
+    ? purchases.slice(0, 5)
+    : [];
+
+  if (!recent.length) {
+    container.innerHTML = `
+      <div class="nh-empty-history">
+        <div class="nh-empty-history-icon">🕐</div>
+        <strong>No recent purchases</strong>
+        <span>Your purchased numbers will appear here.</span>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = recent.map((purchase) => {
+    const service = purchase.service || "Unknown service";
+    const phone = purchase.phone_number || "Number unavailable";
+    const amount = Number(purchase.price);
+
+    const amountText = Number.isFinite(amount)
+      ? money(amount)
+      : "—";
+
+    const date = purchase.created_at
+      ? new Date(purchase.created_at)
+      : null;
+
+    const dateText =
+      date && !Number.isNaN(date.getTime())
+        ? date.toLocaleDateString()
+        : "—";
+
+    return `
+      <div class="nh-recent-item">
+        <div class="nh-recent-item-main">
+          <span class="nh-recent-item-title">${escapeHtml(service)}</span>
+          <span class="nh-recent-item-meta">${escapeHtml(phone)}</span>
+        </div>
+        <div class="nh-recent-item-side">
+          <span class="nh-recent-item-amount">${escapeHtml(amountText)}</span>
+          <span class="nh-recent-item-date">${escapeHtml(dateText)}</span>
+        </div>
+      </div>
+    `;
+  }).join("");
 }
 
 function showNumbersHistory(fromHistory = false){
@@ -780,8 +1021,14 @@ window.addEventListener("error", function(e) {
 
 <main class="main" id="dashboardMain" style="display:none;">
 <section id="transactionHistorySection" class="panel" style="display:none;margin-bottom:20px">
-  <div class="green">ACCOUNT</div>
-  <h2>Transaction History</h2>
+  <div class="nh-history-topbar">
+    <button type="button" class="nh-history-back" onclick="closeTransactionHistoryPage()">←</button>
+    <div>
+      <div class="green">ACCOUNT</div>
+      <h2>Transaction History</h2>
+    </div>
+  </div>
+
   <p id="transactionHistoryMessage">Loading transactions...</p>
   <div id="transactionHistoryList"></div>
 </section>
@@ -906,25 +1153,42 @@ window.addEventListener("error", function(e) {
   </div>
 
   <section class="nh-recent-section">
-    <div class="nh-section-heading">
-      <div>
-        <div class="green">RECENT NUMBER HISTORY</div>
-        <h2>Recent Number History</h2>
-      </div>
-      <button type="button" class="nh-view-all" onclick="showNumbersHistory()">View All →</button>
+  <div class="nh-section-heading">
+    <div>
+      <div class="green">RECENT NUMBER PURCHASES</div>
+      <h2>Recent Number Purchases</h2>
     </div>
+    <button type="button" class="nh-view-all" onclick="showNumbersHistory()">View All →</button>
+  </div>
 
-    <div id="nhRecentPurchases">
-      <div class="nh-empty-history">
-        <div class="nh-empty-history-icon">🕐</div>
-        <strong>No recent number history yet</strong>
-        <span>Your purchased numbers will appear here.</span>
-      </div>
+  <div id="nhRecentPurchases" class="nh-recent-list">
+    <div class="nh-empty-history">
+      <div class="nh-empty-history-icon">🕐</div>
+      <strong>Loading recent purchases...</strong>
+      <span>Your latest number purchases will appear here.</span>
     </div>
-  </section>
+  </div>
+</section>
+
+<section class="nh-recent-section nh-recent-transactions-section">
+  <div class="nh-section-heading">
+    <div>
+      <div class="green">RECENT TRANSACTIONS</div>
+      <h2>Recent Transactions</h2>
+    </div>
+    <button type="button" class="nh-view-all" onclick="showTransactionHistory()">View All →</button>
+  </div>
+
+  <div id="nhRecentTransactions" class="nh-recent-list">
+    <div class="nh-empty-history">
+      <div class="nh-empty-history-icon">💳</div>
+      <strong>Loading recent transactions...</strong>
+      <span>Your latest wallet activity will appear here.</span>
+    </div>
+  </div>
+</section>
 
 </div>
-
 
 <section
   id="buyNumbersPanel"
@@ -4824,6 +5088,7 @@ async function restoreActiveNumberPurchase() {
 
   if (authenticated) {
     await loadNumbersHistory();
+    await loadRecentDashboardTransactions();
     await restoreActiveNumberPurchase();
   }
 });</script>
