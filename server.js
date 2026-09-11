@@ -1619,6 +1619,25 @@ The wallet has NOT been credited. Verify the payment before approving the reques
       }
     }
 
+    if (req.method === "GET" && req.url === "/api/admin/customer-count") {
+      const admin = await getAdminUserId(req);
+      if (admin.error) {
+        sendJSON(res, admin.status, { error: admin.error });
+        return;
+      }
+
+      const result = await pool.query(
+        `SELECT COUNT(*)::int AS total_customers
+         FROM users
+         WHERE is_admin = FALSE`
+      );
+
+      sendJSON(res, 200, {
+        total_customers: result.rows[0].total_customers
+      });
+      return;
+    }
+
     if (req.method === "GET" && req.url === "/api/admin/deposits") {
       const admin = await getAdminUserId(req);
 

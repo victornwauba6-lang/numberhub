@@ -758,6 +758,17 @@ window.addEventListener("error", function(e) {
 </div>
 
 <section id="adminPanelSection" class="panel" style="display:none;margin-bottom:20px">
+  <div style="border:1px solid #dcfce7;border-radius:16px;padding:18px;margin-bottom:18px;background:#f0fdf4;">
+    <div style="color:#16a34a;font-size:13px;font-weight:800;letter-spacing:.5px;">CUSTOMERS</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:6px;">
+      <div>
+        <div style="font-size:16px;font-weight:800;color:#0f172a;">Total Customers</div>
+        <div style="font-size:13px;color:#64748b;margin-top:4px;">Registered customer accounts</div>
+      </div>
+      <div id="adminTotalCustomers" style="font-size:32px;font-weight:900;color:#16a34a;">—</div>
+    </div>
+  </div>
+
   <div class="green">ADMIN</div>
   <h2>Wallet Funding Requests</h2>
   <p id="adminDepositsMessage">Loading pending funding requests...</p>
@@ -1525,12 +1536,40 @@ async function openAdminPanel(fromHistory = false) {
     list.innerHTML = "";
   }
 
-  await loadAdminDeposits();
+  await Promise.all([
+    loadAdminCustomerCount(),
+    loadAdminDeposits()
+  ]);
 
   window.scrollTo({
     top: 0,
     behavior: "smooth"
   });
+}
+
+async function loadAdminCustomerCount() {
+  const countEl = document.getElementById("adminTotalCustomers");
+  if (!countEl) return;
+
+  countEl.textContent = "…";
+
+  try {
+    const r = await fetch("https://numberhub.onrender.com/api/admin/customer-count", {
+      method: "GET",
+      credentials: "include"
+    });
+
+    const data = await r.json().catch(() => ({}));
+
+    if (!r.ok) {
+      throw new Error(data.error || "Could not load customer count.");
+    }
+
+    countEl.textContent = Number(data.total_customers || 0).toLocaleString();
+  } catch (error) {
+    console.error("Customer count error:", error);
+    countEl.textContent = "—";
+  }
 }
 
 async function loadAdminDeposits() {
