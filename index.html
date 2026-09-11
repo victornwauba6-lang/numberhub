@@ -83,7 +83,7 @@ h1{margin:5px 0;font-size:30px}
     transition:opacity .25s ease;
   }
 
-  .sidebar.open + .sidebar-overlay{
+  .sidebar-overlay.open{
     opacity:1;
     pointer-events:auto;
   }
@@ -339,6 +339,9 @@ function showNumbersHistory(fromHistory = false){
 
   const dashboard = document.getElementById("dashboardMain");
   const historyPage = document.getElementById("nhNumberHistoryPage");
+  const profile = document.getElementById("profileStandalone");
+  const faq = document.getElementById("faqStandalone");
+  const admin = document.getElementById("adminPanelSection");
 
   if (!dashboard || !historyPage) return;
 
@@ -1416,6 +1419,14 @@ function closeMyProfile() {
 
 function openFAQs(fromHistory = false) {
   if (!fromHistory) {
+    const sidebar = document.querySelector(".sidebar");
+    const overlay = document.querySelector(".sidebar-overlay");
+
+    if (sidebar) sidebar.classList.remove("open");
+    if (overlay) overlay.classList.remove("open");
+
+    window.numberHubSidebarOpen = false;
+
     navigateNumberHub("faq", null, null);
     return;
   }
@@ -1880,9 +1891,38 @@ function goToSection(id) {
 }
 
 function toggleSidebar() {
-  const sidebar = document.querySelector(".sidebar");
-  if (sidebar) sidebar.classList.toggle("open");
-}
+    const sidebar = document.querySelector(".sidebar");
+    const overlay = document.querySelector(".sidebar-overlay");
+
+    if (!sidebar) return;
+
+    const isOpen = sidebar.classList.contains("open");
+
+    if (isOpen) {
+      sidebar.classList.remove("open");
+      if (overlay) overlay.classList.remove("open");
+      window.numberHubSidebarOpen = false;
+      return;
+    }
+
+    sidebar.classList.add("open");
+    if (overlay) overlay.classList.add("open");
+    window.numberHubSidebarOpen = true;
+  }
+
+  window.addEventListener("popstate", function(event) {
+    if (window.numberHubSidebarOpen === true) {
+      const sidebar = document.querySelector(".sidebar");
+      const overlay = document.querySelector(".sidebar-overlay");
+
+      if (sidebar) sidebar.classList.remove("open");
+      if (overlay) overlay.classList.remove("open");
+
+      window.numberHubSidebarOpen = false;
+      event.stopImmediatePropagation();
+    }
+  });
+
 </script>
 <script>
 function applyUserToDashboard(user) {
@@ -4478,11 +4518,19 @@ function backToServerSelection() {
 }
 
 function backToNumberTypes() {
+  const modal = document.getElementById("modal");
+  if (modal) {
+    modal.classList.remove("show");
+  }
+
   const box = document.getElementById("buyNumberInterface");
   const buyPanel = document.getElementById("buyNumbersPanel");
   const buyTypes = document.getElementById("buyNumberTypes");
   const dashboard = document.getElementById("dashboardMain");
   const historyPage = document.getElementById("nhNumberHistoryPage");
+  const profile = document.getElementById("profileStandalone");
+  const faq = document.getElementById("faqStandalone");
+  const admin = document.getElementById("adminPanelSection");
 
   if (box) {
     box.style.display = "none";
@@ -4499,6 +4547,19 @@ function backToNumberTypes() {
 
   if (historyPage) {
     historyPage.style.setProperty("display", "none", "important");
+  }
+
+  // Always hide standalone screens when returning to Dashboard.
+  if (profile) {
+    profile.style.setProperty("display", "none", "important");
+  }
+
+  if (faq) {
+    faq.style.setProperty("display", "none", "important");
+  }
+
+  if (admin) {
+    admin.style.setProperty("display", "none", "important");
   }
 
   window.selectedNumberType = null;
