@@ -1424,9 +1424,70 @@ if (fundButton) {
 }
 document.getElementById("modal").classList.add("show");
 }
+function saveFundWalletState(step){
+  try {
+    sessionStorage.setItem("nhFundWalletState", JSON.stringify({
+      amount: nhFundAmount,
+      method: nhFundMethod,
+      step: step
+    }));
+  } catch (e) {
+    console.warn("Could not save Fund Wallet state:", e);
+  }
+}
+
+function loadFundWalletState(){
+  try {
+    const raw = sessionStorage.getItem("nhFundWalletState");
+    if (!raw) return null;
+
+    const saved = JSON.parse(raw);
+
+    if (!saved || typeof saved !== "object") {
+      return null;
+    }
+
+    const amount = Number(saved.amount || 0);
+    const method = String(saved.method || "");
+    const step = Number(saved.step || 1);
+
+    return {
+      amount: Number.isFinite(amount) ? amount : 0,
+      method: method,
+      step: [1, 2, 3].includes(step) ? step : 1
+    };
+  } catch (e) {
+    console.warn("Could not load Fund Wallet state:", e);
+    return null;
+  }
+}
+
+function clearFundWalletState(){
+  try {
+    sessionStorage.removeItem("nhFundWalletState");
+  } catch (e) {
+    console.warn("Could not clear Fund Wallet state:", e);
+  }
+}
+
 function fund(fromHistory = false){
   if (!fromHistory) {
+    clearFundWalletState();
+
     navigateNumberHub("fundWallet", null, null);
+
+    window.history.replaceState(
+      {
+        numberHub: true,
+        screen: "fundWallet",
+        numberType: null,
+        server: null,
+        fundStep: 1
+      },
+      "",
+      window.location.href
+    );
+
     return;
   }
 
@@ -1445,6 +1506,24 @@ function fund(fromHistory = false){
   if (faq) faq.style.display = "none";
   if (admin) admin.style.display = "none";
 
+  const saved = loadFundWalletState();
+
+  if (saved) {
+    nhFundAmount = saved.amount;
+    nhFundMethod = saved.method;
+  }
+
+  const historyStep =
+    window.history.state &&
+    window.history.state.numberHub === true &&
+    window.history.state.screen === "fundWallet" &&
+    Number(window.history.state.fundStep);
+
+  const step =
+    [1, 2, 3].includes(historyStep)
+      ? historyStep
+      : (saved ? saved.step : 1);
+
   let page = document.getElementById("nhFundWalletPage");
 
   if (!page) {
@@ -1459,7 +1538,10 @@ function fund(fromHistory = false){
 
   page.innerHTML = `
     <div class="nh-fund-topbar">
-      <button type="button" class="nh-history-back" onclick="closeFundWalletPage()">←</button>
+      <button type="button" class="nh-history-back" onclick="fundWalletBack()">
+        ←
+      </button>
+
       <div>
         <div class="green">WALLET</div>
         <h2>Fund Wallet</h2>
@@ -1471,12 +1553,16 @@ function fund(fromHistory = false){
         <span>1</span>
         <small>Amount</small>
       </div>
+
       <div class="nh-fund-line"></div>
+
       <div class="nh-fund-step" data-step="2">
         <span>2</span>
         <small>Payment</small>
       </div>
+
       <div class="nh-fund-line"></div>
+
       <div class="nh-fund-step" data-step="3">
         <span>3</span>
         <small>Confirm</small>
@@ -1486,7 +1572,7 @@ function fund(fromHistory = false){
     <div id="nhFundWalletContent"></div>
   `;
 
-  renderFundWalletStep(1);
+  renderFundWalletStep(step);
   page.scrollIntoView({behavior:"smooth", block:"start"});
 }
 
@@ -1501,9 +1587,31 @@ function updateFundWalletProgress(step){
   });
 }
 
-function renderFundWalletStep(step){
+function renderFundWalletStep(step, updateHistory = false){
   const content = document.getElementById("nhFundWalletContent");
   if (!content) return;
+
+  if (![1, 2, 3].includes(Number(step))) {
+    step = 1;
+  }
+
+  if (updateHistory) {
+    saveFundWalletState(step);
+
+    const currentState = window.history.state || {};
+
+    window.history.pushState(
+      {
+        numberHub: true,
+        screen: "fundWallet",
+        numberType: null,
+        server: null,
+        fundStep: step
+      },
+      "",
+      window.location.href
+    );
+  }
 
   updateFundWalletProgress(step);
 
@@ -1512,12 +1620,15 @@ function renderFundWalletStep(step){
       <div class="nh-fund-card">
         <div class="nh-fund-kicker">STEP 1</div>
         <h3>How much would you like to add?</h3>
-        <p class="nh-fund-muted">Choose an amount to add to your NumberHub wallet.</p>
+        <p class="nh-fund-muted">
+          Choose an amount to add to your NumberHub wallet.
+        </p>
 
         <label class="nh-fund-label" for="nhFundAmount">Amount</label>
 
         <div class="nh-fund-amount-wrap">
           <span>₦</span>
+
           <input
             id="nhFundAmount"
             type="number"
@@ -1537,7 +1648,11 @@ function renderFundWalletStep(step){
 
         <p id="nhFundAmountError" class="nh-fund-error"></p>
 
-        <button type="button" class="nh-fund-primary" onclick="continueFundAmount()">
+        <button
+          type="button"
+          class="nh-fund-primary"
+          onclick="continueFundAmount()"
+        >
           Continue →
         </button>
       </div>
@@ -1549,39 +1664,62 @@ function renderFundWalletStep(step){
   if (step === 2) {
     content.innerHTML = `
       <div class="nh-fund-card">
-        <button type="button" class="nh-fund-back-link" onclick="renderFundWalletStep(1)">
+        <button
+          type="button"
+          class="nh-fund-back-link"
+          onclick="fundWalletBack()"
+        >
           ← Back
         </button>
 
         <div class="nh-fund-kicker">STEP 2</div>
         <h3>How would you like to pay?</h3>
-        <p class="nh-fund-muted">Select where you would like to send the money.</p>
+
+        <p class="nh-fund-muted">
+          Select where you would like to send the money.
+        </p>
 
         <div class="nh-payment-methods">
-          <button type="button" class="nh-payment-card ${nhFundMethod === "Kuda" ? "selected" : ""}" onclick="chooseFundMethod(this, 'Kuda')">
+
+          <button
+            type="button"
+            class="nh-payment-card ${nhFundMethod === "Kuda" ? "selected" : ""}"
+            onclick="chooseFundMethod(this, 'Kuda')"
+          >
             <span class="nh-payment-icon">🏦</span>
+
             <span>
               <strong>Kuda</strong>
               <small>Bank transfer</small>
             </span>
+
             <span class="nh-payment-check">✓</span>
           </button>
 
-
-
-          <button type="button" class="nh-payment-card ${nhFundMethod === "Bank Transfer" ? "selected" : ""}" onclick="chooseFundMethod(this, 'Bank Transfer')">
+          <button
+            type="button"
+            class="nh-payment-card ${nhFundMethod === "Bank Transfer" ? "selected" : ""}"
+            onclick="chooseFundMethod(this, 'Bank Transfer')"
+          >
             <span class="nh-payment-icon">🏛️</span>
+
             <span>
               <strong>Bank Transfer</strong>
               <small>Transfer from your bank</small>
             </span>
+
             <span class="nh-payment-check">✓</span>
           </button>
+
         </div>
 
         <p id="nhFundMethodError" class="nh-fund-error"></p>
 
-        <button type="button" class="nh-fund-primary" onclick="continueFundMethod()">
+        <button
+          type="button"
+          class="nh-fund-primary"
+          onclick="continueFundMethod()"
+        >
           Continue →
         </button>
       </div>
@@ -1596,14 +1734,23 @@ function renderFundWalletStep(step){
 
     content.innerHTML = `
       <div class="nh-fund-card">
-        <button type="button" class="nh-fund-back-link" onclick="renderFundWalletStep(2)">
+
+        <button
+          type="button"
+          class="nh-fund-back-link"
+          onclick="fundWalletBack()"
+        >
           ← Back
         </button>
 
         <div class="nh-fund-kicker">STEP 3</div>
+
         <h3>Make Your Payment</h3>
+
         <p class="nh-fund-muted">
-          Transfer exactly <strong>₦${Number(nhFundAmount).toLocaleString()}</strong> to the account below.
+          Transfer exactly
+          <strong>₦${Number(nhFundAmount).toLocaleString()}</strong>
+          to the account below.
         </p>
 
         <div class="nh-fund-payment-summary">
@@ -1612,6 +1759,7 @@ function renderFundWalletStep(step){
         </div>
 
         <div class="nh-fund-account-card">
+
           <div class="nh-fund-account-row">
             <span>Account Name</span>
             <strong>NUMBERBRIDGE TECHNOLOGIES</strong>
@@ -1624,13 +1772,19 @@ function renderFundWalletStep(step){
 
           <div class="nh-fund-account-row">
             <span>Account Number</span>
+
             <div class="nh-fund-account-number">
               <strong>${accountNumber}</strong>
-              <button type="button" onclick="copyFundAccountNumber('${accountNumber}', this)">
+
+              <button
+                type="button"
+                onclick="copyFundAccountNumber('${accountNumber}', this)"
+              >
                 Copy
               </button>
             </div>
           </div>
+
         </div>
 
         <div class="nh-fund-instructions">
@@ -1643,6 +1797,7 @@ function renderFundWalletStep(step){
 
         <details class="nh-fund-help">
           <summary>💡 New to bank transfers? Show me how</summary>
+
           <div>
             Open your bank or payment app, choose <b>Transfer</b>, enter the
             account details shown above, enter the exact amount, and complete
@@ -1663,9 +1818,14 @@ function renderFundWalletStep(step){
           I've Made the Payment
         </button>
 
-        <button type="button" class="nh-fund-cancel" onclick="closeFundWalletPage()">
+        <button
+          type="button"
+          class="nh-fund-cancel"
+          onclick="cancelFundWallet()"
+        >
           Cancel
         </button>
+
       </div>
     `;
 
@@ -1676,24 +1836,49 @@ function renderFundWalletStep(step){
 function setFundAmount(amount){
   nhFundAmount = Number(amount) || 0;
 
+  saveFundWalletState(1);
+
   const input = document.getElementById("nhFundAmount");
-  if (input) input.value = nhFundAmount;
+
+  if (input) {
+    input.value = nhFundAmount;
+  }
 }
 
 function continueFundAmount(){
   const input = document.getElementById("nhFundAmount");
   const error = document.getElementById("nhFundAmountError");
+
   const amount = Number(input ? input.value : 0);
 
   if (!Number.isFinite(amount) || amount < 100) {
     if (error) {
-      error.textContent = "Please enter an amount of at least ₦100.";
+      error.textContent =
+        "Please enter an amount of at least ₦100.";
     }
+
     return;
   }
 
   nhFundAmount = amount;
-  if (error) error.textContent = "";
+
+  if (error) {
+    error.textContent = "";
+  }
+
+  saveFundWalletState(2);
+
+  window.history.pushState(
+    {
+      numberHub: true,
+      screen: "fundWallet",
+      numberType: null,
+      server: null,
+      fundStep: 2
+    },
+    "",
+    window.location.href
+  );
 
   renderFundWalletStep(2);
 }
@@ -1701,33 +1886,113 @@ function continueFundAmount(){
 function chooseFundMethod(button, method){
   nhFundMethod = method;
 
+  saveFundWalletState(2);
+
   document.querySelectorAll(".nh-payment-card").forEach((item) => {
     item.classList.remove("selected");
   });
 
-  if (button) button.classList.add("selected");
+  if (button) {
+    button.classList.add("selected");
+  }
 
   const error = document.getElementById("nhFundMethodError");
-  if (error) error.textContent = "";
+
+  if (error) {
+    error.textContent = "";
+  }
 }
 
 function continueFundMethod(){
   const error = document.getElementById("nhFundMethodError");
 
   if (!nhFundMethod) {
-    if (error) error.textContent = "Please select a payment method.";
+    if (error) {
+      error.textContent =
+        "Please select a payment method.";
+    }
+
     return;
   }
 
+  saveFundWalletState(3);
+
+  window.history.pushState(
+    {
+      numberHub: true,
+      screen: "fundWallet",
+      numberType: null,
+      server: null,
+      fundStep: 3
+    },
+    "",
+    window.location.href
+  );
+
   renderFundWalletStep(3);
+}
+
+function fundWalletBack(){
+  if (
+    window.history.state &&
+    window.history.state.numberHub === true &&
+    window.history.state.screen === "fundWallet"
+  ) {
+    const currentStep = Number(window.history.state.fundStep || 1);
+
+    if (currentStep > 1) {
+      window.history.back();
+      return;
+    }
+
+    clearFundWalletState();
+    window.history.back();
+    return;
+  }
+
+  clearFundWalletState();
+  navigateNumberHub("dashboard", null, null);
+}
+
+function cancelFundWallet(){
+  clearFundWalletState();
+  nhFundAmount = 0;
+  nhFundMethod = "";
+  nhFundSubmitting = false;
+
+  navigateNumberHub("dashboard", null, null);
+}
+
+function finishFundWalletPage(){
+  clearFundWalletState();
+
+  nhFundAmount = 0;
+  nhFundMethod = "";
+  nhFundSubmitting = false;
+
+  if (
+    window.history.state &&
+    window.history.state.numberHub === true &&
+    window.history.state.screen === "fundWallet"
+  ) {
+    navigateNumberHub("dashboard", null, null, true);
+    return;
+  }
+
+  navigateNumberHub("dashboard", null, null);
 }
 
 async function submitFundWalletRequest(){
   if (nhFundSubmitting) return;
 
-  const button = document.getElementById("nhFundSubmitButton");
+  const button =
+    document.getElementById("nhFundSubmitButton");
 
-  if (!Number.isFinite(nhFundAmount) || nhFundAmount < 100 || !nhFundMethod) {
+  if (
+    !Number.isFinite(nhFundAmount) ||
+    nhFundAmount < 100 ||
+    !nhFundMethod
+  ) {
     renderFundWalletStep(1);
     return;
   }
@@ -1740,65 +2005,138 @@ async function submitFundWalletRequest(){
   }
 
   try {
-    const r = await fetch("https://numberhub.onrender.com/api/wallet/deposit", {
-      method: "POST",
-      credentials: "include",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({
-        amount: nhFundAmount,
-        method: nhFundMethod
-      })
-    });
+    const r = await fetch(
+      "https://numberhub.onrender.com/api/wallet/deposit",
+      {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          amount: nhFundAmount,
+          method: nhFundMethod
+        })
+      }
+    );
 
     const d = await r.json();
 
     if (!r.ok) {
-      throw new Error(d.error || "Could not create funding request.");
+      throw new Error(
+        d.error || "Could not create funding request."
+      );
     }
 
-    const requestId = d.transaction?.reference || "Pending";
+    const requestId =
+      d.transaction?.reference || "Pending";
 
-    const content = document.getElementById("nhFundWalletContent");
+    /*
+     * The payment request is now stored on the server.
+     * Do not persist the confirmation screen locally.
+     * Also replace the current Fund Wallet history entry with
+     * Dashboard so a refresh cannot restore the payment screen.
+     */
+    clearFundWalletState();
+
+    window.history.replaceState(
+      {
+        numberHub: true,
+        screen: "dashboard",
+        numberType: null,
+        server: null
+      },
+      "",
+      window.location.href
+    );
+
+    const content =
+      document.getElementById("nhFundWalletContent");
 
     if (content) {
       updateFundWalletProgress(3);
 
       content.innerHTML = `
         <div class="nh-fund-success">
+
           <div class="nh-fund-success-icon">✓</div>
-          <div class="nh-fund-kicker">PAYMENT SUBMITTED</div>
+
+          <div class="nh-fund-kicker">
+            PAYMENT SUBMITTED
+          </div>
+
           <h3>Payment Submitted</h3>
-          <p>Your funding request has been submitted for verification.</p>
+
+          <p>
+            Your funding request has been submitted
+            for verification.
+          </p>
 
           <div class="nh-fund-status-card">
-            <div><span>Amount</span><strong>₦${Number(nhFundAmount).toLocaleString()}</strong></div>
-            <div><span>Method</span><strong>${nhFundMethod}</strong></div>
-            <div><span>Status</span><strong class="pending">Pending Verification</strong></div>
-            <div><span>Request ID</span><strong>${requestId}</strong></div>
+
+            <div>
+              <span>Amount</span>
+              <strong>
+                ₦${Number(nhFundAmount).toLocaleString()}
+              </strong>
+            </div>
+
+            <div>
+              <span>Method</span>
+              <strong>${nhFundMethod}</strong>
+            </div>
+
+            <div>
+              <span>Status</span>
+              <strong class="pending">
+                Pending Verification
+              </strong>
+            </div>
+
+            <div>
+              <span>Request ID</span>
+              <strong>${requestId}</strong>
+            </div>
+
           </div>
 
           <p class="nh-fund-note">
-            Your wallet will be credited after the payment is manually verified.
-            You do not need to provide a transaction number.
+            Your wallet will be credited after the payment
+            is manually verified. You do not need to provide
+            a transaction number.
           </p>
 
-          <button type="button" class="nh-fund-primary" onclick="closeFundWalletPage()">
+          <button
+            type="button"
+            class="nh-fund-primary"
+            onclick="finishFundWalletPage()"
+          >
             Back to Wallet
           </button>
+
         </div>
       `;
     }
+
   } catch (err) {
-    console.error("Fund wallet submission error:", err);
+    console.error(
+      "Fund wallet submission error:",
+      err
+    );
 
     nhFundSubmitting = false;
 
     if (button) {
       button.disabled = false;
-      button.textContent = "I've Made the Payment";
+      button.textContent =
+        "I've Made the Payment";
     }
 
-    alert(err && err.message ? err.message : "Could not submit funding request.");
+    alert(
+      err && err.message
+        ? err.message
+        : "Could not submit funding request."
+    );
   }
 }
 
@@ -1839,35 +2177,6 @@ function fallbackCopyFundAccountNumber(accountNumber, callback){
   }
 
   input.remove();
-}
-
-function closeFundWalletPage(){
-  const page = document.getElementById("nhFundWalletPage");
-
-  if (page) {
-    page.style.display = "none";
-  }
-
-  nhFundAmount = 0;
-  nhFundMethod = "";
-  nhFundSubmitting = false;
-
-  if (
-    window.history.state &&
-    window.history.state.numberHub === true &&
-    window.history.state.screen === "fundWallet"
-  ) {
-    window.history.back();
-    return;
-  }
-
-  const dashboard = document.getElementById("dashboardMain");
-  if (dashboard) {
-    const mainDashboard = dashboard.querySelector(".nh-dashboard");
-    if (mainDashboard) mainDashboard.style.display = "";
-  }
-
-  navigateNumberHub("dashboard", null, null);
 }
 
 function closeModal(){
