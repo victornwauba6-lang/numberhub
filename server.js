@@ -10,7 +10,7 @@ const FIVESIM_BASE_URL = "https://5sim.net/v1";
 const TEXTVERIFIED_PRICES = {
   "United States": {
     whatsapp: 4500,
-    facebook: 1700,
+    facebook: 200,
     tiktok: 2000,
     telegram: 3500
   }
