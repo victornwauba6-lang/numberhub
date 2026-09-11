@@ -2876,9 +2876,7 @@ function applyUserToDashboard(user) {
 
   const adminPanelNav = document.getElementById("adminPanelNav");
   if (adminPanelNav) {
-    const email = String(user.email || "").trim().toLowerCase();
     const isAdmin =
-      email === "numberhubsupport@gmail.com" ||
       user.is_admin === true ||
       user.is_admin === "true" ||
       user.is_admin === 1;
