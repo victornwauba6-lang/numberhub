@@ -1425,119 +1425,449 @@ if (fundButton) {
 document.getElementById("modal").classList.add("show");
 }
 function fund(fromHistory = false){
-if (!fromHistory) {
-  navigateNumberHub("fundWallet", null, null);
-  return;
+  if (!fromHistory) {
+    navigateNumberHub("fundWallet", null, null);
+    return;
+  }
+
+  const dashboard = document.getElementById("dashboardMain");
+  const mainDashboard = dashboard ? dashboard.querySelector(".nh-dashboard") : null;
+  const numberHistory = document.getElementById("nhNumberHistoryPage");
+  const transactionHistory = document.getElementById("transactionHistorySection");
+  const profile = document.getElementById("profileStandalone");
+  const faq = document.getElementById("faqStandalone");
+  const admin = document.getElementById("adminPanelSection");
+
+  if (mainDashboard) mainDashboard.style.display = "none";
+  if (numberHistory) numberHistory.style.display = "none";
+  if (transactionHistory) transactionHistory.style.display = "none";
+  if (profile) profile.style.display = "none";
+  if (faq) faq.style.display = "none";
+  if (admin) admin.style.display = "none";
+
+  let page = document.getElementById("nhFundWalletPage");
+
+  if (!page) {
+    page = document.createElement("section");
+    page.id = "nhFundWalletPage";
+    page.className = "nh-fund-wallet-page";
+
+    dashboard.appendChild(page);
+  }
+
+  page.style.display = "block";
+
+  page.innerHTML = `
+    <div class="nh-fund-topbar">
+      <button type="button" class="nh-history-back" onclick="closeFundWalletPage()">←</button>
+      <div>
+        <div class="green">WALLET</div>
+        <h2>Fund Wallet</h2>
+      </div>
+    </div>
+
+    <div class="nh-fund-progress">
+      <div class="nh-fund-step active" data-step="1">
+        <span>1</span>
+        <small>Amount</small>
+      </div>
+      <div class="nh-fund-line"></div>
+      <div class="nh-fund-step" data-step="2">
+        <span>2</span>
+        <small>Payment</small>
+      </div>
+      <div class="nh-fund-line"></div>
+      <div class="nh-fund-step" data-step="3">
+        <span>3</span>
+        <small>Confirm</small>
+      </div>
+    </div>
+
+    <div id="nhFundWalletContent"></div>
+  `;
+
+  renderFundWalletStep(1);
+  page.scrollIntoView({behavior:"smooth", block:"start"});
 }
 
-document.getElementById("modalTitle").textContent="Fund Wallet";
+let nhFundAmount = 0;
+let nhFundMethod = "";
+let nhFundSubmitting = false;
 
-const fundButton = document.querySelector("#modal .confirm");
-if (fundButton) {
-  fundButton.textContent = "Continue";
-  fundButton.onclick = startFunding;
-}
-document.getElementById("modalText").innerHTML=
-'<b>Nigerian Payment</b><br><br>'+
-'<label><b>Amount (₦)</b></label>'+
-'<input id="fundAmount" type="number" min="100" placeholder="Enter amount" '+
-'style="width:100%;padding:12px;margin-top:7px;border:1px solid #ddd;border-radius:8px">'+
-'<br><br><b>Select Payment Method</b>'+
-'<div style="display:grid;gap:8px;margin-top:8px">'+
-'<button type="button" class="payment-option" onclick="selectPayment(this, \'OPay\')" '+
-'style="padding:12px;border:1px solid #ddd;border-radius:8px;background:white;text-align:left">🟢 OPay</button>'+
-'<button type="button" class="payment-option" onclick="selectPayment(this, \'Bank Transfer\')" '+
-'style="padding:12px;border:1px solid #ddd;border-radius:8px;background:white;text-align:left">🏦 Bank Transfer — Kuda</button>'+
-'<p id="paymentChoice" style="font-size:13px;color:#64748b">Select a payment method.</p>'+
-'<br><label><b>Payment Reference / Transaction ID</b></label>'+
-'<input id="fundPaymentReference" type="text" placeholder="Enter your payment reference or transaction ID" '+
-'style="width:100%;padding:12px;margin-top:7px;border:1px solid #ddd;border-radius:8px">'+
-'<div id="kudaDetails" style="display:none;margin-top:12px;padding:14px;border:1px solid #ddd;border-radius:10px;background:#f8fafc">'+
-'<b>🏦 Kuda Bank Transfer</b><br><br>'+
-'Bank: <b>Kuda Microfinance Bank</b><br>'+
-'Account Name: <b>NUMBERBRIDGE TECHNOLOGIES</b><br>'+ 
-'Account Number: <b>3004234965</b>'+
-'</div>'+
-
-'<br><br><small>After making your payment, enter the payment reference or transaction ID above. Your wallet will be credited after payment is verified.</small>';
-
-document.getElementById("modal").classList.add("show");
-}
-function selectPayment(button, method){
-document.querySelectorAll(".payment-option").forEach(b=>{
-b.style.borderColor="#ddd";
-b.style.background="white";
-});
-button.style.borderColor="#16a34a";
-button.style.background="#ecfdf5";
-document.getElementById("paymentChoice").textContent="Selected: "+method;
-const kudaDetails = document.getElementById("kudaDetails");
-if (kudaDetails) {
-  kudaDetails.style.display = method === "Bank Transfer" ? "block" : "none";
-}
-button.dataset.selected="true";
+function updateFundWalletProgress(step){
+  document.querySelectorAll(".nh-fund-step").forEach((item) => {
+    const itemStep = Number(item.dataset.step || 0);
+    item.classList.toggle("active", itemStep <= step);
+  });
 }
 
-async function startFunding(){
-const amount=document.getElementById("fundAmount");
-const selected=document.querySelector('.payment-option[data-selected="true"]');
+function renderFundWalletStep(step){
+  const content = document.getElementById("nhFundWalletContent");
+  if (!content) return;
 
-if(!amount || Number(amount.value)<100){
-alert("Please enter an amount of at least ₦100.");
-return;
+  updateFundWalletProgress(step);
+
+  if (step === 1) {
+    content.innerHTML = `
+      <div class="nh-fund-card">
+        <div class="nh-fund-kicker">STEP 1</div>
+        <h3>How much would you like to add?</h3>
+        <p class="nh-fund-muted">Choose an amount to add to your NumberHub wallet.</p>
+
+        <label class="nh-fund-label" for="nhFundAmount">Amount</label>
+
+        <div class="nh-fund-amount-wrap">
+          <span>₦</span>
+          <input
+            id="nhFundAmount"
+            type="number"
+            min="100"
+            inputmode="numeric"
+            placeholder="Enter amount"
+            value="${nhFundAmount ? nhFundAmount : ""}"
+          >
+        </div>
+
+        <div class="nh-fund-quick-amounts">
+          <button type="button" onclick="setFundAmount(500)">₦500</button>
+          <button type="button" onclick="setFundAmount(1000)">₦1,000</button>
+          <button type="button" onclick="setFundAmount(5000)">₦5,000</button>
+          <button type="button" onclick="setFundAmount(10000)">₦10,000</button>
+        </div>
+
+        <p id="nhFundAmountError" class="nh-fund-error"></p>
+
+        <button type="button" class="nh-fund-primary" onclick="continueFundAmount()">
+          Continue →
+        </button>
+      </div>
+    `;
+
+    return;
+  }
+
+  if (step === 2) {
+    content.innerHTML = `
+      <div class="nh-fund-card">
+        <button type="button" class="nh-fund-back-link" onclick="renderFundWalletStep(1)">
+          ← Back
+        </button>
+
+        <div class="nh-fund-kicker">STEP 2</div>
+        <h3>How would you like to pay?</h3>
+        <p class="nh-fund-muted">Select where you would like to send the money.</p>
+
+        <div class="nh-payment-methods">
+          <button type="button" class="nh-payment-card ${nhFundMethod === "Kuda" ? "selected" : ""}" onclick="chooseFundMethod(this, 'Kuda')">
+            <span class="nh-payment-icon">🏦</span>
+            <span>
+              <strong>Kuda</strong>
+              <small>Bank transfer</small>
+            </span>
+            <span class="nh-payment-check">✓</span>
+          </button>
+
+
+
+          <button type="button" class="nh-payment-card ${nhFundMethod === "Bank Transfer" ? "selected" : ""}" onclick="chooseFundMethod(this, 'Bank Transfer')">
+            <span class="nh-payment-icon">🏛️</span>
+            <span>
+              <strong>Bank Transfer</strong>
+              <small>Transfer from your bank</small>
+            </span>
+            <span class="nh-payment-check">✓</span>
+          </button>
+        </div>
+
+        <p id="nhFundMethodError" class="nh-fund-error"></p>
+
+        <button type="button" class="nh-fund-primary" onclick="continueFundMethod()">
+          Continue →
+        </button>
+      </div>
+    `;
+
+    return;
+  }
+
+  if (step === 3) {
+    const accountNumber = "3004234965";
+    const bankName = "Kuda Microfinance Bank";
+
+    content.innerHTML = `
+      <div class="nh-fund-card">
+        <button type="button" class="nh-fund-back-link" onclick="renderFundWalletStep(2)">
+          ← Back
+        </button>
+
+        <div class="nh-fund-kicker">STEP 3</div>
+        <h3>Make Your Payment</h3>
+        <p class="nh-fund-muted">
+          Transfer exactly <strong>₦${Number(nhFundAmount).toLocaleString()}</strong> to the account below.
+        </p>
+
+        <div class="nh-fund-payment-summary">
+          <span>Amount</span>
+          <strong>₦${Number(nhFundAmount).toLocaleString()}</strong>
+        </div>
+
+        <div class="nh-fund-account-card">
+          <div class="nh-fund-account-row">
+            <span>Account Name</span>
+            <strong>NUMBERBRIDGE TECHNOLOGIES</strong>
+          </div>
+
+          <div class="nh-fund-account-row">
+            <span>Bank</span>
+            <strong>${bankName}</strong>
+          </div>
+
+          <div class="nh-fund-account-row">
+            <span>Account Number</span>
+            <div class="nh-fund-account-number">
+              <strong>${accountNumber}</strong>
+              <button type="button" onclick="copyFundAccountNumber('${accountNumber}', this)">
+                Copy
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="nh-fund-instructions">
+          <strong>How to pay</strong>
+          <div>① Copy the account number above</div>
+          <div>② Open your banking app</div>
+          <div>③ Transfer exactly ₦${Number(nhFundAmount).toLocaleString()}</div>
+          <div>④ Return to NumberHub</div>
+        </div>
+
+        <details class="nh-fund-help">
+          <summary>💡 New to bank transfers? Show me how</summary>
+          <div>
+            Open your bank or payment app, choose <b>Transfer</b>, enter the
+            account details shown above, enter the exact amount, and complete
+            the transfer. Then return here and tap <b>I've Made the Payment</b>.
+          </div>
+        </details>
+
+        <p class="nh-fund-no-reference">
+          You do <strong>not</strong> need to enter a transaction number.
+        </p>
+
+        <button
+          type="button"
+          id="nhFundSubmitButton"
+          class="nh-fund-primary"
+          onclick="submitFundWalletRequest()"
+        >
+          I've Made the Payment
+        </button>
+
+        <button type="button" class="nh-fund-cancel" onclick="closeFundWalletPage()">
+          Cancel
+        </button>
+      </div>
+    `;
+
+    return;
+  }
 }
 
-if(!selected){
-alert("Please select a payment method.");
-return;
+function setFundAmount(amount){
+  nhFundAmount = Number(amount) || 0;
+
+  const input = document.getElementById("nhFundAmount");
+  if (input) input.value = nhFundAmount;
 }
 
-const value=Number(amount.value);
-const method=selected.textContent.trim().includes("OPay") ? "OPay" : selected.textContent.trim().includes("Kuda") ? "Kuda" : "Bank Transfer";
-const paymentReferenceElement = document.getElementById("fundPaymentReference");
-const paymentReference = paymentReferenceElement ? paymentReferenceElement.value.trim() : "";
+function continueFundAmount(){
+  const input = document.getElementById("nhFundAmount");
+  const error = document.getElementById("nhFundAmountError");
+  const amount = Number(input ? input.value : 0);
 
-if(!paymentReference){
-alert("Please enter your payment reference or transaction ID.");
-return;
+  if (!Number.isFinite(amount) || amount < 100) {
+    if (error) {
+      error.textContent = "Please enter an amount of at least ₦100.";
+    }
+    return;
+  }
+
+  nhFundAmount = amount;
+  if (error) error.textContent = "";
+
+  renderFundWalletStep(2);
 }
 
-document.getElementById("modalTitle").textContent="Creating Funding Request...";
-document.getElementById("modalText").textContent="Please wait...";
+function chooseFundMethod(button, method){
+  nhFundMethod = method;
 
-try {
-const r=await fetch("https://numberhub.onrender.com/api/wallet/deposit",{
-method:"POST",
-credentials:"include",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({
-amount:value,
-method:method,
-paymentReference:paymentReference
-})
-});
+  document.querySelectorAll(".nh-payment-card").forEach((item) => {
+    item.classList.remove("selected");
+  });
 
-const d=await r.json();
+  if (button) button.classList.add("selected");
 
-if(!r.ok){
-document.getElementById("modalTitle").textContent="Funding Request Failed";
-document.getElementById("modalText").textContent=d.error || "Could not create funding request.";
-return;
+  const error = document.getElementById("nhFundMethodError");
+  if (error) error.textContent = "";
 }
 
-document.getElementById("modalTitle").textContent="Funding Request Created";
-document.getElementById("modalText").innerHTML=
-"Your funding request for <b>₦"+value.toFixed(2)+"</b> using <b>"+method+
-"</b> has been created.<br><br>"+
-"<b>Reference:</b> "+d.transaction.reference+
-"<br><br>Status: <b>"+d.transaction.status+"</b>"+
-"<br><br>Your wallet has not been credited yet. Payment confirmation is still required.";
-document.querySelector("#modal .confirm").textContent="Close";
-} catch(err) {
-console.error(err);
-document.getElementById("modalTitle").textContent="Connection Error";
-document.getElementById("modalText").textContent="Error: "+(err && err.message ? err.message : String(err));
+function continueFundMethod(){
+  const error = document.getElementById("nhFundMethodError");
+
+  if (!nhFundMethod) {
+    if (error) error.textContent = "Please select a payment method.";
+    return;
+  }
+
+  renderFundWalletStep(3);
 }
+
+async function submitFundWalletRequest(){
+  if (nhFundSubmitting) return;
+
+  const button = document.getElementById("nhFundSubmitButton");
+
+  if (!Number.isFinite(nhFundAmount) || nhFundAmount < 100 || !nhFundMethod) {
+    renderFundWalletStep(1);
+    return;
+  }
+
+  nhFundSubmitting = true;
+
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Submitting...";
+  }
+
+  try {
+    const r = await fetch("https://numberhub.onrender.com/api/wallet/deposit", {
+      method: "POST",
+      credentials: "include",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        amount: nhFundAmount,
+        method: nhFundMethod
+      })
+    });
+
+    const d = await r.json();
+
+    if (!r.ok) {
+      throw new Error(d.error || "Could not create funding request.");
+    }
+
+    const requestId = d.transaction?.reference || "Pending";
+
+    const content = document.getElementById("nhFundWalletContent");
+
+    if (content) {
+      updateFundWalletProgress(3);
+
+      content.innerHTML = `
+        <div class="nh-fund-success">
+          <div class="nh-fund-success-icon">✓</div>
+          <div class="nh-fund-kicker">PAYMENT SUBMITTED</div>
+          <h3>Payment Submitted</h3>
+          <p>Your funding request has been submitted for verification.</p>
+
+          <div class="nh-fund-status-card">
+            <div><span>Amount</span><strong>₦${Number(nhFundAmount).toLocaleString()}</strong></div>
+            <div><span>Method</span><strong>${nhFundMethod}</strong></div>
+            <div><span>Status</span><strong class="pending">Pending Verification</strong></div>
+            <div><span>Request ID</span><strong>${requestId}</strong></div>
+          </div>
+
+          <p class="nh-fund-note">
+            Your wallet will be credited after the payment is manually verified.
+            You do not need to provide a transaction number.
+          </p>
+
+          <button type="button" class="nh-fund-primary" onclick="closeFundWalletPage()">
+            Back to Wallet
+          </button>
+        </div>
+      `;
+    }
+  } catch (err) {
+    console.error("Fund wallet submission error:", err);
+
+    nhFundSubmitting = false;
+
+    if (button) {
+      button.disabled = false;
+      button.textContent = "I've Made the Payment";
+    }
+
+    alert(err && err.message ? err.message : "Could not submit funding request.");
+  }
+}
+
+function copyFundAccountNumber(accountNumber, button){
+  const done = () => {
+    if (!button) return;
+
+    const original = button.textContent;
+    button.textContent = "Copied";
+
+    setTimeout(() => {
+      button.textContent = original;
+    }, 1500);
+  };
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(accountNumber).then(done).catch(() => {
+      fallbackCopyFundAccountNumber(accountNumber, done);
+    });
+  } else {
+    fallbackCopyFundAccountNumber(accountNumber, done);
+  }
+}
+
+function fallbackCopyFundAccountNumber(accountNumber, callback){
+  const input = document.createElement("textarea");
+  input.value = accountNumber;
+  input.style.position = "fixed";
+  input.style.opacity = "0";
+  document.body.appendChild(input);
+  input.select();
+
+  try {
+    document.execCommand("copy");
+    callback();
+  } catch (e) {
+    alert("Could not copy the account number. Please copy it manually.");
+  }
+
+  input.remove();
+}
+
+function closeFundWalletPage(){
+  const page = document.getElementById("nhFundWalletPage");
+
+  if (page) {
+    page.style.display = "none";
+  }
+
+  nhFundAmount = 0;
+  nhFundMethod = "";
+  nhFundSubmitting = false;
+
+  if (
+    window.history.state &&
+    window.history.state.numberHub === true &&
+    window.history.state.screen === "fundWallet"
+  ) {
+    window.history.back();
+    return;
+  }
+
+  const dashboard = document.getElementById("dashboardMain");
+  if (dashboard) {
+    const mainDashboard = dashboard.querySelector(".nh-dashboard");
+    if (mainDashboard) mainDashboard.style.display = "";
+  }
+
+  navigateNumberHub("dashboard", null, null);
 }
 
 function closeModal(){

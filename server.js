@@ -1397,12 +1397,6 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
-        if (!paymentReference || paymentReference.length < 3) {
-          sendJSON(res, 400, {
-            error: "Please enter your payment reference or transaction ID"
-          });
-          return;
-        }
 
       const reference =
         "NH-" +
@@ -1457,8 +1451,8 @@ Email: ${user.email || "Unknown"}
 
 Amount: ₦${Number(tx.amount).toFixed(2)}
 Method: ${tx.method}
-Payment Reference: ${tx.payment_reference || "Not provided"}
-NumberHub Reference: ${tx.reference}
+Payment Reference: Not required — customer does not enter a bank transaction reference
+NumberHub Request ID: ${tx.reference}
 Status: ${tx.status}
 
 The wallet has NOT been credited. Verify the payment before approving the request.`,
@@ -1470,8 +1464,8 @@ The wallet has NOT been credited. Verify the payment before approving the reques
               <hr>
               <p><b>Amount:</b> ₦${Number(tx.amount).toFixed(2)}</p>
               <p><b>Method:</b> ${tx.method}</p>
-              <p><b>Payment Reference:</b> ${tx.payment_reference || "Not provided"}</p>
-              <p><b>NumberHub Reference:</b> ${tx.reference}</p>
+              <p><b>Payment Reference:</b> Not required — customer does not enter a bank transaction reference</p>
+              <p><b>NumberHub Request ID:</b> ${tx.reference}</p>
               <p><b>Status:</b> ${tx.status}</p>
               <hr>
               <p><b>Wallet has NOT been credited.</b> Verify the payment before approving.</p>
