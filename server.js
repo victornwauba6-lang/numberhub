@@ -150,7 +150,7 @@ const USA_CD_PRICES = {
   },
   facebook: {
     "Server C": { virtual63: 1600, virtual8: 1700 },
-    "Server D": { virtual28: 1500, virtual51: 2000 }
+    "Server D": { virtual28: 200, virtual51: 2000 }
   },
   instagram: {
     "Server C": { virtual63: 1500, virtual8: 1250 },
