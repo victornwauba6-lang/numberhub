@@ -4049,7 +4049,7 @@ The wallet has NOT been credited. Verify the payment before approving the reques
     }
 
     if (
-      req.method === "GET" &&
+      (req.method === "GET" || req.method === "HEAD") &&
       (req.url === "/" || req.url === "/index.html")
     ) {
       const indexPath = path.join(__dirname, "index.html");
@@ -4064,6 +4064,11 @@ The wallet has NOT been credited. Verify the payment before approving the reques
       res.writeHead(200, {
         "Content-Type": "text/html; charset=utf-8"
       });
+
+      if (req.method === "HEAD") {
+        res.end();
+        return;
+      }
 
       fs.createReadStream(indexPath).pipe(res);
       return;
