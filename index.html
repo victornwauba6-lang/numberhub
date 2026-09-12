@@ -5198,6 +5198,7 @@ async function purchaseSelectedNumber() {
     }
 
     await checkPurchasedOtp();
+    startAutoOtpPolling();
 
   } catch (error) {
     console.error("Purchase error:", error);
@@ -5339,7 +5340,45 @@ async function cancelPurchasedNumber() {
   }
 }
 
-async function checkPurchasedOtp() {
+
+let autoOtpPollingTimer = null;
+
+function stopAutoOtpPolling() {
+  if (autoOtpPollingTimer) {
+    clearTimeout(autoOtpPollingTimer);
+    autoOtpPollingTimer = null;
+  }
+}
+
+function startAutoOtpPolling() {
+  stopAutoOtpPolling();
+
+  async function poll() {
+    if (!window.currentSupplierId) {
+      stopAutoOtpPolling();
+      return;
+    }
+
+    try {
+      const received = await checkPurchasedOtp(true);
+
+      if (received || !window.currentSupplierId) {
+        stopAutoOtpPolling();
+        return;
+      }
+    } catch (error) {
+      console.error("Automatic OTP polling error:", error);
+    }
+
+    if (window.currentSupplierId) {
+      autoOtpPollingTimer = setTimeout(poll, 3000);
+    }
+  }
+
+  poll();
+}
+
+async function checkPurchasedOtp(isAutomatic = false) {
   const supplierId = window.currentSupplierId;
   const waiting = document.getElementById("otpWaiting");
   const otpBox = document.getElementById("otpCode");
@@ -5351,7 +5390,7 @@ async function checkPurchasedOtp() {
     return;
   }
 
-  if (button) {
+  if (button && !isAutomatic) {
     button.disabled = true;
     button.textContent = "Checking...";
   }
@@ -5383,6 +5422,7 @@ async function checkPurchasedOtp() {
       if (otpValue) {
         otpValue.textContent = result.smsCode;
       }
+      return true;
     } else {
       if (waiting) {
         waiting.textContent =
@@ -5391,6 +5431,7 @@ async function checkPurchasedOtp() {
       }
     }
 
+    return false;
   } catch (error) {
     console.error("OTP check error:", error);
 
@@ -5400,7 +5441,7 @@ async function checkPurchasedOtp() {
     }
 
   } finally {
-    if (button) {
+    if (button && !isAutomatic) {
       button.disabled = false;
       button.textContent = "🔄 Check for OTP";
     }
@@ -5695,6 +5736,7 @@ async function restoreActiveNumberPurchase() {
     }
 
     await checkPurchasedOtp();
+    startAutoOtpPolling();
 
     console.log(
       "NumberHub active number restored:",
