@@ -4048,9 +4048,11 @@ The wallet has NOT been credited. Verify the payment before approving the reques
       return;
     }
 
+    const requestPath = req.url.split("?")[0];
+
     if (
       (req.method === "GET" || req.method === "HEAD") &&
-      (req.url === "/" || req.url === "/index.html")
+      (requestPath === "/" || requestPath === "/index.html")
     ) {
       const indexPath = path.join(__dirname, "index.html");
 
