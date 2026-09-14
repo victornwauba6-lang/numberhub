@@ -2611,7 +2611,11 @@ The wallet has NOT been credited. Verify the payment before approving the reques
           ""
         ).toLowerCase();
 
-        if (supplierStatus && supplierStatus !== "canceled") {
+        if (
+          provider !== "textverified" &&
+          supplierStatus &&
+          supplierStatus !== "canceled"
+        ) {
           sendJSON(res, 400, {
             error: "Unable to cancel this number right now. Please try again.",
             status: cancelResult.status
