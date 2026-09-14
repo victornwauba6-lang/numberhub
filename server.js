@@ -1453,10 +1453,17 @@ const server = http.createServer(async (req, res) => {
 
         const user = userResult.rows[0] || {};
 
-        await sendEmail(
-          "numberhubsupport@gmail.com",
-          `NumberHub Funding Request — ₦${Number(tx.amount).toFixed(2)}`,
-          `New NumberHub funding request.
+        const fundingEmailResponse = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+            to: ["numberhubsupport@gmail.com"],
+            subject: `NumberHub Funding Request — ₦${Number(tx.amount).toFixed(2)}`,
+            text: `New NumberHub funding request.
 
 Customer: ${user.name || "Unknown"}
 Username: ${user.username || "Not set"}
@@ -1469,21 +1476,27 @@ NumberHub Request ID: ${tx.reference}
 Status: ${tx.status}
 
 The wallet has NOT been credited. Verify the payment before approving the request.`,
-          `
-            <h2>New NumberHub Funding Request</h2>
-            <p><b>Customer:</b> ${user.name || "Unknown"}</p>
-            <p><b>Username:</b> ${user.username || "Not set"}</p>
-            <p><b>Email:</b> ${user.email || "Unknown"}</p>
-            <hr>
-            <p><b>Amount:</b> ₦${Number(tx.amount).toFixed(2)}</p>
-            <p><b>Method:</b> ${tx.method}</p>
-            <p><b>Payment Reference:</b> Not required — customer does not enter a bank transaction reference</p>
-            <p><b>NumberHub Request ID:</b> ${tx.reference}</p>
-            <p><b>Status:</b> ${tx.status}</p>
-            <hr>
-            <p><b>Wallet has NOT been credited.</b> Verify the payment before approving.</p>
-          `
-        );
+            html: `
+              <h2>New NumberHub Funding Request</h2>
+              <p><b>Customer:</b> ${user.name || "Unknown"}</p>
+              <p><b>Username:</b> ${user.username || "Not set"}</p>
+              <p><b>Email:</b> ${user.email || "Unknown"}</p>
+              <hr>
+              <p><b>Amount:</b> ₦${Number(tx.amount).toFixed(2)}</p>
+              <p><b>Method:</b> ${tx.method}</p>
+              <p><b>Payment Reference:</b> Not required — customer does not enter a bank transaction reference</p>
+              <p><b>NumberHub Request ID:</b> ${tx.reference}</p>
+              <p><b>Status:</b> ${tx.status}</p>
+              <hr>
+              <p><b>Wallet has NOT been credited.</b> Verify the payment before approving.</p>
+            `
+          })
+        });
+
+        if (!fundingEmailResponse.ok) {
+          const fundingEmailError = await fundingEmailResponse.text();
+          throw new Error(`Resend API ${fundingEmailResponse.status}: ${fundingEmailError}`);
+        }
       } catch (emailError) {
         console.error("Funding notification error:", emailError);
       }
