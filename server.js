@@ -571,6 +571,10 @@ async function textVerifiedRequest(endpoint, options = {}) {
     );
   }
 
+  if (response.headers.get("location")) {
+    data.location = response.headers.get("location");
+  }
+
   return data;
 }
 
@@ -735,7 +739,7 @@ async function textVerifiedBuyVerification(serviceName, idempotencyKey) {
     headers["Idempotency-Key"] = String(idempotencyKey);
   }
 
-  return textVerifiedRequest(
+  const created = await textVerifiedRequest(
     "/api/pub/v2/verifications",
     {
       method: "POST",
@@ -744,6 +748,37 @@ async function textVerifiedBuyVerification(serviceName, idempotencyKey) {
         capability: "sms",
         serviceName: normalizedService
       })
+    }
+  );
+
+  const detailsHref =
+    created?.href ||
+    created?.location ||
+    created?.details?.href ||
+    created?.verification?.href ||
+    "";
+
+  if (!detailsHref) {
+    throw new Error(
+      "TextVerified verification was created but no verification details link was returned"
+    );
+  }
+
+  let detailsPath;
+
+  try {
+    const detailsUrl = new URL(detailsHref);
+    detailsPath = `${detailsUrl.pathname}${detailsUrl.search}`;
+  } catch {
+    throw new Error(
+      "TextVerified returned an invalid verification details link"
+    );
+  }
+
+  return textVerifiedRequest(
+    detailsPath,
+    {
+      method: "GET"
     }
   );
 }
