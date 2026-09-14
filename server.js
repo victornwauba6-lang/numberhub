@@ -627,7 +627,7 @@ async function textVerifiedCheckUSWhatsApp() {
       body: JSON.stringify({
         numberType: "mobile",
         serviceName: "whatsapp",
-        capability: "Sms"
+        capability: "sms"
       })
     }
   );
@@ -641,7 +641,7 @@ async function textVerifiedCheckUSWhatsApp() {
         carrier: false,
         numberType: "mobile",
         serviceName: "whatsapp",
-        capability: "Sms"
+        capability: "sms"
       })
     }
   );
@@ -672,7 +672,7 @@ async function textVerifiedCheckUSService(serviceName) {
       body: JSON.stringify({
         numberType: "mobile",
         serviceName: normalizedService,
-        capability: "Sms"
+        capability: "sms"
       })
     }
   );
@@ -686,7 +686,7 @@ async function textVerifiedCheckUSService(serviceName) {
         carrier: false,
         numberType: "mobile",
         serviceName: normalizedService,
-        capability: "Sms"
+        capability: "sms"
       })
     }
   );
@@ -741,7 +741,7 @@ async function textVerifiedBuyVerification(serviceName, idempotencyKey) {
       method: "POST",
       headers,
       body: JSON.stringify({
-        capability: "Sms",
+        capability: "sms",
         serviceName: normalizedService
       })
     }
@@ -1130,7 +1130,7 @@ const server = http.createServer(async (req, res) => {
             "Idempotency-Key": "numberhub-mock-test-success-" + Date.now()
           },
           body: JSON.stringify({
-            capability: "Sms",
+            capability: "sms",
             serviceName: "test_success"
           })
         }
