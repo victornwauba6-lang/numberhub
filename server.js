@@ -4110,6 +4110,39 @@ The wallet has NOT been credited. Verify the payment before approving the reques
 
     const requestPath = req.url.split("?")[0];
 
+    if ((req.method === "GET" || req.method === "HEAD") && requestPath === "/robots.txt") {
+      const robots = `User-agent: *
+Allow: /
+
+Sitemap: https://numberhub.onrender.com/sitemap.xml
+`;
+
+      res.writeHead(200, {
+        "Content-Type": "text/plain; charset=utf-8"
+      });
+
+      res.end(req.method === "HEAD" ? "" : robots);
+      return;
+    }
+
+    if ((req.method === "GET" || req.method === "HEAD") && requestPath === "/sitemap.xml") {
+      const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://numberhub.onrender.com/</loc>
+  </url>
+</urlset>
+`;
+
+      res.writeHead(200, {
+        "Content-Type": "application/xml; charset=utf-8"
+      });
+
+      res.end(req.method === "HEAD" ? "" : sitemap);
+      return;
+    }
+
+
     if (
       (req.method === "GET" || req.method === "HEAD") &&
       (requestPath === "/" || requestPath === "/index.html")
