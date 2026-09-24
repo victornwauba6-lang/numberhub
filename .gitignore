@@ -39,3 +39,22 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+.env.local
+
+backups
+
+# local/test/import files
+.admin-catalog-page.tmp.tsx
+.tmp-pipeline-test/
+check-tv-prices.js
+cookies-test.txt
+cookies.txt
+import-legacy-customers.js
+import-legacy-number-purchases.js
+import-legacy-wallet-transactions.js
+import-legacy-wallets.js
+test-numberhub-discovery.mjs
+*.before-*
+~/
+*.backup

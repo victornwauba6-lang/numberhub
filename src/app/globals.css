@@ -24,3 +24,124 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+
+/* NumberHub Premium Fintech UI */
+:root {
+  --nh-bg: #080b0a;
+  --nh-surface: #101513;
+  --nh-surface-2: #151b18;
+  --nh-border: rgba(255,255,255,.08);
+  --nh-text: #f5f7f6;
+  --nh-muted: #9ba6a1;
+  --nh-green: #35d07f;
+  --nh-green-soft: rgba(53,208,127,.12);
+  --nh-radius: 22px;
+}
+
+html {
+  background: var(--nh-bg);
+}
+
+body {
+  background:
+    radial-gradient(circle at 85% 0%, rgba(53,208,127,.09), transparent 30rem),
+    var(--nh-bg);
+  color: var(--nh-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+a,
+input,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  transition: transform .18s ease, opacity .18s ease, background .18s ease, border-color .18s ease;
+}
+
+button:active {
+  transform: scale(.98);
+}
+
+.nh-premium-card {
+  background: linear-gradient(145deg, rgba(255,255,255,.055), rgba(255,255,255,.018));
+  border: 1px solid var(--nh-border);
+  border-radius: var(--nh-radius);
+  box-shadow: 0 18px 50px rgba(0,0,0,.22);
+  backdrop-filter: blur(18px);
+}
+
+.nh-premium-button {
+  min-height: 54px;
+  border-radius: 16px;
+  border: 1px solid rgba(53,208,127,.25);
+  background: linear-gradient(135deg, #35d07f, #22b96a);
+  color: #04130b;
+  font-weight: 800;
+  letter-spacing: -.01em;
+  box-shadow: 0 10px 30px rgba(53,208,127,.18);
+}
+
+.nh-premium-button:active {
+  transform: translateY(1px) scale(.99);
+}
+
+.nh-muted {
+  color: var(--nh-muted);
+}
+
+.nh-green {
+  color: var(--nh-green);
+}
+
+.nh-wallet {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(53,208,127,.18), transparent 45%),
+    linear-gradient(145deg, #121916, #0c100e);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 26px;
+  box-shadow: 0 22px 60px rgba(0,0,0,.28);
+}
+
+.nh-section-title {
+  font-size: 1.35rem;
+  line-height: 1.15;
+  font-weight: 800;
+  letter-spacing: -.035em;
+}
+
+.nh-service-card {
+  border: 1px solid rgba(255,255,255,.075);
+  border-radius: 20px;
+  background: rgba(255,255,255,.035);
+  transition: border-color .2s ease, transform .2s ease, background .2s ease;
+}
+
+.nh-service-card:hover {
+  border-color: rgba(53,208,127,.35);
+  background: rgba(53,208,127,.055);
+  transform: translateY(-1px);
+}
+
+.nh-bottom-nav {
+  background: rgba(8,11,10,.88);
+  border-top: 1px solid rgba(255,255,255,.08);
+  backdrop-filter: blur(24px);
+}
+
+@media (max-width: 640px) {
+  body {
+    overflow-x: hidden;
+  }
+
+  .nh-premium-card {
+    border-radius: 20px;
+  }
+
+  .nh-wallet {
+    border-radius: 24px;
+  }
+}
