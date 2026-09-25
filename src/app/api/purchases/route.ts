@@ -72,30 +72,56 @@ export async function POST(request: Request) {
       idempotencyKey: body.idempotencyKey.trim(),
     });
 
-    const processing = await withTransaction(async (client) => {
-      return processOrder(client, result.orderId);
-    });
+    try {
+      const processing = await withTransaction(async (client) => {
+        return processOrder(client, result.orderId);
+      });
 
-    await captureServerEvent(user.id, "numberhub_purchase", {
-      order_id: result.orderId,
-      status: result.status,
-      currency: result.currency,
-      price_minor: result.priceMinor,
-      refund_enabled: result.refundEnabled,
-      replayed: result.replayed,
-      processing_status:
-        typeof processing === "object" &&
-        processing !== null &&
-        "status" in processing
-          ? processing.status
-          : undefined,
-    });
+      await captureServerEvent(user.id, "numberhub_purchase", {
+        order_id: result.orderId,
+        status: result.status,
+        currency: result.currency,
+        price_minor: result.priceMinor,
+        refund_enabled: result.refundEnabled,
+        replayed: result.replayed,
+        processing_status:
+          typeof processing === "object" &&
+          processing !== null &&
+          "status" in processing
+            ? processing.status
+            : undefined,
+      });
 
-    return NextResponse.json({
-      success: true,
-      purchase: result,
-      processing,
-    });
+      return NextResponse.json({
+        success: true,
+        purchase: result,
+        processing,
+      });
+    } catch (processingError) {
+      await captureServerEvent(user.id, "numberhub_purchase_processing_error", {
+        order_id: result.orderId,
+        status: result.status,
+        currency: result.currency,
+        price_minor: result.priceMinor,
+        refund_enabled: result.refundEnabled,
+        replayed: result.replayed,
+        processing_error:
+          processingError instanceof Error
+            ? processingError.message
+            : "Unknown processing error",
+      });
+
+      return NextResponse.json({
+        success: true,
+        purchase: result,
+        processing: {
+          status: "PENDING",
+          orderId: result.orderId,
+          message:
+            "Your order was created successfully and is waiting for processing.",
+        },
+      });
+    }
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Purchase could not be created";

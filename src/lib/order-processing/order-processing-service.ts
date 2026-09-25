@@ -209,13 +209,29 @@ export async function processOrder(
       );
     }
 
-    const activation = await adapter.activateNumber({
-      orderId: order.id,
-      productOptionId: order.productOptionId,
-      countryCode: order.countryCode,
-      serviceSlug: order.serviceSlug,
-      supplierProductId: route.supplierProductId,
-    });
+    let activation: Awaited<ReturnType<typeof adapter.activateNumber>>;
+
+    try {
+      activation = await adapter.activateNumber({
+        orderId: order.id,
+        productOptionId: order.productOptionId,
+        countryCode: order.countryCode,
+        serviceSlug: order.serviceSlug,
+        supplierProductId: route.supplierProductId,
+      });
+    } catch (error: unknown) {
+      activation = {
+        success: false,
+        supplierOrderReference: null,
+        phoneNumber: null,
+        supplierNumberReference: null,
+        errorCode: "SUPPLIER_ACTIVATION_EXCEPTION",
+        errorMessage:
+          error instanceof Error
+            ? error.message
+            : "Supplier activation failed unexpectedly.",
+      };
+    }
 
     if (
       !activation.success ||
