@@ -367,6 +367,30 @@ export default function AdminCatalogPage() {
     }
   }
 
+  async function repairCatalogSchema() {
+    setError("");
+
+    try {
+      const response = await fetch("/api/admin/fix-catalog-schema", {
+        method: "POST",
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Catalog schema repair failed.");
+      }
+
+      alert("Catalog schema repaired successfully.");
+    } catch (repairError) {
+      setError(
+        repairError instanceof Error
+          ? repairError.message
+          : "Catalog schema repair failed.",
+      );
+    }
+  }
+
   return (
     <>
     <main className="min-h-screen bg-[#f3f7f5] text-[#10231a]">
@@ -486,6 +510,15 @@ export default function AdminCatalogPage() {
             {syncing
               ? "Synchronizing all..."
               : "Sync all catalog"}
+          </button>
+
+          <button
+            type="button"
+            onClick={repairCatalogSchema}
+            disabled={syncing}
+            className="inline-flex w-full items-center justify-center rounded-2xl border border-amber-500 bg-amber-50 px-5 py-3.5 text-sm font-extrabold text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Repair catalog schema
           </button>
           </div>
         </section>
