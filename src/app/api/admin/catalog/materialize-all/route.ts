@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/authorization";
 import { db } from "@/lib/db";
-import { syncDiscoveredCatalog } from "@/lib/suppliers/catalog/unified-discovery-service";
+import { syncDiscoveredCountries } from "@/lib/suppliers/catalog/unified-discovery-service";
 
 export const runtime = "nodejs";
 
@@ -9,9 +9,9 @@ export async function POST() {
   try {
     await requireAdmin();
 
-    const result = await syncDiscoveredCatalog(db);
+    const result = await syncDiscoveredCountries(db);
 
-    console.log("NUMBERHUB FULL CATALOG SYNC RESULT:", result);
+    console.log("NUMBERHUB COUNTRY CATALOG SYNC RESULT:", result);
 
     return NextResponse.json({
       success: true,
