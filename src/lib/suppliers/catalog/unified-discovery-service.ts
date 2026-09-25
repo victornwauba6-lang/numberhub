@@ -308,6 +308,26 @@ export async function syncDiscoveredCatalog(
 }> {
   const discovery = await discoverUnifiedCatalog();
 
+  // Ensure configured suppliers exist in the production catalog database.
+  const configuredSuppliers = [
+    { name: "5SIM", slug: "fivesim", priority: 10 },
+    { name: "TextVerified", slug: "textverified", priority: 20 },
+  ];
+
+  for (const supplier of configuredSuppliers) {
+    await db.query(
+      `INSERT INTO suppliers (name, slug, is_active, priority)
+       VALUES ($1, $2, true, $3)
+       ON CONFLICT (slug)
+       DO UPDATE SET
+         name = EXCLUDED.name,
+         is_active = true,
+         priority = EXCLUDED.priority,
+         updated_at = NOW()`,
+      [supplier.name, supplier.slug, supplier.priority],
+    );
+  }
+
   let createdCountries = 0;
   let existingCountries = 0;
   let skippedCountries = 0;
