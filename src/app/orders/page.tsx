@@ -86,6 +86,23 @@ function statusMeta(status: string) {
         dot: "bg-blue-500",
       };
 
+    case "NUMBER_ASSIGNED":
+    case "WAITING_FOR_SMS":
+      return {
+        label: "Waiting for OTP",
+        className:
+          "bg-amber-50 text-amber-700 dark:bg-amber-400/10 dark:text-amber-300",
+        dot: "bg-amber-500",
+      };
+
+    case "CODE_RECEIVED":
+      return {
+        label: "OTP received",
+        className:
+          "bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300",
+        dot: "bg-emerald-500",
+      };
+
     default:
       return {
         label: "Pending",
