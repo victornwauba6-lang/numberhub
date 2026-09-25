@@ -2,7 +2,6 @@ import { createHash } from "node:crypto";
 import { db } from "@/lib/db";
 import { withTransaction } from "@/lib/db-transaction";
 import { getSupplierAdapter } from "@/lib/suppliers/supplier-registry";
-import { automaticallyRefundFailedOrder } from "@/lib/order-processing/auto-refund-service";
 
 export type VerificationSyncResult = {
   orderId: string;
@@ -257,10 +256,6 @@ export async function syncVerificationOrder(
           }),
         ],
       );
-
-      if (nextStatus === "EXPIRED") {
-        await automaticallyRefundFailedOrder(client, order.id);
-      }
     }
   });
 
