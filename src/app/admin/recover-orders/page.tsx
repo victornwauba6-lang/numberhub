@@ -48,53 +48,98 @@ export default function RecoverOrdersPage() {
   }
 
   return (
-    <main style={{ maxWidth: 600, margin: "0 auto", padding: 24 }}>
-      <h1>Temporary Order Recovery</h1>
-      <p>
-        This page is for recovering the two orders affected by the production
-        migration issue.
-      </p>
+    <main
+      style={{
+        minHeight: "100vh",
+        background: "#f6f8f7",
+        color: "#111827",
+        padding: "32px 20px",
+        fontFamily: "Arial, sans-serif",
+      }}
+    >
+      <div style={{ maxWidth: 600, margin: "0 auto" }}>
+        <h1 style={{ fontSize: 26, marginBottom: 8 }}>
+          Temporary Order Recovery
+        </h1>
 
-      {orders.map((order) => (
-        <section
-          key={order.id}
-          style={{
-            border: "1px solid #333",
-            borderRadius: 12,
-            padding: 16,
-            marginTop: 16,
-          }}
-        >
-          <strong>{order.label}</strong>
+        <p style={{ color: "#4b5563", lineHeight: 1.5 }}>
+          Use this page only to recover the two orders affected by the
+          production migration issue.
+        </p>
 
-          <button
-            onClick={() => recover(order.id)}
-            disabled={loading !== null}
+        {orders.map((order) => (
+          <section
+            key={order.id}
             style={{
-              display: "block",
-              marginTop: 12,
-              padding: "12px 16px",
-              borderRadius: 8,
-              border: 0,
-              cursor: loading ? "wait" : "pointer",
+              background: "#ffffff",
+              border: "1px solid #d1d5db",
+              borderRadius: 16,
+              padding: 20,
+              marginTop: 18,
+              boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
             }}
           >
-            {loading === order.id ? "Processing..." : "Recover this order"}
-          </button>
-
-          {results[order.id] && (
-            <pre
+            <div
               style={{
-                whiteSpace: "pre-wrap",
-                marginTop: 12,
-                fontSize: 12,
+                fontSize: 18,
+                fontWeight: 700,
+                color: "#111827",
+                marginBottom: 6,
               }}
             >
-              {results[order.id]}
-            </pre>
-          )}
-        </section>
-      ))}
+              {order.label}
+            </div>
+
+            <div
+              style={{
+                fontSize: 12,
+                color: "#6b7280",
+                wordBreak: "break-all",
+              }}
+            >
+              {order.id}
+            </div>
+
+            <button
+              onClick={() => recover(order.id)}
+              disabled={loading !== null}
+              style={{
+                width: "100%",
+                marginTop: 16,
+                padding: "14px 16px",
+                borderRadius: 10,
+                border: "none",
+                background: "#111827",
+                color: "#ffffff",
+                fontSize: 15,
+                fontWeight: 700,
+                cursor: loading ? "wait" : "pointer",
+              }}
+            >
+              {loading === order.id
+                ? "Processing..."
+                : "Recover this order"}
+            </button>
+
+            {results[order.id] && (
+              <pre
+                style={{
+                  whiteSpace: "pre-wrap",
+                  marginTop: 14,
+                  padding: 12,
+                  borderRadius: 8,
+                  background: "#f3f4f6",
+                  color: "#111827",
+                  fontSize: 12,
+                  lineHeight: 1.5,
+                }}
+              >
+                {results[order.id]}
+              </pre>
+            )}
+          </section>
+        ))}
+      </div>
     </main>
   );
 }
