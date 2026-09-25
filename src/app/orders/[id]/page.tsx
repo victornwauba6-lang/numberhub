@@ -149,14 +149,73 @@ export default function OrderDetailPage() {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [refundReason, setRefundReason] = useState("");
-  const [showRefundForm, setShowRefundForm] = useState(false);
-  const [refundLoading, setRefundLoading] = useState(false);
-  const [refundError, setRefundError] = useState("");
-  const [refundSuccess, setRefundSuccess] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [cancelError, setCancelError] = useState("");
+  const [cancelSuccess, setCancelSuccess] = useState(false);
   const [verificationCode, setVerificationCode] = useState<string | null>(null);
   const [verificationMessage, setVerificationMessage] = useState("");
   const [verificationLoading, setVerificationLoading] = useState(false);
+
+  async function cancelNumber() {
+    if (!orderId || cancelLoading) return;
+
+    const confirmed = window.confirm(
+      "Cancel this number and receive an instant wallet refund? This should only be used if you have not received an OTP."
+    );
+
+    if (!confirmed) return;
+
+    setCancelLoading(true);
+    setCancelError("");
+    setCancelSuccess(false);
+
+    try {
+      const response = await fetch(
+        `/api/orders/${encodeURIComponent(orderId)}/cancel`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        },
+      );
+
+      const contentType =
+        response.headers.get("content-type") || "";
+
+      if (!contentType.includes("application/json")) {
+        throw new Error("Unexpected cancellation response");
+      }
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.error || "Unable to cancel this number",
+        );
+      }
+
+      setCancelSuccess(true);
+      setOrder((current) =>
+        current
+          ? {
+              ...current,
+              status: "REFUNDED",
+            }
+          : current,
+      );
+      setVerificationCode(null);
+      setVerificationMessage("");
+    } catch (cancelRequestError) {
+      setCancelError(
+        cancelRequestError instanceof Error
+          ? cancelRequestError.message
+          : "Unable to cancel this number. Please contact our team.",
+      );
+    } finally {
+      setCancelLoading(false);
+    }
+  }
 
   async function checkVerification() {
     if (!orderId) return;
@@ -554,6 +613,114 @@ export default function OrderDetailPage() {
             </div>
           </div>
         </section>
+
+        {(order.status.toUpperCase() === "NUMBER_ASSIGNED" ||
+          order.status.toUpperCase() === "WAITING_FOR_SMS") &&
+          !verificationCode && (
+            <section className="mt-4 overflow-hidden rounded-[30px] border border-amber-200/80 bg-gradient-to-br from-white via-white to-amber-50/60 shadow-sm ring-1 ring-amber-100">
+              <div className="p-5 sm:p-6">
+                <div className="flex items-start gap-4">
+                  <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-2xl ring-1 ring-amber-200">
+                    <span className="absolute inset-0 animate-ping rounded-2xl bg-amber-200/30" />
+                    <span className="relative">⌁</span>
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-base font-black tracking-tight text-slate-950">
+                        Waiting for OTP
+                      </h2>
+                      <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.08em] text-amber-700">
+                        Active
+                      </span>
+                    </div>
+
+                    <p className="mt-2 text-sm leading-6 text-slate-600">
+                      Your verification number is active. We&apos;re waiting for the
+                      verification SMS to arrive.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-5 rounded-2xl bg-slate-50/90 p-4 ring-1 ring-slate-200/80">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 text-sm text-slate-400">i</div>
+                    <p className="text-xs font-medium leading-5 text-slate-500">
+                      Haven&apos;t received an OTP? You can cancel this number and
+                      receive the amount back in your wallet instantly.
+                    </p>
+                  </div>
+                </div>
+
+                {cancelError && (
+                  <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3">
+                    <p className="text-xs font-bold leading-5 text-red-700">
+                      {cancelError}
+                    </p>
+                  </div>
+                )}
+
+                {cancelSuccess ? (
+                  <div className="mt-4 flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-sm font-black text-emerald-700">
+                      ✓
+                    </div>
+                    <div>
+                      <p className="text-sm font-black text-emerald-900">
+                        Number cancelled and refund credited
+                      </p>
+                      <p className="mt-1 text-xs font-medium leading-5 text-emerald-700">
+                        The amount has been returned to your NumberHub wallet.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => void cancelNumber()}
+                    disabled={cancelLoading}
+                    className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white shadow-lg shadow-slate-950/10 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {cancelLoading ? (
+                      <>
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                        Cancelling securely…
+                      </>
+                    ) : (
+                      <>
+                        Cancel number
+                        <span className="text-white/50">·</span>
+                        Get refund
+                      </>
+                    )}
+                  </button>
+                )}
+
+                <p className="mt-3 text-center text-[11px] font-medium leading-5 text-slate-400">
+                  Cancellation is available only before an OTP is received.
+                </p>
+              </div>
+            </section>
+          )}
+
+        {order.status.toUpperCase() === "CODE_RECEIVED" && verificationCode && (
+          <section className="mt-4 rounded-[30px] border border-emerald-200/80 bg-emerald-50/50 p-5 shadow-sm ring-1 ring-emerald-100">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-sm font-black text-emerald-700">
+                ✓
+              </div>
+              <div>
+                <p className="text-sm font-black text-emerald-950">
+                  OTP received
+                </p>
+                <p className="mt-1 text-xs font-medium leading-5 text-emerald-800/70">
+                  This number has already received an OTP. Any refund request
+                  now requires review by our team.
+                </p>
+              </div>
+            </div>
+          </section>
+        )}
 
         {verificationCode && (
           <section className="mt-4 overflow-hidden rounded-[28px] border border-emerald-200 bg-white p-5 shadow-sm ring-1 ring-emerald-100">
