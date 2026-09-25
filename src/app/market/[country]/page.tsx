@@ -557,8 +557,11 @@ export default function MarketCountryPage() {
             <div className="space-y-3">
               {liveOptions.map((option, index) => {
                 const price = Number(
-                  option.materializedPromoPriceNgn ??
+                  option.customerPriceNgn ??
+                    option.materializedPromoPriceNgn ??
                     option.materializedPriceNgn ??
+                    option.priceNgn ??
+                    option.price ??
                     0
                 );
                 const unavailable =
