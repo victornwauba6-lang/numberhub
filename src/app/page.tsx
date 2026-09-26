@@ -365,7 +365,7 @@ export default function HomePage() {
                         </p>
 
                         <Link
-                          href={selectedCountry?.href || "/market"}
+                          href="/market/access"
                           className="mt-3 flex items-center justify-center rounded-xl bg-emerald-400 px-4 py-3 text-xs font-black text-[#06100c] transition hover:bg-emerald-300"
                         >
                           Sign in to continue →
@@ -616,7 +616,7 @@ export default function HomePage() {
             <Link href="/acceptable-use" className="hover:text-emerald-600">
               Acceptable Use
             </Link>
-            <Link href="/market" className="hover:text-emerald-600">
+            <Link href="/market/access" className="hover:text-emerald-600">
               Marketplace
             </Link>
           </div>
