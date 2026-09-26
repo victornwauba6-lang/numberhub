@@ -418,7 +418,6 @@ export default function DashboardPage() {
             [
               "NUMBER_ASSIGNED",
               "WAITING_FOR_SMS",
-              "CODE_RECEIVED",
             ].includes(order.status),
           );
 
