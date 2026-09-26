@@ -112,6 +112,17 @@ export async function syncVerificationOrder(
     supplierNumberReference: order.supplierNumberReference ?? "",
   });
 
+  console.error("[Verification Sync Diagnostic]", {
+    orderId: order.id,
+    supplierOrderReference: order.supplierOrderReference,
+    supplierNumberReference: order.supplierNumberReference,
+    success: supplierStatus.success,
+    status: supplierStatus.status,
+    hasVerificationCode: Boolean(supplierStatus.verificationCode),
+    errorCode: supplierStatus.errorCode ?? null,
+    errorMessage: supplierStatus.errorMessage ?? null,
+  });
+
   if (!supplierStatus.success) {
     throw new Error(
       supplierStatus.errorMessage ??
