@@ -237,28 +237,55 @@ export function createFiveSimAdapter(
       try {
         const body = await fiveSimRequest(
           normalizedApiKey,
-          `/user/sms/inbox/${encodeURIComponent(verificationId)}`,
+          `/user/check/${encodeURIComponent(verificationId)}`,
         );
 
-        const data =
-          body &&
-          typeof body === "object" &&
-          Array.isArray((body as Record<string, unknown>).Data)
-            ? ((body as Record<string, unknown>).Data as unknown[])
+        const record =
+          body && typeof body === "object"
+            ? (body as Record<string, unknown>)
+            : {};
+
+        const supplierStatus = extractString(record, [["status"]]);
+
+        const sms =
+          Array.isArray(record.sms)
+            ? (record.sms as unknown[])
             : [];
 
-        const latestSms = data.length > 0 ? data[0] : null;
+        const latestSms = sms.length > 0 ? sms[0] : null;
 
         const verificationCode = extractString(latestSms, [["code"]]);
         const message = extractString(latestSms, [["text"]]);
-        const phoneNumber = extractString(latestSms, [["sender"]]);
+        const phoneNumber =
+          extractString(record, [["phone"]]) ??
+          extractString(latestSms, [["sender"]]);
+
+        let status: SupplierVerificationStatusResult["status"];
+
+        if (verificationCode) {
+          status = "CODE_RECEIVED";
+        } else {
+          switch (supplierStatus) {
+            case "FINISHED":
+              status = "COMPLETED";
+              break;
+            case "TIMEOUT":
+              status = "EXPIRED";
+              break;
+            case "CANCELED":
+              status = "CANCELLED";
+              break;
+            case "RECEIVED":
+            case "PENDING":
+            default:
+              status = "WAITING_FOR_SMS";
+              break;
+          }
+        }
 
         return {
           success: true,
-          status:
-            verificationCode
-              ? "CODE_RECEIVED"
-              : "WAITING_FOR_SMS",
+          status,
           phoneNumber,
           verificationCode,
           message,

@@ -115,12 +115,11 @@ export async function POST(
           order.supplierNumberReference,
       });
 
-      if (!cancellation.success) {
-        throw new Error(
-          cancellation.errorMessage ||
-            "Supplier cancellation could not be confirmed",
-        );
-      }
+        if (!cancellation.success) {
+          throw new Error(
+            "This number could not be cancelled. If you have already received an OTP, the number cannot be cancelled. Please contact our support team if you need assistance.",
+          );
+        }
 
       await client.query(
         `
