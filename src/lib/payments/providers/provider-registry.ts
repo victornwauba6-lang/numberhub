@@ -1,5 +1,10 @@
 import { db } from "@/lib/db";
 import type { PaymentProvider } from "./payment-provider";
+import { KorapayPaymentProvider } from "./korapay-provider";
+
+const providers: Record<string, PaymentProvider> = {
+  korapay: new KorapayPaymentProvider(),
+};
 
 export async function getActiveDepositProvider(): Promise<{
   id: string;
@@ -23,9 +28,10 @@ export async function getActiveDepositProvider(): Promise<{
     return null;
   }
 
-  // Provider implementations will be registered here as they are added.
+  const row = result.rows[0];
+
   return {
-    id: result.rows[0].id,
-    provider: null,
+    id: row.id,
+    provider: providers[row.slug] ?? null,
   };
 }

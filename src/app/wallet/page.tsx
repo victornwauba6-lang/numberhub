@@ -32,15 +32,12 @@ export default function WalletPage() {
   const [user, setUser] = useState<User | null>(null);
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
-  const [fundingRequests, setFundingRequests] = useState<Array<{ id: string; fundingId: string; amountMinor: string; currency: string; status: string; adminNote: string | null; createdAt: string; reviewedAt: string | null }>>([]);
   const [amount, setAmount] = useState("");
   const [loading, setLoading] = useState(true);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState<"error" | "success">("error");
-  const [showFundingSuccess, setShowFundingSuccess] = useState(false);
-  const [submittedFundingAmount, setSubmittedFundingAmount] = useState(0);
 
   useEffect(() => {
     async function loadWallet() {
@@ -58,16 +55,13 @@ export default function WalletPage() {
 
         setUser(userData.user);
 
-        const [walletResponse, historyResponse, fundingResponse] = await Promise.all([
+        const [walletResponse, historyResponse] = await Promise.all([
           fetch("/api/wallet", { cache: "no-store" }),
           fetch("/api/payments/history", { cache: "no-store" }),
-          fetch("/api/manual-funding/history", { cache: "no-store" }),
         ]);
 
         const walletData = await walletResponse.json();
         const historyData = await historyResponse.json();
-        const fundingData = await fundingResponse.json();
-
         if (walletResponse.ok && walletData.success) {
           setWallet(walletData.wallet);
         }
@@ -76,9 +70,6 @@ export default function WalletPage() {
           setPayments(historyData.payments || []);
         }
 
-        if (fundingResponse.ok && fundingData.success) {
-          setFundingRequests(fundingData.fundingRequests || []);
-        }
       } catch {
         router.replace("/login");
       } finally {
@@ -145,8 +136,8 @@ export default function WalletPage() {
     }
   }
 
-  const transactionHistory = [
-    ...payments.map((payment) => ({
+  const transactionHistory = payments
+    .map((payment) => ({
       id: payment.id,
       amountMinor: payment.amountMinor,
       createdAt: payment.createdAt,
@@ -154,28 +145,15 @@ export default function WalletPage() {
       paymentMethod: payment.paymentMethod,
       providerReference: payment.providerReference,
       fundingId: null as string | null,
-    })),
-    ...fundingRequests
-      .filter((request) => request.status !== "APPROVED")
-      .map((request) => ({
-        id: `funding-${request.id}`,
-        amountMinor: request.amountMinor,
-        createdAt: request.createdAt,
-        status:
-          request.status === "REJECTED"
-            ? "PAYMENT_REJECTED"
-            : "PENDING",
-        paymentMethod: "WALLET_FUNDING",
-        providerReference: null,
-        fundingId: request.fundingId,
-      })),
-  ].sort(
-    (a, b) =>
-      new Date(b.createdAt).getTime() -
-      new Date(a.createdAt).getTime(),
-  );
+    }))
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() -
+        new Date(a.createdAt).getTime(),
+    );
 
-  async function handleManualFunding() {
+
+  async function handleFunding() {
     setMessage("");
 
     const value = Number(amount);
@@ -195,75 +173,50 @@ export default function WalletPage() {
     setSubmitting(true);
 
     try {
-      const response = await fetch("/api/manual-funding", {
+      const idempotencyKey =
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+      const response = await fetch("/api/payments", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ amount: value }),
+        body: JSON.stringify({
+          amount: value,
+          idempotencyKey,
+          paymentMethod: "KORAPAY",
+        }),
       });
 
       const data = await response.json();
 
       if (!response.ok || !data.success) {
         setMessageType("error");
-        setMessage(data.error || "We couldn't create your funding request.");
+        setMessage(data.error || "We couldn't start your payment.");
         return;
       }
 
-      if (data.fundingRequest) {
-        setFundingRequests((current) => [
-          data.fundingRequest,
-          ...current,
-        ]);
+      if (!data.payment?.checkoutUrl) {
+        setMessageType("error");
+        setMessage("Payment checkout is unavailable right now. Please try again.");
+        return;
       }
 
-      setSubmittedFundingAmount(value);
-      setAmount("");
-      setMessage("");
-      setShowFundingSuccess(true);
+      window.location.href = data.payment.checkoutUrl;
     } catch {
       setMessageType("error");
-      setMessage(
-        "Something went wrong while creating your funding request.",
-      );
+      setMessage("Something went wrong while starting your payment.");
     } finally {
       setSubmitting(false);
     }
   }
 
-  function getFundingStatusStyle(status: string) {
-    switch (status) {
-      case "APPROVED":
-        return "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400";
-      case "REJECTED":
-        return "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400";
-      default:
-        return "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400";
-    }
-  }
 
-  function getFundingStatusLabel(status: string) {
-    switch (status) {
-      case "APPROVED":
-        return "Approved";
-      case "REJECTED":
-        return "Rejected";
-      default:
-        return "Pending review";
-    }
-  }
 
-  async function copyAccountNumber() {
-    try {
-      await navigator.clipboard.writeText("3004234965");
-      setMessageType("success");
-      setMessage("Account number copied.");
-    } catch {
-      setMessageType("error");
-      setMessage("Couldn't copy the account number.");
-    }
-  }
+
+
 
   if (loading) {
     return (
@@ -344,8 +297,8 @@ export default function WalletPage() {
               Fund your wallet
             </h1>
             <p className="mt-2 text-sm leading-6 text-white/40">
-              Transfer funds to our business account and we’ll verify the
-              payment before adding the money to your wallet.
+              Add money securely through Kora. Your wallet is credited
+              automatically after the payment is confirmed.
             </p>
           </div>
 
@@ -383,52 +336,26 @@ export default function WalletPage() {
               Minimum funding amount: ₦100
             </p>
 
-            <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-              <div className="flex items-center justify-between">
+            <div className="mt-5 rounded-2xl border border-emerald-400/10 bg-emerald-400/[0.04] p-4">
+              <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[0.16em] text-white/30">
-                    Bank transfer
+                    Secure checkout
                   </p>
                   <p className="mt-1 text-base font-black text-white">
-                    Kuda
+                    Kora
                   </p>
                 </div>
 
                 <span className="rounded-full border border-emerald-400/15 bg-emerald-400/[0.07] px-2.5 py-1 text-[10px] font-black text-emerald-300">
-                  Manual verification
+                  Automatic credit
                 </span>
               </div>
 
-              <div className="mt-4 space-y-3">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/30">
-                    Account name
-                  </p>
-                  <p className="mt-1 text-sm font-black text-white">
-                    NUMBERBRIDGE TECHNOLOGIES
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/30">
-                    Account number
-                  </p>
-
-                  <div className="mt-1 flex items-center justify-between gap-3">
-                    <p className="text-lg font-black tracking-[0.08em] text-white">
-                      3004234965
-                    </p>
-
-                    <button
-                      type="button"
-                      onClick={copyAccountNumber}
-                      className="rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-[11px] font-black text-white/70 transition hover:bg-white/[0.08]"
-                    >
-                      Copy
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <p className="mt-3 text-xs font-medium leading-5 text-white/35">
+                You’ll be redirected to a secure payment page to complete
+                your wallet funding.
+              </p>
             </div>
 
             {message && (
@@ -445,26 +372,26 @@ export default function WalletPage() {
 
             <button
               type="button"
-              onClick={handleManualFunding}
+              onClick={handleFunding}
               disabled={submitting}
               className="nh-premium-button mt-5 flex w-full items-center justify-center gap-2 px-5 py-4 text-sm"
             >
               {submitting ? (
                 <>
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-black/20 border-t-black" />
-                  Creating funding request...
+                  Opening secure checkout...
                 </>
               ) : (
                 <>
-                  I’ve made the payment
+                  Continue to payment
                   <span aria-hidden="true">→</span>
                 </>
               )}
             </button>
 
             <div className="mt-4 rounded-xl bg-white/[0.025] px-3 py-3 text-center text-[10px] font-bold leading-4 text-white/30">
-              Your wallet is not credited automatically. We verify the bank
-              transfer first, then credit the exact amount to your wallet.
+              Your wallet is credited automatically after successful payment
+              confirmation.
             </div>
           </div>
         </section>
@@ -527,13 +454,6 @@ export default function WalletPage() {
                       <p className="mt-1 text-[11px] font-medium text-white/25">
                         {formatDate(transaction.createdAt)}
                       </p>
-
-                      {transaction.fundingId && (
-                        <p className="mt-2 text-[10px] font-black uppercase tracking-[0.12em] text-white/25">
-                          Funding ID · {transaction.fundingId}
-                        </p>
-                      )}
-
                       {transaction.providerReference &&
                         transaction.paymentMethod !== "MANUAL_BANK_TRANSFER" && (
                           <p className="mt-2 truncate text-[10px] font-medium text-white/20">
@@ -571,94 +491,6 @@ export default function WalletPage() {
         </button>
       </div>
 
-      {showFundingSuccess && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 px-5 backdrop-blur-xl"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="funding-success-title"
-        >
-          <div className="relative w-full max-w-[390px] overflow-hidden rounded-[32px] border border-white/[0.12] bg-[#0d1210] shadow-[0_30px_100px_rgba(0,0,0,0.65)]">
-            <div className="absolute -right-20 -top-20 h-48 w-48 rounded-full bg-emerald-400/[0.08] blur-3xl" />
-            <div className="absolute -bottom-24 -left-20 h-48 w-48 rounded-full bg-emerald-500/[0.05] blur-3xl" />
-
-            <div className="relative px-6 pb-6 pt-7">
-              <div className="flex justify-center">
-                <div className="relative">
-                  <div className="absolute inset-0 rounded-full bg-emerald-400/20 blur-xl" />
-
-                  <div className="relative flex h-[76px] w-[76px] items-center justify-center rounded-full border border-emerald-300/20 bg-emerald-400/[0.10]">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-400 shadow-[0_8px_30px_rgba(52,211,153,0.25)]">
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        className="h-7 w-7 text-[#06100b]"
-                        aria-hidden="true"
-                      >
-                        <path
-                          d="M5 12.5 9.2 17 19 7"
-                          stroke="currentColor"
-                          strokeWidth="2.8"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </div>
-                  </div>
-
-                  <span className="absolute -right-1 -top-1 text-base">✦</span>
-                  <span className="absolute -bottom-1 -left-2 text-xs text-emerald-300">✦</span>
-                </div>
-              </div>
-
-              <div className="mt-6 text-center">
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-emerald-400/70">
-                  Funding request
-                </p>
-
-                <h2
-                  id="funding-success-title"
-                  className="mt-2 text-[25px] font-black tracking-tight text-white"
-                >
-                  Payment submitted
-                </h2>
-
-                <p className="mt-2 text-sm font-medium text-white/40">
-                  Your payment has been submitted successfully.
-                </p>
-              </div>
-
-              <div className="mt-6 rounded-2xl border border-white/[0.08] bg-white/[0.035] px-5 py-4 text-center">
-                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-white/25">
-                  Payment amount
-                </p>
-
-                <p className="mt-1 text-[30px] font-black tracking-tight text-white">
-                  {formatNaira(String(submittedFundingAmount * 100))}
-                </p>
-
-                <div className="mx-auto mt-2 h-px w-10 bg-emerald-400/30" />
-
-                <p className="mt-2 text-[11px] font-bold text-white/30">
-                  Pending confirmation
-                </p>
-              </div>
-
-              <p className="mt-5 px-2 text-center text-xs font-medium leading-5 text-white/35">
-                Your wallet will be updated once the payment is confirmed.
-              </p>
-
-              <button
-                type="button"
-                onClick={() => setShowFundingSuccess(false)}
-                className="mt-6 flex w-full items-center justify-center rounded-2xl bg-emerald-400 px-5 py-4 text-sm font-black text-[#06100b] shadow-[0_10px_30px_rgba(52,211,153,0.14)] transition duration-200 hover:bg-emerald-300 active:scale-[0.98]"
-              >
-                OK
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </main>
   );
 }

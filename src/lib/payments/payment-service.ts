@@ -6,6 +6,7 @@ import {
   getIdempotencyRecord,
 } from "@/lib/idempotency/idempotency-service";
 import { createRequestHash } from "@/lib/idempotency/request-hash";
+import { getActiveDepositProvider } from "@/lib/payments/providers/provider-registry";
 
 const PAYMENT_OPERATION = "CREATE_WALLET_PAYMENT";
 const IDEMPOTENCY_EXPIRY_HOURS = 24;
@@ -27,6 +28,7 @@ export type CreatePaymentResult = {
   status: string;
   providerId: string | null;
   providerReference: string | null;
+  checkoutUrl: string | null;
   replayed: boolean;
 };
 
@@ -64,6 +66,30 @@ function normalizeCurrency(currency?: string): string {
   return normalized;
 }
 
+async function updatePaymentProviderDetails(
+  paymentId: string,
+  providerReference: string,
+  checkoutUrl: string | null,
+): Promise<void> {
+  await withTransaction(async (client) => {
+    await client.query(
+      `
+        UPDATE payments
+        SET
+          provider_reference = $2::text,
+          metadata = COALESCE(metadata, '{}'::jsonb)
+            || jsonb_build_object(
+              'providerReference', $2::text,
+              'checkoutUrl', $3::text
+            ),
+          updated_at = NOW()
+        WHERE id = $1
+      `,
+      [paymentId, providerReference, checkoutUrl],
+    );
+  });
+}
+
 export async function createWalletPayment(
   input: CreatePaymentInput,
 ): Promise<CreatePaymentResult> {
@@ -90,41 +116,43 @@ export async function createWalletPayment(
     paymentMethod,
   });
 
-  return withTransaction(async (client) => {
-    const existing = await getIdempotencyRecord(
+  const existing = await withTransaction(async (client) => {
+    return getIdempotencyRecord(
       client,
       input.userId,
       idempotencyKey,
       PAYMENT_OPERATION,
     );
+  });
 
-    if (existing) {
-      if (existing.requestHash !== requestHash) {
-        throw new Error(
-          "Idempotency key was already used for a different payment",
-        );
-      }
-
-      if (
-        existing.responseStatus === 200 &&
-        existing.responseBody &&
-        typeof existing.responseBody === "object"
-      ) {
-        const body = existing.responseBody as CreatePaymentResult;
-
-        return {
-          ...body,
-          replayed: true,
-        };
-      }
-
-      throw new Error("This payment request is already being processed");
+  if (existing) {
+    if (existing.requestHash !== requestHash) {
+      throw new Error(
+        "Idempotency key was already used for a different payment",
+      );
     }
 
-    const expiresAt = new Date(
-      Date.now() + IDEMPOTENCY_EXPIRY_HOURS * 60 * 60 * 1000,
-    );
+    if (
+      existing.responseStatus === 200 &&
+      existing.responseBody &&
+      typeof existing.responseBody === "object"
+    ) {
+      const body = existing.responseBody as CreatePaymentResult;
 
+      return {
+        ...body,
+        replayed: true,
+      };
+    }
+
+    throw new Error("This payment request is already being processed");
+  }
+
+  const expiresAt = new Date(
+    Date.now() + IDEMPOTENCY_EXPIRY_HOURS * 60 * 60 * 1000,
+  );
+
+  const created = await withTransaction(async (client) => {
     let idempotencyRecord;
 
     try {
@@ -169,10 +197,10 @@ export async function createWalletPayment(
 
     const providerResult = await client.query<{
       id: string;
-      name: string;
+      slug: string;
     }>(
       `
-        SELECT id, name
+        SELECT id, slug
         FROM payment_providers
         WHERE is_active = TRUE
           AND supports_deposit = TRUE
@@ -181,13 +209,15 @@ export async function createWalletPayment(
       `,
     );
 
-    const providerId =
-      providerResult.rowCount === 1 ? providerResult.rows[0].id : null;
+    if (providerResult.rowCount !== 1) {
+      throw new Error("No active payment provider is configured");
+    }
+
+    const providerId = providerResult.rows[0].id;
 
     const paymentResult = await client.query<{
       id: string;
       status: string;
-      providerReference: string | null;
     }>(
       `
         INSERT INTO payments (
@@ -214,8 +244,7 @@ export async function createWalletPayment(
         )
         RETURNING
           id,
-          status,
-          provider_reference AS "providerReference"
+          status
       `,
       [
         input.userId,
@@ -227,31 +256,117 @@ export async function createWalletPayment(
         idempotencyKey,
         JSON.stringify({
           source: "NUMBERHUB_WALLET_FUNDING",
-          providerConfigured: providerId !== null,
+          providerConfigured: true,
         }),
       ],
     );
 
-    const response: CreatePaymentResult = {
+    return {
+      idempotencyRecordId: idempotencyRecord.id,
       paymentId: paymentResult.rows[0].id,
       walletId,
-      amountMinor: input.amountMinor.toString(),
-      currency,
       status: paymentResult.rows[0].status,
       providerId,
-      providerReference: paymentResult.rows[0].providerReference,
-      replayed: false,
+      providerSlug: providerResult.rows[0].slug,
     };
+  });
 
+  const providerInfo = await getActiveDepositProvider();
+
+  if (!providerInfo || !providerInfo.provider) {
+    throw new Error("Payment provider is not configured");
+  }
+
+  if (providerInfo.id !== created.providerId) {
+    throw new Error("Payment provider configuration changed");
+  }
+
+  const customerResult = await withTransaction(async (client) => {
+    const result = await client.query<{
+      email: string;
+      fullName: string | null;
+    }>(
+      `
+        SELECT email, full_name AS "fullName"
+        FROM users
+        WHERE id = $1
+        LIMIT 1
+      `,
+      [input.userId],
+    );
+
+    if (result.rowCount !== 1) {
+      throw new Error("User not found");
+    }
+
+    return result.rows[0];
+  });
+
+  let initialization;
+
+  try {
+    initialization = await providerInfo.provider.initializePayment({
+      paymentId: created.paymentId,
+      userId: input.userId,
+      amountMinor: input.amountMinor,
+      currency,
+      customerEmail: customerResult.email,
+      customerName: customerResult.fullName,
+    });
+  } catch (error) {
+    await withTransaction(async (client) => {
+      await client.query(
+        `
+          UPDATE payments
+          SET status = 'FAILED',
+              metadata = COALESCE(metadata, '{}'::jsonb)
+                || jsonb_build_object(
+                  'initializationError',
+                  $2::text
+                ),
+              updated_at = NOW()
+          WHERE id = $1
+        `,
+        [
+          created.paymentId,
+          error instanceof Error
+            ? error.message
+            : "Payment initialization failed",
+        ],
+      );
+    });
+
+    throw error;
+  }
+
+  const response: CreatePaymentResult = {
+    paymentId: created.paymentId,
+    walletId: created.walletId,
+    amountMinor: input.amountMinor.toString(),
+    currency,
+    status: created.status,
+    providerId: created.providerId,
+    providerReference: initialization.providerPaymentId,
+    checkoutUrl: initialization.checkoutUrl ?? null,
+    replayed: false,
+  };
+
+  await updatePaymentProviderDetails(
+    created.paymentId,
+    initialization.providerPaymentId,
+    initialization.checkoutUrl ?? null,
+  );
+
+  await withTransaction(async (client) => {
     await completeIdempotencyRecord(
       client,
-      idempotencyRecord.id,
+      created.idempotencyRecordId,
       200,
       response,
       "PAYMENT",
       response.paymentId,
     );
-
-    return response;
   });
+
+  return response;
 }
