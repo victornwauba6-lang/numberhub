@@ -146,14 +146,43 @@ export default function AdminFundingPage() {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={loadRequests}
-            disabled={loading}
-            className="rounded-2xl border border-black/10 bg-white px-4 py-3 text-xs font-black text-slate-600 shadow-sm transition hover:border-emerald-300 hover:text-emerald-700 disabled:opacity-50"
-          >
-            Refresh
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={async () => {
+                setMessage("Configuring Korapay...");
+                try {
+                  const response = await fetch("/api/admin/migrate-korapay", {
+                    method: "POST",
+                    credentials: "include",
+                  });
+                  const data = await response.json();
+                  if (!response.ok || !data.success) {
+                    throw new Error(data.error || "Korapay configuration failed");
+                  }
+                  setMessage("Korapay payment provider is configured successfully.");
+                } catch (error) {
+                  setMessage(
+                    error instanceof Error
+                      ? error.message
+                      : "Korapay configuration failed",
+                  );
+                }
+              }}
+              className="rounded-2xl bg-[#062d1d] px-4 py-3 text-xs font-black text-white shadow-sm"
+            >
+              Configure Kora
+            </button>
+
+            <button
+              type="button"
+              onClick={loadRequests}
+              disabled={loading}
+              className="rounded-2xl border border-black/10 bg-white px-4 py-3 text-xs font-black text-slate-600 shadow-sm transition hover:border-emerald-300 hover:text-emerald-700 disabled:opacity-50"
+            >
+              Refresh
+            </button>
+          </div>
         </div>
 
         {message && (
