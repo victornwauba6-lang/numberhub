@@ -7,7 +7,7 @@ import NumberHubAssistant from "@/app/_components/NumberHubAssistant";
 type User = {
   id: string;
   email: string;
-  name?: string | null;
+  fullName?: string | null;
 };
 
 type Transaction = {
@@ -245,7 +245,7 @@ export default function DashboardPage() {
   }, [orders]);
 
   const firstName =
-    user?.name?.trim()?.split(/\s+/)[0] ||
+    user?.fullName?.trim()?.split(/\s+/)[0] ||
     user?.email?.split("@")[0] ||
     "there";
 
@@ -305,7 +305,7 @@ export default function DashboardPage() {
             aria-label="Open profile"
             className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-sm font-black text-white shadow-lg shadow-black/20 transition hover:border-emerald-400/30 hover:bg-white/[0.09] active:scale-95"
           >
-            {(user?.name?.trim()?.charAt(0) ||
+            {(user?.fullName?.trim()?.charAt(0) ||
               user?.email?.charAt(0) ||
               "N").toUpperCase()}
           </button>
