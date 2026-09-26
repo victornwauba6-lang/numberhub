@@ -204,9 +204,9 @@ export default function HomePage() {
 
             <div className="mt-9 flex items-center gap-5 border-t border-slate-200/80 pt-7 dark:border-white/[0.08]">
               <div>
-                <div className="text-2xl font-black tracking-tight">5,000+</div>
+                <div className="text-2xl font-black tracking-tight">Trusted digital connectivity</div>
                 <div className="mt-0.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                  customers
+                  Fast, secure access when you need it.
                 </div>
               </div>
 
