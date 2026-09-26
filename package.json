@@ -6,7 +6,8 @@
     "dev": "next dev --webpack",
     "build": "next build --webpack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:ensure-manual-funding": "sh scripts/ensure-manual-funding.sh"
   },
   "dependencies": {
     "@google/genai": "^2.24.0",
