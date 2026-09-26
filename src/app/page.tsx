@@ -213,7 +213,7 @@ export default function HomePage() {
               <div className="h-10 w-px bg-slate-200 dark:bg-white/10" />
 
               <div className="max-w-[230px] text-sm font-medium leading-5 text-slate-500 dark:text-slate-400">
-                Choosing NumberHub for digital connectivity.
+                
               </div>
             </div>
           </div>
@@ -250,7 +250,7 @@ export default function HomePage() {
                   </div>
                   <p className="mt-2 max-w-sm text-xs leading-5 text-slate-500">
                     {selectedPromoService
-                      ? "A promotional public price. Actual marketplace availability may vary."
+                      ? "Promotional public price. Actual marketplace availability and pricing may vary by country, service, and live availability."
                       : selectedPromoCountry
                         ? `See promotional pricing for ${selectedCountry?.name || "this destination"}.`
                         : "Select a country first, then choose the service you need."}
@@ -451,6 +451,47 @@ export default function HomePage() {
                 </p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Secure & transparent */}
+      <section className="border-b border-slate-200/80 bg-white dark:border-white/[0.07] dark:bg-slate-950">
+        <div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 sm:py-24">
+          <div className="max-w-2xl">
+            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600">
+              Secure & transparent
+            </div>
+            <h2 className="mt-2 text-3xl font-black tracking-[-0.04em] sm:text-4xl">
+              Clear, simple and transparent.
+            </h2>
+            <p className="mt-4 text-sm leading-7 text-slate-500 dark:text-slate-400">
+              Know what you are paying for, keep track of your balance and follow
+              your orders from one account.
+            </p>
+          </div>
+
+          <div className="mt-12 grid gap-4 md:grid-cols-3">
+            <div className="rounded-3xl border border-slate-200/80 bg-slate-50/70 p-6 dark:border-white/[0.07] dark:bg-white/[0.025]">
+              <div className="text-sm font-black">Clear pricing</div>
+              <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
+                See the applicable price before completing a purchase.
+              </p>
+            </div>
+
+            <div className="rounded-3xl border border-slate-200/80 bg-slate-50/70 p-6 dark:border-white/[0.07] dark:bg-white/[0.025]">
+              <div className="text-sm font-black">Wallet records</div>
+              <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
+                Keep track of your available balance and transaction history.
+              </p>
+            </div>
+
+            <div className="rounded-3xl border border-slate-200/80 bg-slate-50/70 p-6 dark:border-white/[0.07] dark:bg-white/[0.025]">
+              <div className="text-sm font-black">Order visibility</div>
+              <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
+                Follow your purchases and order status from your account.
+              </p>
+            </div>
           </div>
         </div>
       </section>
