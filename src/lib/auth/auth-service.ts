@@ -43,6 +43,16 @@ export async function registerUser(
   const passwordHash = await hashPassword(input.password);
 
   return withTransaction(async (client) => {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS legal_acceptances (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        terms_version VARCHAR(20) NOT NULL,
+        privacy_version VARCHAR(20) NOT NULL,
+        accepted_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+
     const roleResult = await client.query<{ id: string; name: string }>(
       `
         SELECT id, name
