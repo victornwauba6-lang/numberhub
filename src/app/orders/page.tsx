@@ -67,6 +67,14 @@ function statusMeta(status: string) {
         dot: "bg-emerald-500",
       };
 
+    case "CODE_RECEIVED":
+      return {
+        label: "Code received",
+        className:
+          "bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300",
+        dot: "bg-emerald-500",
+      };
+
     case "FAILED":
     case "CANCELLED":
     case "EXPIRED":
