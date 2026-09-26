@@ -467,11 +467,11 @@ export default function DashboardPage() {
                       <p className="mt-2 text-[25px] font-black tracking-[-0.04em] text-white">
                         {activeOrder.phoneNumber}
                       </p>
-                    ) : (
+                    ) : isWaiting ? (
                       <p className="mt-3 text-sm font-bold text-white/50">
                         Number is being assigned…
                       </p>
-                    )}
+                    ) : null}
 
                     <p className="mt-2 text-xs leading-5 text-white/40">
                       {isWaiting
