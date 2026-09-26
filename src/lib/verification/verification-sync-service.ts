@@ -112,17 +112,6 @@ export async function syncVerificationOrder(
     supplierNumberReference: order.supplierNumberReference ?? "",
   });
 
-  console.error("[Verification Sync Diagnostic]", {
-    orderId: order.id,
-    supplierOrderReference: order.supplierOrderReference,
-    supplierNumberReference: order.supplierNumberReference,
-    success: supplierStatus.success,
-    status: supplierStatus.status,
-    hasVerificationCode: Boolean(supplierStatus.verificationCode),
-    errorCode: supplierStatus.errorCode ?? null,
-    errorMessage: supplierStatus.errorMessage ?? null,
-  });
-
   if (!supplierStatus.success) {
     throw new Error(
       supplierStatus.errorMessage ??
@@ -226,9 +215,9 @@ export async function syncVerificationOrder(
         `
           UPDATE orders
           SET
-            status = $2,
+            status = $2::varchar(40),
             completed_at = CASE
-              WHEN $2 = 'COMPLETED' THEN NOW()
+              WHEN $2::varchar(40) = 'COMPLETED' THEN NOW()
               ELSE completed_at
             END,
             updated_at = NOW()
@@ -248,9 +237,9 @@ export async function syncVerificationOrder(
           )
           VALUES (
             $1,
-            $2,
-            $3,
-            $4,
+            $2::varchar(40),
+            $3::varchar(40),
+            $4::varchar(50),
             $5
           )
         `,
