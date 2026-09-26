@@ -152,6 +152,7 @@ export default function OrderDetailPage() {
   const [cancelLoading, setCancelLoading] = useState(false);
   const [cancelError, setCancelError] = useState("");
   const [cancelSuccess, setCancelSuccess] = useState(false);
+    const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [verificationCode, setVerificationCode] = useState<string | null>(null);
   const [verificationMessage, setVerificationMessage] = useState("");
   const [verificationLoading, setVerificationLoading] = useState(false);
@@ -159,11 +160,6 @@ export default function OrderDetailPage() {
   async function cancelNumber() {
     if (!orderId || cancelLoading) return;
 
-    const confirmed = window.confirm(
-      "Cancel this number and receive an instant wallet refund? This should only be used if you have not received an OTP."
-    );
-
-    if (!confirmed) return;
 
     setCancelLoading(true);
     setCancelError("");
@@ -677,7 +673,7 @@ export default function OrderDetailPage() {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => void cancelNumber()}
+                    onClick={() => setShowCancelConfirm(true)}
                     disabled={cancelLoading}
                     className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white shadow-lg shadow-slate-950/10 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                   >
@@ -698,6 +694,55 @@ export default function OrderDetailPage() {
 
                 <p className="mt-3 text-center text-[11px] font-medium leading-5 text-slate-400">
                   Cancellation is available only before an OTP is received.
+
+                  {showCancelConfirm && (
+                    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/50 p-4 backdrop-blur-sm sm:items-center">
+                      <div className="w-full max-w-md overflow-hidden rounded-[28px] bg-white shadow-2xl ring-1 ring-slate-200">
+                        <div className="p-6">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-xl font-black text-amber-700 ring-1 ring-amber-200">
+                            !
+                          </div>
+
+                          <h3 className="mt-5 text-xl font-black tracking-tight text-slate-950">
+                            Cancel this number?
+                          </h3>
+
+                          <p className="mt-2 text-sm leading-6 text-slate-600">
+                            If you have not received an OTP, the amount will be refunded to your NumberHub wallet immediately.
+                          </p>
+
+                          <div className="mt-4 rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-200">
+                            <p className="text-xs font-bold leading-5 text-slate-600">
+                              Once an OTP has been received, the number cannot be cancelled.
+                            </p>
+                          </div>
+
+                          <div className="mt-6 grid grid-cols-2 gap-3">
+                            <button
+                              type="button"
+                              onClick={() => setShowCancelConfirm(false)}
+                              disabled={cancelLoading}
+                              className="h-12 rounded-2xl bg-slate-100 px-4 text-sm font-black text-slate-700 transition hover:bg-slate-200 disabled:opacity-60"
+                            >
+                              Keep number
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowCancelConfirm(false);
+                                void cancelNumber();
+                              }}
+                              disabled={cancelLoading}
+                              className="h-12 rounded-2xl bg-slate-950 px-4 text-sm font-black text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              Cancel & refund
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </p>
               </div>
             </section>
@@ -855,7 +900,7 @@ export default function OrderDetailPage() {
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200/80 bg-white/95 px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl">
         <div className="mx-auto grid max-w-2xl grid-cols-4 gap-2">
           <Link
-            href="/"
+            href="/dashboard"
             className="flex flex-col items-center gap-1 rounded-2xl py-2 text-[11px] font-semibold text-slate-500"
           >
             <span className="text-lg">⌂</span>
