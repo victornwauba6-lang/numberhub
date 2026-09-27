@@ -229,9 +229,9 @@ export async function POST(request: Request) {
                   'webhookError',
                   'Amount mismatch',
                   'webhookAmountMinor',
-                  $2,
+                  $2::text,
                   'expectedAmountMinor',
-                  $3
+                  $3::text
                 ),
               updated_at = NOW()
             WHERE id = $1
