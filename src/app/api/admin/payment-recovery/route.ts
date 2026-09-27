@@ -48,10 +48,9 @@ export async function GET() {
         FROM payments p
         INNER JOIN users u ON u.id = p.user_id
         WHERE p.amount_minor = 10000
-          AND p.status IN ('PENDING', 'PROCESSING')
           AND p.provider_reference IS NOT NULL
         ORDER BY p.created_at DESC
-        LIMIT 10
+        LIMIT 20
       `,
     );
 
