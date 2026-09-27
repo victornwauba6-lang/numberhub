@@ -803,7 +803,7 @@ export default function OrderDetailPage() {
                 <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-300">
                   Verification number
                 </p>
-                <p className="mt-2 break-all text-[30px] leading-tight font-black tracking-tight text-slate-950 dark:text-emerald-100">
+                <p className="mt-2 break-all text-[30px] leading-tight font-black tracking-tight text-slate-950">
                   {order.phoneNumber}
                 </p>
                 {order.assignedAt && (
