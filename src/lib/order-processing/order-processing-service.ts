@@ -2,6 +2,8 @@ import type { PoolClient } from "pg";
 import { getSupplierAdapter } from "@/lib/suppliers/supplier-registry";
 import { automaticallyRefundFailedOrder } from "@/lib/order-processing/auto-refund-service";
 import { findSupplierRoutes } from "@/lib/suppliers/supplier-routing-service";
+import { getFiveSimCountryServiceOptions } from "@/lib/suppliers/catalog/fivesim-catalog-service";
+import { calculateCustomerPrice } from "@/lib/pricing/pricing-engine";
 
 export type ProcessOrderResult = {
   orderId: string;
@@ -26,6 +28,7 @@ export async function processOrder(
     productOptionId: string;
     countryCode: string;
     serviceSlug: string;
+    priceMinor: string;
     supplierId: string;
     supplierName: string;
     supplierSlug: string;
@@ -37,6 +40,7 @@ export async function processOrder(
         o.product_option_id AS "productOptionId",
         c.code AS "countryCode",
         s.slug AS "serviceSlug",
+        o.price_minor::text AS "priceMinor",
         sup.id AS "supplierId",
         sup.name AS "supplierName",
         sup.slug AS "supplierSlug",
@@ -245,6 +249,159 @@ export async function processOrder(
       hasSupplierNumberReference: Boolean(activation.supplierNumberReference),
       rawResponse: activation.rawResponse ?? null,
     });
+
+    const rawActivationText =
+      activation.rawResponse &&
+      typeof activation.rawResponse === "object" &&
+      "rawText" in activation.rawResponse &&
+      typeof activation.rawResponse.rawText === "string"
+        ? activation.rawResponse.rawText.trim().toLowerCase()
+        : "";
+
+    if (
+      route.supplierSlug === "fivesim" &&
+      rawActivationText === "no free phones"
+    ) {
+      try {
+        const freshOperators = await getFiveSimCountryServiceOptions(
+          order.countryCode,
+          order.serviceSlug,
+        );
+
+        const paidPriceMinor = Number(order.priceMinor);
+
+        const candidates = [];
+
+        for (const operator of freshOperators) {
+          if (
+            !operator.operator ||
+            operator.operator.trim().toLowerCase() ===
+              route.supplierProductId.trim().toLowerCase() ||
+            operator.count <= 0
+          ) {
+            continue;
+          }
+
+          const price = await calculateCustomerPrice({
+            supplier: "fivesim",
+            supplierOption: operator.operator,
+            cost: operator.cost,
+            currency: operator.currency,
+            country: order.countryCode,
+            service: order.serviceSlug,
+          });
+
+          if (
+            price.customerPriceMinor !== null &&
+            Number.isFinite(paidPriceMinor) &&
+            price.customerPriceMinor <= paidPriceMinor
+          ) {
+            candidates.push({
+              operator: operator.operator,
+              count: operator.count,
+              customerPriceMinor: price.customerPriceMinor,
+            });
+          }
+        }
+
+        candidates.sort(
+          (a, b) =>
+            b.count - a.count ||
+            a.customerPriceMinor - b.customerPriceMinor,
+        );
+
+        for (const candidate of candidates) {
+          console.log("[ORDER_PROCESSING] trying safe 5SIM operator fallback", {
+            orderId: order.id,
+            operator: candidate.operator,
+            stock: candidate.count,
+            customerPriceMinor: candidate.customerPriceMinor,
+            paidPriceMinor,
+          });
+
+          await client.query(
+            `
+              UPDATE supplier_requests
+              SET
+                request_payload = request_payload || $2::jsonb,
+                updated_at = NOW()
+              WHERE id = $1
+            `,
+            [
+              supplierRequestId,
+              JSON.stringify({
+                fallbackOperator: candidate.operator,
+                fallbackStock: candidate.count,
+                fallbackCustomerPriceMinor: candidate.customerPriceMinor,
+                originalSupplierProductId: route.supplierProductId,
+              }),
+            ],
+          );
+
+          try {
+            const fallbackActivation = await adapter.activateNumber({
+              orderId: order.id,
+              productOptionId: order.productOptionId,
+              countryCode: order.countryCode,
+              serviceSlug: order.serviceSlug,
+              supplierProductId: candidate.operator,
+            });
+
+            console.log(
+              "[ORDER_PROCESSING] 5SIM operator fallback result",
+              {
+                orderId: order.id,
+                operator: candidate.operator,
+                success: fallbackActivation.success,
+                errorCode: fallbackActivation.errorCode,
+                errorMessage: fallbackActivation.errorMessage,
+                hasSupplierOrderReference: Boolean(
+                  fallbackActivation.supplierOrderReference,
+                ),
+                hasPhoneNumber: Boolean(fallbackActivation.phoneNumber),
+                hasSupplierNumberReference: Boolean(
+                  fallbackActivation.supplierNumberReference,
+                ),
+                rawResponse: fallbackActivation.rawResponse ?? null,
+              },
+            );
+
+            if (
+              fallbackActivation.success &&
+              fallbackActivation.supplierOrderReference &&
+              fallbackActivation.phoneNumber &&
+              fallbackActivation.supplierNumberReference
+            ) {
+              activation = fallbackActivation;
+              break;
+            }
+          } catch (fallbackError: unknown) {
+            console.error(
+              "[ORDER_PROCESSING] 5SIM operator fallback exception",
+              {
+                orderId: order.id,
+                operator: candidate.operator,
+                error:
+                  fallbackError instanceof Error
+                    ? fallbackError.message
+                    : "Unknown fallback activation error.",
+              },
+            );
+          }
+        }
+      } catch (fallbackLookupError: unknown) {
+        console.error(
+          "[ORDER_PROCESSING] 5SIM operator fallback lookup failed",
+          {
+            orderId: order.id,
+            error:
+              fallbackLookupError instanceof Error
+                ? fallbackLookupError.message
+                : "Unknown fallback lookup error.",
+          },
+        );
+      }
+    }
 
     if (
       !activation.success ||
