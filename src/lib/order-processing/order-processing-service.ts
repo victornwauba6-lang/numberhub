@@ -233,6 +233,19 @@ export async function processOrder(
       };
     }
 
+    console.log("[ORDER_PROCESSING] supplier activation result", {
+      orderId: order.id,
+      supplier: route.supplierSlug,
+      supplierProductId: route.supplierProductId,
+      success: activation.success,
+      errorCode: activation.errorCode,
+      errorMessage: activation.errorMessage,
+      hasSupplierOrderReference: Boolean(activation.supplierOrderReference),
+      hasPhoneNumber: Boolean(activation.phoneNumber),
+      hasSupplierNumberReference: Boolean(activation.supplierNumberReference),
+      rawResponse: activation.rawResponse ?? null,
+    });
+
     if (
       !activation.success ||
       !activation.supplierOrderReference ||
