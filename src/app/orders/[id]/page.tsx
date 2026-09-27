@@ -800,14 +800,14 @@ export default function OrderDetailPage() {
           <section className="mt-4 overflow-hidden rounded-[28px] border border-emerald-200 bg-emerald-50 p-5 shadow-sm dark:border-emerald-400/20 dark:bg-emerald-400/5">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-sm font-black uppercase tracking-[0.14em] text-emerald-800 dark:text-emerald-300">
+                <p className="text-sm font-black uppercase tracking-[0.14em] text-black">
                   Verification number
                 </p>
-                <p className="mt-2 break-all text-[30px] leading-tight font-black tracking-tight text-slate-950 dark:text-emerald-100">
+                <p className="mt-2 break-all text-[30px] leading-tight font-black tracking-tight text-black">
                   {order.phoneNumber}
                 </p>
                 {order.assignedAt && (
-                  <p className="mt-2 text-sm font-bold text-emerald-900 dark:text-emerald-200">
+                  <p className="mt-2 text-sm font-bold text-black">
                     Assigned {formatDate(order.assignedAt)}
                   </p>
                 )}
@@ -818,7 +818,7 @@ export default function OrderDetailPage() {
                 onClick={() => {
                   void navigator.clipboard?.writeText(order.phoneNumber || "");
                 }}
-                className="shrink-0 rounded-xl bg-white px-3 py-2 text-xs font-black text-emerald-700 shadow-sm ring-1 ring-emerald-200 transition hover:bg-emerald-50 dark:bg-white/10 dark:text-emerald-200 dark:ring-emerald-400/20"
+                className="shrink-0 rounded-xl bg-white px-3 py-2 text-xs font-black text-black shadow-sm ring-1 ring-emerald-200 transition hover:bg-emerald-50 dark:bg-white/10 dark:text-black dark:ring-emerald-400/20"
               >
                 Copy
               </button>
