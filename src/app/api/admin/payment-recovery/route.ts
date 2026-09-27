@@ -86,7 +86,13 @@ export async function GET() {
         status: payment.status,
         providerReference: payment.provider_reference,
         createdAt: payment.created_at,
-        verification,
+        verification: verification
+          ? JSON.parse(
+              JSON.stringify(verification, (_, value) =>
+                typeof value === "bigint" ? value.toString() : value,
+              ),
+            )
+          : null,
       });
     }
 
