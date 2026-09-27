@@ -27,10 +27,13 @@ export default function PaymentRecoveryPage() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [recoveringId, setRecoveringId] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState("");
 
   async function inspectPayments() {
     setLoading(true);
     setError("");
+    setSuccessMessage("");
 
     try {
       const response = await fetch("/api/admin/payment-recovery", {
@@ -52,13 +55,67 @@ export default function PaymentRecoveryPage() {
     }
   }
 
+  async function recoverPayment(payment: Payment) {
+    if (!payment.verification?.success) {
+      setError("This payment has not been confirmed successful by Korapay.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Recover ₦${payment.amountNgn.toLocaleString()} for ${payment.email}?\n\nKora reference: ${payment.providerReference}\n\nThis will credit the wallet and mark the payment successful.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setRecoveringId(payment.paymentId);
+    setError("");
+    setSuccessMessage("");
+
+    try {
+      const response = await fetch("/api/admin/payment-recovery", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          paymentId: payment.paymentId,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Recovery failed");
+      }
+
+      if (result.alreadyRecovered) {
+        setSuccessMessage(
+          "This payment was already recovered or had already been credited."
+        );
+      } else {
+        setSuccessMessage(
+          `Recovery successful. ₦${payment.amountNgn.toLocaleString()} was credited to ${payment.email}.`
+        );
+      }
+
+      await inspectPayments();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Recovery failed");
+    } finally {
+      setRecoveringId(null);
+    }
+  }
+
   return (
     <main className="min-h-screen bg-background p-6">
       <div className="mx-auto max-w-4xl space-y-6">
         <div>
           <h1 className="text-2xl font-semibold">Payment Recovery</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Read-only inspection of pending ₦100 Korapay payments.
+            Inspect ₦100 Korapay payments and recover a confirmed successful payment.
           </p>
         </div>
 
@@ -68,12 +125,18 @@ export default function PaymentRecoveryPage() {
           disabled={loading}
           className="rounded-xl bg-primary px-5 py-3 text-sm font-medium text-primary-foreground disabled:opacity-50"
         >
-          {loading ? "Checking..." : "Check Pending ₦100 Payment"}
+          {loading ? "Checking..." : "Check ₦100 Payments"}
         </button>
 
         {error ? (
           <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm">
             {error}
+          </div>
+        ) : null}
+
+        {successMessage ? (
+          <div className="rounded-xl border border-primary/30 bg-primary/10 p-4 text-sm">
+            {successMessage}
           </div>
         ) : null}
 
@@ -131,9 +194,29 @@ export default function PaymentRecoveryPage() {
                     {payment.verification?.success ? "YES" : "NO"}
                   </strong>
                 </p>
+
                 {payment.verification?.error ? (
                   <p className="mt-2 text-destructive">
                     {payment.verification.error}
+                  </p>
+                ) : null}
+
+                {payment.verification?.success && payment.status !== "SUCCESS" ? (
+                  <button
+                    type="button"
+                    onClick={() => recoverPayment(payment)}
+                    disabled={recoveringId !== null}
+                    className="mt-4 rounded-xl bg-primary px-5 py-3 text-sm font-medium text-primary-foreground disabled:opacity-50"
+                  >
+                    {recoveringId === payment.paymentId
+                      ? "Recovering..."
+                      : "Recover ₦100"}
+                  </button>
+                ) : null}
+
+                {payment.status === "SUCCESS" ? (
+                  <p className="mt-4 text-sm font-medium">
+                    Already marked successful
                   </p>
                 ) : null}
               </div>
