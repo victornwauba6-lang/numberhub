@@ -176,7 +176,7 @@ export async function POST(request: Request) {
             AND provider_reference = $2
           FOR UPDATE
         `,
-        [providerInfo.id, data.reference],
+        [providerInfo.id, data.payment_reference || data.reference],
       );
 
       if (paymentResult.rowCount !== 1) {
