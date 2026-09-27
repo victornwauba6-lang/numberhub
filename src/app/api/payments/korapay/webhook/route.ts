@@ -289,7 +289,7 @@ export async function POST(request: Request) {
             metadata = COALESCE(metadata, '{}'::jsonb)
               || jsonb_build_object(
                 'webhookEvent',
-                $3
+                $3::text
               ),
             updated_at = NOW()
           WHERE id = $1
