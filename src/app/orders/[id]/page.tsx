@@ -800,14 +800,14 @@ export default function OrderDetailPage() {
           <section className="mt-4 overflow-hidden rounded-[28px] border border-emerald-200 bg-emerald-50 p-5 shadow-sm dark:border-emerald-400/20 dark:bg-emerald-400/5">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-300">
+                <p className="text-sm font-black uppercase tracking-[0.14em] text-emerald-800 dark:text-emerald-300">
                   Verification number
                 </p>
-                <p className="mt-2 break-all text-[30px] leading-tight font-black tracking-tight text-slate-950">
+                <p className="mt-2 break-all text-[30px] leading-tight font-black tracking-tight text-slate-950 dark:text-emerald-100">
                   {order.phoneNumber}
                 </p>
                 {order.assignedAt && (
-                  <p className="mt-2 text-xs font-medium text-emerald-800/70 dark:text-emerald-200/70">
+                  <p className="mt-2 text-sm font-bold text-emerald-900 dark:text-emerald-200">
                     Assigned {formatDate(order.assignedAt)}
                   </p>
                 )}
