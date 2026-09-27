@@ -463,7 +463,7 @@ export default function DashboardPage() {
                     </p>
 
                     {activeOrder.phoneNumber ? (
-                      <p className="mt-2 inline-block rounded-xl bg-black/20 px-3 py-1 text-[25px] font-black tracking-[-0.04em] text-white drop-shadow-[0_1px_3px_rgba(0,0,0,.55)]">
+                      <p className="mt-2 inline-block rounded-xl bg-black/20 px-3 py-1 text-[25px] font-black tracking-[-0.04em] text-green-400 drop-shadow-[0_1px_3px_rgba(0,0,0,.55)]">
                         {activeOrder.phoneNumber}
                       </p>
                     ) : isWaiting ? (
