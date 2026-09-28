@@ -106,10 +106,6 @@ export default function MarketCountryPage() {
       const data: CatalogResponse = await res.json();
       setCatalog(data);
 
-      const services = data.services || [];
-      if (services.length) {
-        setSelectedService((current) => current || services[0].slug);
-      }
     } catch {
       setError("We couldn't load the marketplace right now.");
     } finally {
