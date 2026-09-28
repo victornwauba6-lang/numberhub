@@ -21,6 +21,7 @@ function extractActivationExpiresAt(rawResponse: unknown): Date | null {
   const response = rawResponse as Record<string, unknown>;
 
   const candidates = [
+    response.expires,
     response.expiresAt,
     response.endsAt,
     (response.details as Record<string, unknown> | null)?.expiresAt,
