@@ -59,6 +59,19 @@ function formatDate(value: string | null) {
   }).format(date);
 }
 
+function formatCountdown(totalSeconds: number) {
+  const safeSeconds = Math.max(0, totalSeconds);
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  const seconds = safeSeconds % 60;
+
+  if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  }
+
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
 function getStatusMeta(status: string) {
   switch (status.toUpperCase()) {
     case "COMPLETED":
@@ -156,6 +169,31 @@ export default function OrderDetailPage() {
   const [verificationCode, setVerificationCode] = useState<string | null>(null);
   const [verificationMessage, setVerificationMessage] = useState("");
   const [verificationLoading, setVerificationLoading] = useState(false);
+  const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!order?.expiresAt) {
+      setRemainingSeconds(null);
+      return;
+    }
+
+    const updateCountdown = () => {
+      const remaining = Math.max(
+        0,
+        Math.ceil(
+          (new Date(order.expiresAt as string).getTime() - Date.now()) / 1000,
+        ),
+      );
+
+      setRemainingSeconds(remaining);
+    };
+
+    updateCountdown();
+
+    const interval = window.setInterval(updateCountdown, 1000);
+
+    return () => window.clearInterval(interval);
+  }, [order?.expiresAt]);
 
   async function cancelNumber() {
     if (!orderId || cancelLoading) return;
@@ -809,6 +847,12 @@ export default function OrderDetailPage() {
                 {order.assignedAt && (
                   <p className="mt-2 text-sm font-bold text-black">
                     Assigned {formatDate(order.assignedAt)}
+                  </p>
+                )}
+
+                {remainingSeconds !== null && (
+                  <p className="mt-3 text-sm font-black text-black">
+                    Time remaining: {remainingSeconds > 0 ? formatCountdown(remainingSeconds) : "Expired"}
                   </p>
                 )}
               </div>

@@ -13,6 +13,36 @@ export type ProcessOrderResult = {
   message: string;
 };
 
+function extractActivationExpiresAt(rawResponse: unknown): Date | null {
+  if (!rawResponse || typeof rawResponse !== "object") {
+    return null;
+  }
+
+  const response = rawResponse as Record<string, unknown>;
+
+  const candidates = [
+    response.expiresAt,
+    response.endsAt,
+    (response.details as Record<string, unknown> | null)?.expiresAt,
+    (response.details as Record<string, unknown> | null)?.endsAt,
+    (response.created as Record<string, unknown> | null)?.expiresAt,
+    (response.created as Record<string, unknown> | null)?.endsAt,
+  ];
+
+  for (const value of candidates) {
+    if (typeof value !== "string" && typeof value !== "number") {
+      continue;
+    }
+
+    const date = new Date(value);
+    if (!Number.isNaN(date.getTime())) {
+      return date;
+    }
+  }
+
+  return null;
+}
+
 export async function processOrder(
   client: PoolClient,
   orderId: string,
@@ -480,6 +510,10 @@ export async function processOrder(
       [route.routeId],
     );
 
+    const activationExpiresAt = extractActivationExpiresAt(
+      activation.rawResponse,
+    );
+
     await client.query(
       `
         UPDATE orders
@@ -487,6 +521,7 @@ export async function processOrder(
           status = 'NUMBER_ASSIGNED',
           supplier_id = $2,
           supplier_order_reference = $3,
+          expires_at = $4,
           updated_at = NOW()
         WHERE id = $1
       `,
@@ -494,6 +529,7 @@ export async function processOrder(
         order.id,
         route.supplierId,
         activation.supplierOrderReference,
+        activationExpiresAt,
       ],
     );
 
