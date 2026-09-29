@@ -12,12 +12,12 @@ export async function GET() {
 
   const body = new URLSearchParams({
     key: apiKey,
-    action: "getCountries",
-    setting: "smspool",
+    country: "INVALID",
+    service: "INVALID",
   });
 
   const response = await fetch(
-    "https://api.smspool.net/stubs/handler_api",
+    "https://api.smspool.net/purchase/sms",
     {
       method: "POST",
       headers: {
