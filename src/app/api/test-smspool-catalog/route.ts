@@ -39,15 +39,14 @@ export async function GET() {
     request(apiKey, "/country/retrieve_all"),
     request(apiKey, "/service/retrieve_all"),
     request(apiKey, "/pool/retrieve_all"),
-    request(apiKey, "/service/retrieve_all"),
     request(apiKey, "/request/price", {
       country: "US",
-      service: "Facebook",
+      service: "329",
     }),
   ]);
 
   return NextResponse.json({
     ok: true,
-    services,
+    prices,
   });
 }
