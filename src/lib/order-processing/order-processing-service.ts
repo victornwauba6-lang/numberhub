@@ -301,6 +301,20 @@ export async function processOrder(
 
         const paidPriceMinor = Number(order.priceMinor);
 
+        console.log("[ORDER_PROCESSING] fresh 5SIM operators for fallback", {
+          orderId: order.id,
+          country: order.countryCode,
+          service: order.serviceSlug,
+          originalOperator: route.supplierProductId,
+          paidPriceMinor,
+          operators: freshOperators.map((operator) => ({
+            operator: operator.operator,
+            stock: operator.count,
+            cost: operator.cost,
+            currency: operator.currency,
+          })),
+        });
+
         const candidates = [];
 
         for (const operator of freshOperators) {
