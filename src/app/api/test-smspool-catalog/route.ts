@@ -3,23 +3,25 @@ import { NextResponse } from "next/server";
 async function request(
   apiKey: string,
   endpoint: string,
-): Promise<{ status: number; text: string }> {
-  const response = await fetch(
-    `https://api.smspool.net${endpoint}`,
-    {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: new URLSearchParams({ key: apiKey }),
-      cache: "no-store",
+  params: Record<string, string> = {},
+) {
+  const response = await fetch(`https://api.smspool.net${endpoint}`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/x-www-form-urlencoded",
     },
-  );
+    body: new URLSearchParams({
+      key: apiKey,
+      ...params,
+    }),
+  });
+
+  const text = await response.text();
 
   return {
     status: response.status,
-    text: await response.text(),
+    text,
   };
 }
 
@@ -37,7 +39,10 @@ export async function GET() {
     request(apiKey, "/country/retrieve_all"),
     request(apiKey, "/service/retrieve_all"),
     request(apiKey, "/pool/retrieve_all"),
-    request(apiKey, "/request/price"),
+    request(apiKey, "/request/price", {
+      country: "US",
+      service: "Facebook",
+    }),
   ]);
 
   return NextResponse.json({
