@@ -1,5 +1,28 @@
 import { NextResponse } from "next/server";
 
+async function request(
+  apiKey: string,
+  endpoint: string,
+): Promise<{ status: number; text: string }> {
+  const response = await fetch(
+    `https://api.smspool.net${endpoint}`,
+    {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({ key: apiKey }),
+      cache: "no-store",
+    },
+  );
+
+  return {
+    status: response.status,
+    text: await response.text(),
+  };
+}
+
 export async function GET() {
   const apiKey = process.env.SMSPOOL_API_KEY?.trim();
 
@@ -10,30 +33,14 @@ export async function GET() {
     );
   }
 
-  const body = new URLSearchParams({
-    key: apiKey,
-    country: "INVALID",
-    service: "INVALID",
-  });
-
-  const response = await fetch(
-    "https://api.smspool.net/purchase/sms",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        Accept: "application/json",
-      },
-      body,
-      cache: "no-store",
-    },
-  );
-
-  const text = await response.text();
+  const [countries, services] = await Promise.all([
+    request(apiKey, "/country/retrieve_all"),
+    request(apiKey, "/service/retrieve_all"),
+  ]);
 
   return NextResponse.json({
-    ok: response.ok,
-    httpStatus: response.status,
-    response: text,
+    ok: true,
+    countries,
+    services,
   });
 }
