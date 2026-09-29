@@ -3,7 +3,7 @@ import { getSupplierAdapter } from "@/lib/suppliers/supplier-registry";
 import { automaticallyRefundFailedOrder } from "@/lib/order-processing/auto-refund-service";
 import { findSupplierRoutes } from "@/lib/suppliers/supplier-routing-service";
 import { getFiveSimCountryServiceOptions } from "@/lib/suppliers/catalog/fivesim-catalog-service";
-import { calculateCustomerPrice } from "@/lib/pricing/pricing-engine";
+import { calculateCustomerPrice, getCurrencyRate } from "@/lib/pricing/pricing-engine";
 
 export type ProcessOrderResult = {
   orderId: string;
@@ -94,6 +94,12 @@ export async function processOrder(
   }
 
   const order = orderResult.rows[0];
+
+  const usdRate = await getCurrencyRate("USD");
+  const maxPriceUsd =
+    usdRate !== null
+      ? Number(order.priceMinor) / 100 / usdRate
+      : null;
 
   if (order.status !== "CREATED") {
     return {
@@ -253,6 +259,8 @@ export async function processOrder(
         countryCode: order.countryCode,
         serviceSlug: order.serviceSlug,
         supplierProductId: route.supplierProductId,
+        maxPriceUsd:
+          route.supplierSlug === "smspool" ? maxPriceUsd ?? undefined : undefined,
       });
     } catch (error: unknown) {
       activation = {

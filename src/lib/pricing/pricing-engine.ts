@@ -47,6 +47,16 @@ async function getSetting<T>(key: string, fallback: T): Promise<T> {
   return result.rows[0]?.setting_value ?? fallback;
 }
 
+export async function getCurrencyRate(
+  currency: string,
+): Promise<number | null> {
+  const settings = await getPricingSettings();
+  const normalizedCurrency = currency.trim().toUpperCase();
+  const rate = settings.currencyRates[normalizedCurrency];
+
+  return Number.isFinite(rate) && rate > 0 ? rate : null;
+}
+
 async function getPricingSettings(): Promise<PricingSettings> {
   const [currencyRates, defaultMarkup, rounding, manualOverrides] =
     await Promise.all([

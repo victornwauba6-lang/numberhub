@@ -4,6 +4,7 @@ export type SupplierActivateNumberInput = {
   countryCode: string;
   serviceSlug: string;
   supplierProductId: string;
+  maxPriceUsd?: number;
 };
 
 export type SupplierActivateNumberResult = {

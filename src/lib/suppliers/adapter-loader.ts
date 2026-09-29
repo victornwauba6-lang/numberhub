@@ -1,6 +1,7 @@
 import type { SupplierAdapter } from "@/lib/suppliers/supplier-adapter";
 import { createFiveSimAdapter } from "@/lib/suppliers/adapters/fivesim-adapter";
 import { createTextVerifiedAdapter } from "@/lib/suppliers/adapters/textverified-adapter";
+import { createSmsPoolAdapter } from "@/lib/suppliers/adapters/smspool-adapter";
 
 const configuredAdapters: Array<{
   slug: string;
@@ -26,6 +27,15 @@ if (textVerifiedEmail && textVerifiedApiKey) {
       email: textVerifiedEmail,
       apiKey: textVerifiedApiKey,
     }),
+  });
+}
+
+const smsPoolApiKey = process.env.SMSPOOL_API_KEY?.trim();
+
+if (smsPoolApiKey) {
+  configuredAdapters.push({
+    slug: "smspool",
+    adapter: createSmsPoolAdapter(smsPoolApiKey),
   });
 }
 
