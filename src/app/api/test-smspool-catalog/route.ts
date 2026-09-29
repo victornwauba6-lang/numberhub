@@ -33,14 +33,16 @@ export async function GET() {
     );
   }
 
-  const [countries, services] = await Promise.all([
+  const [countries, services, pools] = await Promise.all([
     request(apiKey, "/country/retrieve_all"),
     request(apiKey, "/service/retrieve_all"),
+    request(apiKey, "/pool/retrieve_all"),
   ]);
 
   return NextResponse.json({
     ok: true,
     countries,
     services,
+    pools,
   });
 }
