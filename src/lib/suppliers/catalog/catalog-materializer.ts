@@ -210,6 +210,23 @@ async function upsertOption(
       };
     }
 
+    const cooldownResult = await client.query<{ cooldownActive: boolean }>(
+      `
+        SELECT EXISTS (
+          SELECT 1
+          FROM option_supplier_routes
+          WHERE product_option_id = $1
+            AND supplier_id = $2
+            AND cooldown_until IS NOT NULL
+            AND cooldown_until > NOW()
+        ) AS "cooldownActive"
+      `,
+      [existing.rows[0].id, supplierId],
+    );
+
+    const cooldownActive =
+      cooldownResult.rows[0]?.cooldownActive === true;
+
     await client.query(
       `
         UPDATE product_options
@@ -226,7 +243,7 @@ async function upsertOption(
       [
         displayOptionName(option.supplier, option.supplierOption),
         option.customerPriceMinor,
-        option.available,
+        option.available && !cooldownActive,
         option.supplierOption,
         existing.rows[0].id,
       ],
@@ -322,8 +339,18 @@ async function upsertRoute(
       ON CONFLICT (product_option_id, supplier_id)
       DO UPDATE SET
         route_priority = EXCLUDED.route_priority,
-        is_active = true,
-        is_primary = true,
+        is_active = CASE
+          WHEN option_supplier_routes.cooldown_until IS NOT NULL
+            AND option_supplier_routes.cooldown_until > NOW()
+            THEN option_supplier_routes.is_active
+          ELSE true
+        END,
+        is_primary = CASE
+          WHEN option_supplier_routes.cooldown_until IS NOT NULL
+            AND option_supplier_routes.cooldown_until > NOW()
+            THEN option_supplier_routes.is_primary
+          ELSE true
+        END,
         supplier_product_id = EXCLUDED.supplier_product_id,
         updated_at = NOW()
     `,

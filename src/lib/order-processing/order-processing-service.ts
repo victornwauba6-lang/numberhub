@@ -473,6 +473,19 @@ export async function processOrder(
         ],
       );
 
+      const rawActivationText =
+        typeof activation.rawResponse === "object" &&
+        activation.rawResponse !== null &&
+        "rawText" in activation.rawResponse
+          ? String(
+              (activation.rawResponse as { rawText?: unknown }).rawText ?? "",
+            )
+              .trim()
+              .toLowerCase()
+          : "";
+
+      const noFreePhones = rawActivationText === "no free phones";
+
       await client.query(
         `
           UPDATE option_supplier_routes
@@ -480,6 +493,8 @@ export async function processOrder(
             consecutive_failures = consecutive_failures + 1,
             last_failure_at = NOW(),
             cooldown_until = CASE
+              WHEN $2 = true
+                THEN NOW() + INTERVAL '5 minutes'
               WHEN consecutive_failures + 1 >= max_consecutive_failures
                 THEN NOW() + MAKE_INTERVAL(secs => cooldown_seconds)
               ELSE cooldown_until
@@ -487,8 +502,32 @@ export async function processOrder(
             updated_at = NOW()
           WHERE id = $1
         `,
-        [route.routeId],
+        [route.routeId, noFreePhones],
       );
+
+      if (noFreePhones) {
+        await client.query(
+          `
+            UPDATE product_options
+            SET
+              is_available = false,
+              updated_at = NOW()
+            WHERE id = $1
+          `,
+          [order.productOptionId],
+        );
+
+        console.log(
+          "[ORDER_PROCESSING] marked 5SIM option unavailable after no free phones",
+          {
+            orderId: order.id,
+            productOptionId: order.productOptionId,
+            routeId: route.routeId,
+            supplierProductId: route.supplierProductId,
+            cooldownMinutes: 5,
+          },
+        );
+      }
 
       attemptedSupplierIds.push(route.supplierId);
       continue;
