@@ -39,6 +39,7 @@ export async function GET() {
     request(apiKey, "/country/retrieve_all"),
     request(apiKey, "/service/retrieve_all"),
     request(apiKey, "/pool/retrieve_all"),
+    request(apiKey, "/service/retrieve_all"),
     request(apiKey, "/request/price", {
       country: "US",
       service: "Facebook",
@@ -47,7 +48,6 @@ export async function GET() {
 
   return NextResponse.json({
     ok: true,
-    pools,
-    prices,
+    services,
   });
 }
