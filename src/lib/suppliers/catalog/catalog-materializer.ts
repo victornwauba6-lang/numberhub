@@ -4,6 +4,9 @@ import {
   getGlobalCatalog,
   type GlobalCatalogOption,
 } from "@/lib/suppliers/catalog/global-catalog-service";
+import {
+  getConfiguredSupplierCatalogServices,
+} from "@/lib/suppliers/catalog/catalog-loader";
 
 type MaterializeResult = {
   country: string;
@@ -31,6 +34,102 @@ function displayOptionName(
   return supplierOption
     .replace(/[-_]+/g, " ")
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+async function ensureServiceExists(
+  client: {
+    query: <T = unknown>(
+      text: string,
+      values?: unknown[],
+    ) => Promise<{ rows: T[] }>;
+  },
+  service: string,
+): Promise<void> {
+  const normalizedService = normalize(service);
+
+  const existing = await client.query<{ id: string }>(
+    `
+      SELECT id
+      FROM services
+      WHERE LOWER(slug) = $1
+        AND is_active = true
+        AND is_test = false
+      LIMIT 1
+    `,
+    [normalizedService],
+  );
+
+  if (existing.rows[0]) {
+    return;
+  }
+
+  const catalogServices = getConfiguredSupplierCatalogServices();
+  let discoveredName: string | null = null;
+
+  for (const catalogService of catalogServices) {
+    if (!catalogService.getServices) {
+      continue;
+    }
+
+    try {
+      const services = await catalogService.getServices();
+
+      const match = services.find(
+        (item) => normalize(item.key) === normalizedService,
+      );
+
+      if (match) {
+        discoveredName = match.name.trim();
+        break;
+      }
+    } catch (error) {
+      console.warn(
+        "[catalog-materializer] service discovery failed",
+        {
+          supplier: catalogService.slug,
+          service: normalizedService,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      );
+    }
+  }
+
+  if (!discoveredName) {
+    throw new Error(`Service not found: ${normalizedService}`);
+  }
+
+  const name = discoveredName.slice(0, 100);
+
+  await client.query(
+    `
+      INSERT INTO services (
+        slug,
+        name,
+        icon,
+        is_active,
+        sort_order,
+        is_test
+      )
+      VALUES (
+        $1,
+        $2,
+        NULL,
+        true,
+        COALESCE(
+          (SELECT MAX(sort_order) + 1 FROM services WHERE is_test = false),
+          0
+        ),
+        false
+      )
+      ON CONFLICT (slug)
+      DO UPDATE SET
+        name = EXCLUDED.name,
+        is_active = true,
+        is_test = false,
+        updated_at = NOW()
+    `,
+    [normalizedService, name],
+  );
 }
 
 async function getOrCreateProduct(
@@ -64,6 +163,8 @@ async function getOrCreateProduct(
   if (!countryResult.rows[0]) {
     throw new Error(`Country not found: ${country}`);
   }
+
+  await ensureServiceExists(client, service);
 
   const serviceResult = await client.query<{ id: string }>(
     `
@@ -142,20 +243,45 @@ async function findSupplierId(
   },
   supplierSlug: string,
 ): Promise<string> {
+  const normalizedSlug = normalize(supplierSlug);
+
+  const supplierDetails: Record<
+    string,
+    { name: string; priority: number }
+  > = {
+    fivesim: { name: "5SIM", priority: 10 },
+    textverified: { name: "TextVerified", priority: 20 },
+    smspool: { name: "SMSPool", priority: 30 },
+  };
+
+  const details = supplierDetails[normalizedSlug];
+
+  if (!details) {
+    throw new Error(`Unknown production supplier: ${normalizedSlug}`);
+  }
+
   const result = await client.query<{ id: string }>(
     `
-      SELECT id
-      FROM suppliers
-      WHERE slug = $1
-        AND is_active = true
-        AND is_test = false
-      LIMIT 1
+      INSERT INTO suppliers (
+        name,
+        slug,
+        is_active,
+        priority
+      )
+      VALUES ($1, $2, true, $3)
+      ON CONFLICT (slug)
+      DO UPDATE SET
+        name = EXCLUDED.name,
+        is_active = true,
+        priority = EXCLUDED.priority,
+        updated_at = NOW()
+      RETURNING id
     `,
-    [supplierSlug],
+    [details.name, normalizedSlug, details.priority],
   );
 
   if (!result.rows[0]) {
-    throw new Error(`Production supplier not found: ${supplierSlug}`);
+    throw new Error(`Production supplier not found: ${normalizedSlug}`);
   }
 
   return result.rows[0].id;

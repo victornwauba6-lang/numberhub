@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getConfiguredSupplierCatalogServices } from "@/lib/suppliers/catalog/catalog-loader";
 
 export const runtime = "nodejs";
 
@@ -102,9 +103,66 @@ export async function GET() {
         ),
       ]);
 
+    const serviceMap = new Map(
+      servicesResult.rows.map((service) => [
+        service.slug.toLowerCase(),
+        service,
+      ]),
+    );
+
+    const configuredCatalogServices =
+      getConfiguredSupplierCatalogServices();
+
+    await Promise.all(
+      configuredCatalogServices.map(async (catalogService) => {
+        if (!catalogService.getServices) {
+          return;
+        }
+
+        try {
+          const discoveredServices = await catalogService.getServices();
+
+          for (const discovered of discoveredServices) {
+            const slug = discovered.key.trim().toLowerCase();
+            const name = discovered.name.trim();
+
+            if (!slug || !name) {
+              continue;
+            }
+
+            if (!serviceMap.has(slug)) {
+              serviceMap.set(slug, {
+                slug,
+                name: name.slice(0, 100),
+                icon: null,
+                sortOrder: 100000,
+              });
+            }
+          }
+        } catch (error) {
+          console.warn(
+            "Catalog supplier service discovery failed",
+            {
+              supplier: catalogService.slug,
+              error:
+                error instanceof Error
+                  ? error.message
+                  : String(error),
+            },
+          );
+        }
+      }),
+    );
+
+    const services = Array.from(serviceMap.values()).sort(
+      (a, b) =>
+        a.sortOrder - b.sortOrder ||
+        a.name.localeCompare(b.name),
+    );
+
     return NextResponse.json({
       countries: countriesResult.rows,
-      services: servicesResult.rows,
+      services,
       offerings: offeringsResult.rows,
     });
   } catch (error) {

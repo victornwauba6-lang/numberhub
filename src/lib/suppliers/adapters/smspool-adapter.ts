@@ -136,6 +136,7 @@ export function createSmsPoolAdapter(
     ): Promise<SupplierActivateNumberResult> {
       const country = normalizeCountry(input.countryCode);
       const service = normalizeService(input.serviceSlug);
+      const supplierServiceId = input.supplierProductId.trim();
 
       if (!country) {
         return {
@@ -148,14 +149,14 @@ export function createSmsPoolAdapter(
         };
       }
 
-      if (!service) {
+      if (!service || !supplierServiceId) {
         return {
           success: false,
           supplierOrderReference: null,
           phoneNumber: null,
           supplierNumberReference: null,
           errorCode: "INVALID_SERVICE",
-          errorMessage: "SMSPool service is required.",
+          errorMessage: "SMSPool service and supplier service ID are required.",
         };
       }
 
@@ -173,7 +174,7 @@ export function createSmsPoolAdapter(
       try {
         const purchaseParams: Record<string, string> = {
           country,
-          service: serviceNameForSmsPool(service),
+          service: supplierServiceId,
         };
 
         if (

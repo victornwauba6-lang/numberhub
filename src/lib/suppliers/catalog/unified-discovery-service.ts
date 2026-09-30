@@ -312,6 +312,7 @@ export async function syncDiscoveredCatalog(
   const configuredSuppliers = [
     { name: "5SIM", slug: "fivesim", priority: 10 },
     { name: "TextVerified", slug: "textverified", priority: 20 },
+    { name: "SMSPool", slug: "smspool", priority: 30 },
   ];
 
   for (const supplier of configuredSuppliers) {

@@ -382,10 +382,30 @@ export function createTextVerifiedCatalogService(
         service,
       ),
 
-    getServices: () =>
-      textVerifiedRequest<unknown>(
+    getServices: async () => {
+      const payload = await textVerifiedRequest<unknown>(
         config,
         "/api/pub/v2/services?numberType=mobile&reservationType=verification",
-      ),
+      );
+
+      return extractServices(payload)
+        .map((service) => {
+          const id = service.id ?? extractServiceKey(service);
+          const key = extractServiceKey(service);
+          const name = service.name ?? service.serviceName ?? key;
+
+          return {
+            key: key ? String(key).trim() : "",
+            id: id ? String(id).trim() : "",
+            name: name ? String(name).trim() : "",
+          };
+        })
+        .filter(
+          (service) =>
+            Boolean(service.key) &&
+            Boolean(service.id) &&
+            Boolean(service.name),
+        );
+    },
   };
 }
