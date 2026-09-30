@@ -230,11 +230,13 @@ export default function OrderDetailPage() {
       }
 
       setCancelSuccess(true);
+      setRemainingSeconds(null);
       setOrder((current) =>
         current
           ? {
               ...current,
               status: "REFUNDED",
+              expiresAt: null,
             }
           : current,
       );
