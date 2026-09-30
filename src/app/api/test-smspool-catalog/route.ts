@@ -47,6 +47,7 @@ export async function GET() {
 
   return NextResponse.json({
     ok: true,
+    countries,
     services,
   });
 }
