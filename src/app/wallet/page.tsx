@@ -303,12 +303,54 @@ export default function WalletPage() {
           </div>
 
           <div className="nh-premium-card p-5">
-            <label
-              htmlFor="amount"
-              className="text-xs font-black uppercase tracking-[0.15em] text-white/40"
-            >
-              Funding amount
-            </label>
+            <div>
+              <div className="flex items-end justify-between gap-3">
+                <label
+                  htmlFor="amount"
+                  className="text-xs font-black uppercase tracking-[0.15em] text-white/40"
+                >
+                  Funding amount
+                </label>
+
+                <span className="text-[10px] font-bold text-white/25">
+                  Quick select
+                </span>
+              </div>
+
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                {[200, 500, 1000, 2000, 5000, 10000].map((preset) => {
+                  const selected = Number(amount) === preset;
+
+                  return (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => {
+                        setAmount(String(preset));
+                        setMessage("");
+                      }}
+                      disabled={submitting}
+                      className={`rounded-2xl border px-3 py-3 text-sm font-black transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 ${
+                        selected
+                          ? "border-emerald-400/40 bg-emerald-400/[0.12] text-emerald-300 shadow-[0_8px_24px_rgba(16,185,129,0.08)]"
+                          : "border-white/[0.08] bg-white/[0.025] text-white/65 hover:border-emerald-400/20 hover:bg-emerald-400/[0.04] hover:text-white"
+                      }`}
+                    >
+                      ₦{preset.toLocaleString("en-NG")}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="mt-5">
+              <label
+                htmlFor="amount"
+                className="text-xs font-black uppercase tracking-[0.15em] text-white/40"
+              >
+                Or enter an amount
+              </label>
+            </div>
 
             <div className="relative mt-3">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-black text-emerald-400">
