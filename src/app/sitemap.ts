@@ -25,6 +25,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.7,
     },
     {
+      url: `${baseUrl}/guides/one-time-vs-long-term-numbers`,
+      changeFrequency: "monthly",
+      priority: 0.7,
+    },
+    {
       url: `${baseUrl}/acceptable-use`,
       changeFrequency: "monthly",
       priority: 0.4,
