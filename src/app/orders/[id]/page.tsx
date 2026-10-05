@@ -172,7 +172,14 @@ export default function OrderDetailPage() {
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!order?.expiresAt) {
+    const status = order?.status?.toUpperCase();
+
+    const countdownStatuses = new Set([
+      "WAITING_FOR_SMS",
+      "NUMBER_ASSIGNED",
+    ]);
+
+    if (!order?.expiresAt || !countdownStatuses.has(status || "")) {
       setRemainingSeconds(null);
       return;
     }
@@ -193,7 +200,7 @@ export default function OrderDetailPage() {
     const interval = window.setInterval(updateCountdown, 1000);
 
     return () => window.clearInterval(interval);
-  }, [order?.expiresAt]);
+  }, [order?.expiresAt, order?.status]);
 
   async function cancelNumber() {
     if (!orderId || cancelLoading) return;
