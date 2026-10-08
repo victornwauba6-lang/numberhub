@@ -62,8 +62,6 @@ export async function GET() {
           currency: string;
           purchaseLimitPerCustomer: number | null;
           refundEnabled: boolean;
-          isAvailable: boolean;
-          supplierSlug: string;
         }>(
           `
             SELECT
@@ -81,9 +79,7 @@ export async function GET() {
               po.promo_price_minor::text AS "promoPriceMinor",
               po.currency AS "currency",
               po.purchase_limit_per_customer AS "purchaseLimitPerCustomer",
-              po.refund_enabled AS "refundEnabled",
-              po.is_available AS "isAvailable",
-              sup.slug AS "supplierSlug"
+              po.refund_enabled AS "refundEnabled"
             FROM products p
             JOIN countries c
               ON c.id = p.country_id
@@ -99,10 +95,7 @@ export async function GET() {
               AND s.is_active = true
               AND s.is_test = false
               AND po.is_active = true
-              AND (
-                po.is_available = true
-                OR sup.slug = 'smspool'
-              )
+              AND po.is_available = true
               AND sup.is_active = true
               AND sup.is_test = false
             ORDER BY c.name, s.name

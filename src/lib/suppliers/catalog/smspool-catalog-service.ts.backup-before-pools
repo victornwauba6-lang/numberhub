@@ -297,12 +297,8 @@ export async function getSmsPoolCountryServiceOptions(
     return [];
   }
 
-  /*
-   * SMSPool exposes pools separately from services. The old implementation
-   * used the unique service slug map here, which could hide additional
-   * SMSPool service entries/pools. Match every service entry that resolves
-   * to the requested canonical service instead.
-   */
+  const uniqueSlugs = buildUniqueServiceSlugs(services);
+
   const matchingServices = services.filter((item) => {
     if (isWhatsAppService(item)) {
       return false;
@@ -312,25 +308,12 @@ export async function getSmsPoolCountryServiceOptions(
       return false;
     }
 
-    return serviceSlug(item) === normalizedService;
+    return uniqueSlugs.get(String(item.ID)) === normalizedService;
   });
 
   if (matchingServices.length === 0) {
     return [];
   }
-
-  const poolResponse = await smsPoolRequest(
-    apiKey,
-    "/pool/retrieve_all",
-  );
-
-  const pools = parseJson<Array<{ ID?: number; name?: string }>>(
-    poolResponse,
-    "SMSPool pools",
-  ).filter(
-    (pool): pool is { ID: number; name?: string } =>
-      typeof pool.ID === "number" && Number.isFinite(pool.ID),
-  );
 
   const options: SmsPoolCatalogOption[] = [];
 
@@ -339,108 +322,27 @@ export async function getSmsPoolCountryServiceOptions(
       continue;
     }
 
-    const serviceId = String(matchingService.ID);
+    const response = await smsPoolRequest(apiKey, "/request/price", {
+      country: String(matchingCountry.ID ?? normalizedCountry),
+      service: String(matchingService.ID),
+    });
 
-    for (const pool of pools) {
-      const poolId = String(pool.ID);
+    const cost = parsePrice(response.text);
 
-      let cost: number | null = null;
-      let available = false;
-      let stock: number | null = null;
-
-      try {
-        const priceResponse = await smsPoolRequest(apiKey, "/request/price", {
-          country: String(matchingCountry.ID ?? normalizedCountry),
-          service: serviceId,
-          pool: poolId,
-        });
-
-        const pricePayload = JSON.parse(priceResponse.text) as Record<
-          string,
-          unknown
-        >;
-
-        const parsedPrice = pricePayload.price;
-
-        if (typeof parsedPrice === "number" && Number.isFinite(parsedPrice) && parsedPrice > 0) {
-          cost = parsedPrice;
-        } else if (
-          typeof parsedPrice === "string" &&
-          Number.isFinite(Number(parsedPrice)) &&
-          Number(parsedPrice) > 0
-        ) {
-          cost = Number(parsedPrice);
-        }
-      } catch {
-        cost = null;
-      }
-
-      try {
-        const stockResponse = await smsPoolRequest(apiKey, "/sms/stock", {
-          country: String(matchingCountry.ID ?? normalizedCountry),
-          service: serviceId,
-          pool: poolId,
-        });
-
-        const stockPayload = JSON.parse(stockResponse.text) as Record<
-          string,
-          unknown
-        >;
-
-        if (
-          stockPayload.success === 1 &&
-          typeof stockPayload.amount === "number" &&
-          Number.isFinite(stockPayload.amount)
-        ) {
-          stock = stockPayload.amount;
-          available = stock > 0 && cost !== null;
-        } else if (
-          stockPayload.success === 1 &&
-          typeof stockPayload.amount === "string" &&
-          Number.isFinite(Number(stockPayload.amount))
-        ) {
-          stock = Number(stockPayload.amount);
-          available = stock > 0 && cost !== null;
-        }
-      } catch {
-        stock = null;
-      }
-
-      /*
-       * Keep every real pool in the catalog. An option with no price,
-       * zero stock, or unsupported service is retained as unavailable.
-       * The supplier pool ID is stored as supplierOption internally.
-       */
-      options.push({
-        supplierOption: `${serviceId}:${poolId}`,
-        currency: "USD",
-        cost,
-        available,
-        stock,
-      });
-    }
-  }
-
-  /*
-   * Avoid duplicate pool IDs when SMSPool has multiple service entries that
-   * resolve to the same canonical service.
-   */
-  const uniqueOptions = new Map<string, SmsPoolCatalogOption>();
-
-  for (const option of options) {
-    const existing = uniqueOptions.get(option.supplierOption);
-
-    if (!existing) {
-      uniqueOptions.set(option.supplierOption, option);
+    if (cost === null) {
       continue;
     }
 
-    if (!existing.available && option.available) {
-      uniqueOptions.set(option.supplierOption, option);
-    }
+    options.push({
+      supplierOption: String(matchingService.ID),
+      currency: "USD",
+      cost,
+      available: true,
+      stock: null,
+    });
   }
 
-  return Array.from(uniqueOptions.values());
+  return options;
 }
 
 export function createSmsPoolCatalogService(apiKey: string) {

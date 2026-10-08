@@ -34,8 +34,6 @@ type Offering = {
   currency: string;
   purchaseLimitPerCustomer: number | null;
   refundEnabled: boolean;
-  isAvailable: boolean;
-  supplierSlug: string;
 };
 
 function formatMoney(minor: string, currency: string) {
@@ -329,7 +327,7 @@ export default function ServiceMarketPage() {
           <div className="mb-5 flex items-end justify-between gap-4">
             <div>
               <p className="text-[11px] font-black uppercase tracking-[0.18em] text-emerald-600 dark:text-emerald-400">
-                Product options
+                Available products
               </p>
 
               <h2 className="mt-1 text-2xl font-black tracking-tight">
@@ -339,7 +337,7 @@ export default function ServiceMarketPage() {
 
             {!loading && !catalogError && (
               <span className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-slate-500 shadow-sm ring-1 ring-slate-200 dark:bg-white/5 dark:text-slate-400 dark:ring-white/10">
-                {serviceOfferings.filter((offering) => offering.isAvailable).length} available
+                {serviceOfferings.length} available
               </span>
             )}
           </div>
@@ -421,12 +419,8 @@ export default function ServiceMarketPage() {
                     <div className="mt-4 grid grid-cols-2 gap-2">
                       <InfoBox
                         label="Availability"
-                        value={
-                          offering.isAvailable
-                            ? "Available"
-                            : "Unavailable"
-                        }
-                        positive={offering.isAvailable}
+                        value="Available"
+                        positive
                       />
 
                       <InfoBox
@@ -449,19 +443,13 @@ export default function ServiceMarketPage() {
                     <button
                       type="button"
                       onClick={() => {
-                        if (!offering.isAvailable) return;
                         setPurchaseError("");
                         setSelectedOffering(offering);
                       }}
-                      disabled={!offering.isAvailable}
-                      className={`mt-5 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-sm font-black transition active:scale-[0.99] ${
-                        offering.isAvailable
-                          ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-600"
-                          : "cursor-not-allowed bg-slate-200 text-slate-500 shadow-none dark:bg-slate-800 dark:text-slate-400"
-                      }`}
+                      className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-3.5 text-sm font-black text-white shadow-lg shadow-emerald-500/20 transition hover:bg-emerald-600 active:scale-[0.99]"
                     >
-                      {offering.isAvailable ? "Continue to purchase" : "Unavailable"}
-                      {offering.isAvailable && <span aria-hidden="true">→</span>}
+                      Continue to purchase
+                      <span aria-hidden="true">→</span>
                     </button>
                   </article>
                 );
