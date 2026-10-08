@@ -303,6 +303,7 @@ async function upsertOption(
   supplierId: string,
   option: GlobalCatalogOption,
   optionNumber: number,
+  displayOptionNumber: number = optionNumber,
 ): Promise<{
   id: string;
   created: boolean;
@@ -372,7 +373,7 @@ async function upsertOption(
         WHERE id = $5
       `,
       [
-        displayOptionName(option.supplier, option.supplierOption, optionNumber),
+        displayOptionName(option.supplier, option.supplierOption, displayOptionNumber),
         option.customerPriceMinor,
         option.available && !cooldownActive,
         option.supplierOption,
@@ -430,7 +431,7 @@ async function upsertOption(
     [
       productId,
       optionNumber,
-      displayOptionName(option.supplier, option.supplierOption, optionNumber),
+      displayOptionName(option.supplier, option.supplierOption, displayOptionNumber),
       supplierId,
       option.customerPriceMinor,
       option.available,
@@ -541,6 +542,7 @@ export async function materializeGlobalCatalog(
     );
 
     const seenOptionKeys = new Set<string>();
+    const supplierDisplayNumbers = new Map<string, number>();
 
     for (const option of catalog.options) {
       const supplier = normalize(option.supplier);
@@ -578,12 +580,24 @@ export async function materializeGlobalCatalog(
         existing.rows[0]?.optionNumber ??
         (await findNextOptionNumber(client, productId));
 
+      const currentDisplayNumber =
+        supplierDisplayNumbers.get(supplier) ?? 0;
+      const displayOptionNumber =
+        supplier === "smspool"
+          ? currentDisplayNumber + 1
+          : nextOptionNumber;
+
+      if (supplier === "smspool") {
+        supplierDisplayNumbers.set(supplier, displayOptionNumber);
+      }
+
       const upserted = await upsertOption(
         client,
         productId,
         supplierId,
         option,
         nextOptionNumber,
+        displayOptionNumber,
       );
 
       if (!upserted.id) {
@@ -643,6 +657,7 @@ export async function materializeGlobalCatalog(
             UPDATE product_options
             SET
               is_available = false,
+              is_active = false,
               updated_at = NOW()
             WHERE id = $1
           `,
