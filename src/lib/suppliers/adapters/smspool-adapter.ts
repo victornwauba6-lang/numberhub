@@ -360,30 +360,54 @@ export function createSmsPoolAdapter(
       }
 
       try {
-        const body = await smsPoolRequest(
-          normalizedApiKey,
-          "/sms/cancel",
-          {
-            orderid: orderId,
-          },
-        );
+        let lastBody: unknown = null;
 
-        const success = extractNumber(body, ["success"]);
+        for (let attempt = 1; attempt <= 4; attempt += 1) {
+          const body = await smsPoolRequest(
+            normalizedApiKey,
+            "/sms/cancel",
+            {
+              orderid: orderId,
+            },
+          );
 
-        if (success !== 1) {
-          return {
-            success: false,
-            rawResponse: body,
-            errorCode: "SUPPLIER_CANCEL_NOT_CONFIRMED",
-            errorMessage:
-              extractString(body, ["message", "type"]) ??
-              "SMSPool cancellation was not confirmed.",
-          };
+          lastBody = body;
+
+          const success = extractNumber(body, ["success"]);
+
+          if (success === 1) {
+            return {
+              success: true,
+              rawResponse: body,
+            };
+          }
+
+          const message =
+            extractString(body, ["message", "type", "error"]) ??
+            "SMSPool cancellation was not confirmed.";
+
+          const retryable =
+            /wait|lock|locked|try again|too soon|recently|pending/i.test(
+              message,
+            );
+
+          if (!retryable || attempt === 4) {
+            return {
+              success: false,
+              rawResponse: body,
+              errorCode: "SUPPLIER_CANCEL_NOT_CONFIRMED",
+              errorMessage: message,
+            };
+          }
+
+          await new Promise((resolve) => setTimeout(resolve, 2000));
         }
 
         return {
-          success: true,
-          rawResponse: body,
+          success: false,
+          rawResponse: lastBody,
+          errorCode: "SUPPLIER_CANCEL_NOT_CONFIRMED",
+          errorMessage: "SMSPool cancellation was not confirmed.",
         };
       } catch (error: unknown) {
         return {
