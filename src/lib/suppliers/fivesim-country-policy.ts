@@ -1,9 +1,9 @@
-const FIVESIM_ALLOWED_COUNTRIES = new Set(["US", "CA", "GB"]);
-
-export function isFiveSimAllowedCountry(
+export function isFiveSimAllowedOption(
   countryCode: string | null | undefined,
+  serviceSlug: string | null | undefined,
 ): boolean {
-  return FIVESIM_ALLOWED_COUNTRIES.has(
-    (countryCode ?? "").trim().toUpperCase(),
+  return (
+    (countryCode ?? "").trim().toUpperCase() === "US" &&
+    (serviceSlug ?? "").trim().toLowerCase() === "whatsapp"
   );
 }

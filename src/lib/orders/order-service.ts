@@ -1,6 +1,6 @@
 import type { PoolClient } from "pg";
 import { debitWallet } from "@/lib/wallet/wallet-debit";
-import { isFiveSimAllowedCountry } from "@/lib/suppliers/fivesim-country-policy";
+import { isFiveSimAllowedOption } from "@/lib/suppliers/fivesim-country-policy";
 
 export type CreateOrderInput = {
   userId: string;
@@ -47,6 +47,7 @@ export async function createOrder(
     productId: string;
     countryId: string;
     countryCode: string;
+    serviceSlug: string;
     serviceId: string;
     supplierId: string;
     supplierSlug: string;
@@ -67,6 +68,7 @@ export async function createOrder(
         p.id AS "productId",
         p.country_id AS "countryId",
         c.code AS "countryCode",
+        s.slug AS "serviceSlug",
         p.service_id AS "serviceId",
         po.supplier_id AS "supplierId",
         sup.slug AS "supplierSlug",
@@ -103,7 +105,7 @@ export async function createOrder(
 
   if (
     option.supplierSlug.trim().toLowerCase() === "fivesim" &&
-    !isFiveSimAllowedCountry(option.countryCode)
+    !isFiveSimAllowedOption(option.countryCode, option.serviceSlug)
   ) {
     throw new Error("5SIM is unavailable for this country");
   }
