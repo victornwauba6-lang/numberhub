@@ -84,42 +84,91 @@ export function createSmsBulkAdapter(apiKey: string): SupplierAdapter {
         };
       }
 
-      // Never retry a purchase automatically: an ambiguous timeout could
-      // otherwise buy and charge for a second activation.
+      // Only documented rejection responses are treated as definite failures.
+      // Timeouts, unexpected HTTP errors, and incomplete success responses
+      // must not trigger an automatic second purchase.
       try {
         const result = await request("/activations", {
           method: "POST",
           body: JSON.stringify({ serviceCode, countryIso }),
         });
 
-        if (!result.ok || !result.data.id || !result.data.phoneNumber) {
+        const rawResponse = {
+          httpStatus: result.status,
+          body: result.data,
+        };
+
+        if (result.ok) {
+          if (
+            typeof result.data.id !== "string" ||
+            !result.data.id.trim() ||
+            typeof result.data.phoneNumber !== "string" ||
+            !result.data.phoneNumber.trim()
+          ) {
+            return {
+              success: false,
+              supplierOrderReference: null,
+              supplierNumberReference: null,
+              phoneNumber: null,
+              rawResponse,
+              errorCode: "REQUEST_UNCERTAIN",
+              errorMessage:
+                "SMSBulk returned a successful HTTP response without a usable activation ID and phone number. Investigate before retrying.",
+            };
+          }
+
+          return {
+            success: true,
+            supplierOrderReference: result.data.id,
+            supplierNumberReference: result.data.id,
+            phoneNumber: result.data.phoneNumber,
+            rawResponse: result.data,
+          };
+        }
+
+        // These response codes are documented by SMSBulk as request
+        // rejections. Unexpected HTTP failures remain uncertain.
+        const definitiveRejections = new Set([
+          400, 401, 402, 404,
+        ]);
+
+        if (definitiveRejections.has(result.status)) {
           return {
             success: false,
             supplierOrderReference: null,
             supplierNumberReference: null,
             phoneNumber: null,
-            rawResponse: result.data,
+            rawResponse,
             errorCode: String(result.status),
             errorMessage: errorText(result.data),
           };
         }
 
         return {
-          success: true,
-          supplierOrderReference: result.data.id,
-          supplierNumberReference: result.data.id,
-          phoneNumber: result.data.phoneNumber,
-          rawResponse: result.data,
+          success: false,
+          supplierOrderReference: null,
+          supplierNumberReference: null,
+          phoneNumber: null,
+          rawResponse,
+          errorCode: "REQUEST_UNCERTAIN",
+          errorMessage:
+            `SMSBulk returned unexpected HTTP status ${result.status}. The purchase outcome must be investigated before retrying.`,
         };
-      } catch {
+      } catch (error) {
         return {
           success: false,
           supplierOrderReference: null,
           supplierNumberReference: null,
           phoneNumber: null,
+          rawResponse: {
+            error:
+              error instanceof Error
+                ? error.message
+                : "Unknown network or request error",
+          },
           errorCode: "REQUEST_UNCERTAIN",
           errorMessage:
-            "SMSBulk purchase response was unclear. Check supplier activations before attempting another purchase.",
+            "SMSBulk purchase outcome is uncertain. Check supplier activations before attempting another purchase.",
         };
       }
     },

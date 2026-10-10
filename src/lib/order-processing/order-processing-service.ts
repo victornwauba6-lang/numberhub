@@ -167,6 +167,62 @@ export async function processOrder(
         continue;
       }
 
+      if (
+        route.supplierSlug.trim().toLowerCase() === "smsbulk" &&
+        existingRequestResult.rows[0].status === "TIMEOUT"
+      ) {
+        if (order.status === "CREATED") {
+          await client.query(
+            `
+              UPDATE orders
+              SET status = 'PROCESSING', updated_at = NOW()
+              WHERE id = $1
+            `,
+            [order.id],
+          );
+
+          await client.query(
+            `
+              INSERT INTO order_events (
+                order_id,
+                from_status,
+                to_status,
+                event_type,
+                metadata
+              )
+              VALUES ($1, 'CREATED', 'PROCESSING',
+                      'SMSBULK_ACTIVATION_UNCERTAIN', $2)
+            `,
+            [
+              order.id,
+              JSON.stringify({
+                supplierId: route.supplierId,
+                supplierRequestId,
+                reason: "Existing SMSBulk request is marked TIMEOUT; automatic retry blocked.",
+              }),
+            ],
+          );
+        }
+
+        console.warn(
+          "[ORDER_PROCESSING] blocked retry of uncertain SMSBulk activation",
+          {
+            orderId: order.id,
+            supplierRequestId,
+            supplierId: route.supplierId,
+          },
+        );
+
+        return {
+          orderId: order.id,
+          status: "PROCESSING",
+          supplierId: route.supplierId,
+          supplierRequestId,
+          message:
+            "An existing SMSBulk activation has an uncertain outcome. Automatic retry is blocked pending investigation.",
+        };
+      }
+
       await client.query(
         `
           UPDATE supplier_requests
@@ -188,7 +244,8 @@ export async function processOrder(
             request_type,
             request_reference,
             status,
-            idempotency_key
+            idempotency_key,
+            request_payload
           )
           VALUES (
             $1,
@@ -197,7 +254,8 @@ export async function processOrder(
             'ACTIVATE_NUMBER',
             $4,
             'PROCESSING',
-            $5
+            $5,
+            $6::jsonb
           )
           RETURNING id
         `,
@@ -207,6 +265,13 @@ export async function processOrder(
           route.routeId,
           requestIdempotencyKey,
           requestIdempotencyKey,
+          JSON.stringify({
+            supplierSlug: route.supplierSlug,
+            supplierProductId: route.supplierProductId,
+            countryCode: order.countryCode,
+            serviceSlug: order.serviceSlug,
+            requestStartedAt: new Date().toISOString(),
+          }),
         ],
       );
 
@@ -462,6 +527,48 @@ export async function processOrder(
       !activation.phoneNumber ||
       !activation.supplierNumberReference
     ) {
+      if (
+        route.supplierSlug.trim().toLowerCase() === "smsbulk" &&
+        activation.errorCode === "REQUEST_UNCERTAIN"
+      ) {
+        await client.query(
+          `
+            UPDATE supplier_requests
+            SET
+              status = 'TIMEOUT',
+              error_message = $2,
+              response_payload = $3,
+              completed_at = NOW(),
+              updated_at = NOW()
+            WHERE id = $1
+          `,
+          [
+            supplierRequestId,
+            activation.errorMessage ??
+              "SMSBulk activation outcome is uncertain; investigate before retrying.",
+            JSON.stringify(activation.rawResponse ?? null),
+          ],
+        );
+
+        console.warn(
+          "[ORDER_PROCESSING] SMSBulk activation outcome uncertain; stopping automatic fallback and refund",
+          {
+            orderId: order.id,
+            supplierRequestId,
+            supplierId: route.supplierId,
+          },
+        );
+
+        return {
+          orderId: order.id,
+          status: "PROCESSING",
+          supplierId: route.supplierId,
+          supplierRequestId,
+          message:
+            "The supplier purchase outcome is uncertain. The order is held for investigation; no automatic fallback or refund was initiated.",
+        };
+      }
+
       await client.query(
         `
           UPDATE supplier_requests
