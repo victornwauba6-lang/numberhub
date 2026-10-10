@@ -105,6 +105,10 @@ export async function GET() {
               )
               AND sup.is_active = true
               AND sup.is_test = false
+              AND (
+                LOWER(sup.slug) <> 'fivesim'
+                OR UPPER(c.code) IN ('US', 'CA', 'GB')
+              )
             ORDER BY c.name, s.name
           `,
         ),

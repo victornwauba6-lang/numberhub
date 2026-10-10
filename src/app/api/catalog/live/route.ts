@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { resolveCountry } from "@/lib/catalog/country-resolver";
 import { getGlobalCatalog } from "@/lib/suppliers/catalog/global-catalog-service";
 import { materializeGlobalCatalog } from "@/lib/suppliers/catalog/catalog-materializer";
+import { isFiveSimAllowedCountry } from "@/lib/suppliers/fivesim-country-policy";
 
 export const runtime = "nodejs";
 
@@ -39,6 +40,12 @@ export async function GET(request: NextRequest) {
     );
 
     const catalog = await getGlobalCatalog(country, service);
+
+    const visibleOptions = catalog.options.filter(
+      (option) =>
+        option.supplier.trim().toLowerCase() !== "fivesim" ||
+        isFiveSimAllowedCountry(resolvedCountry.iso2),
+    );
 
     const optionRows = await db.query<{
       optionId: string;
@@ -89,8 +96,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       country: catalog.country,
       service: catalog.service,
-      optionCount: catalog.options.length,
-      options: catalog.options.map((option, index) => {
+      optionCount: visibleOptions.length,
+      options: visibleOptions.map((option, index) => {
         const materialized = optionIdMap.get(
           `${option.supplier.toLowerCase()}:${option.supplierOption.toLowerCase()}`,
         );

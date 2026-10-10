@@ -133,7 +133,8 @@ export async function POST(request: Request) {
         : message === "Insufficient wallet balance"
           ? 409
           : message === "Product option is unavailable" ||
-              message === "Purchase limit reached for this option"
+              message === "Purchase limit reached for this option" ||
+              message === "5SIM is unavailable for this country"
             ? 409
             : 400;
 
