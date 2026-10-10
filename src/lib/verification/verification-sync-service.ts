@@ -259,12 +259,36 @@ export async function syncVerificationOrder(
     }
   });
 
+  // Persist the OTP first, then complete the supplier activation.
+  // A completion failure must not erase or hide an OTP already received.
+  let completionWarning: string | null = null;
+
+  if (
+    nextStatus === "CODE_RECEIVED" &&
+    verificationCode &&
+    adapter.completeActivation
+  ) {
+    const completion = await adapter.completeActivation({
+      orderId: order.id,
+      supplierOrderReference: order.supplierOrderReference,
+      supplierNumberReference: order.supplierNumberReference ?? "",
+    });
+
+    if (!completion.success) {
+      completionWarning =
+        completion.errorMessage ??
+        "The code was received, but supplier activation completion was unsuccessful.";
+    }
+  }
+
   return {
     orderId: order.id,
     status: nextStatus,
     phoneNumber,
     verificationCode,
-    message,
+    message: completionWarning
+      ? [message, completionWarning].filter(Boolean).join(" ")
+      : message,
     synced: true,
   };
 }

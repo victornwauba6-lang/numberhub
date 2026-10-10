@@ -2,6 +2,7 @@ import type { SupplierAdapter } from "@/lib/suppliers/supplier-adapter";
 import { createFiveSimAdapter } from "@/lib/suppliers/adapters/fivesim-adapter";
 import { createTextVerifiedAdapter } from "@/lib/suppliers/adapters/textverified-adapter";
 import { createSmsPoolAdapter } from "@/lib/suppliers/adapters/smspool-adapter";
+import { createSmsBulkAdapter } from "@/lib/suppliers/adapters/smsbulk-adapter";
 
 const configuredAdapters: Array<{
   slug: string;
@@ -36,6 +37,15 @@ if (smsPoolApiKey) {
   configuredAdapters.push({
     slug: "smspool",
     adapter: createSmsPoolAdapter(smsPoolApiKey),
+  });
+}
+
+const smsBulkApiKey = process.env.SMSBULK_API_KEY?.trim();
+
+if (smsBulkApiKey) {
+  configuredAdapters.push({
+    slug: "smsbulk",
+    adapter: createSmsBulkAdapter(smsBulkApiKey),
   });
 }
 

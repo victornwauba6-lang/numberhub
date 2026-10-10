@@ -53,6 +53,13 @@ export type SupplierCancelNumberResult = {
   errorMessage?: string;
 };
 
+export type SupplierCompleteActivationResult = {
+  success: boolean;
+  rawResponse?: unknown;
+  errorCode?: string;
+  errorMessage?: string;
+};
+
 export type SupplierAdapter = {
   name: string;
   activateNumber(
@@ -63,6 +70,9 @@ export type SupplierAdapter = {
     input: SupplierVerificationStatusInput,
   ): Promise<SupplierVerificationStatusResult>;
 
+  completeActivation?(
+    input: SupplierVerificationStatusInput,
+  ): Promise<SupplierCompleteActivationResult>;
   cancelNumber?(
     input: SupplierCancelNumberInput,
   ): Promise<SupplierCancelNumberResult>;

@@ -392,6 +392,13 @@ export function createSmsPoolAdapter(
             );
 
           if (!retryable || attempt === 4) {
+            console.error("[SMSPool] Cancellation failed", {
+              orderId,
+              attempt,
+              message,
+              response: body,
+            });
+
             return {
               success: false,
               rawResponse: body,

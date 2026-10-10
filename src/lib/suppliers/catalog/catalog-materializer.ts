@@ -257,6 +257,7 @@ async function findSupplierId(
     fivesim: { name: "5SIM", priority: 10 },
     textverified: { name: "TextVerified", priority: 20 },
     smspool: { name: "SMSPool", priority: 30 },
+    smsbulk: { name: "SMSBulk", priority: 40 },
   };
 
   const details = supplierDetails[normalizedSlug];

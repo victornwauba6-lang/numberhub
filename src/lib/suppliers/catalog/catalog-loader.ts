@@ -7,6 +7,7 @@ import {
 import {
   createSmsPoolCatalogService,
 } from "@/lib/suppliers/catalog/smspool-catalog-service";
+import { createSmsBulkCatalogService } from "@/lib/suppliers/catalog/smsbulk-catalog-service";
 
 export type SupplierDiscoveredService = {
   key: string;
@@ -90,6 +91,15 @@ if (smsPoolApiKey) {
     getCountryServiceOptions:
       smsPoolCatalog.getCountryServiceOptions,
     getServices: smsPoolCatalog.getServices,
+  });
+}
+
+if (process.env.SMSBULK_API_KEY?.trim()) {
+  const smsBulkCatalog = createSmsBulkCatalogService();
+  configuredCatalogServices.push({
+    slug: "smsbulk",
+    getCountryServiceOptions: smsBulkCatalog.getCountryServiceOptions,
+    getServices: smsBulkCatalog.getServices,
   });
 }
 
