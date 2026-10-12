@@ -292,15 +292,15 @@ export async function GET(
             email_address = COALESCE($5, email_address),
             status = $6,
             error_message = CASE
-              WHEN $6 = 'REFUNDED' THEN 'Wallet refunded after confirmed activation failure.'
+              WHEN $8::text = 'REFUNDED' THEN 'Wallet refunded after confirmed activation failure.'
               ELSE error_message
             END,
             completed_at = CASE
-              WHEN $6 = 'COMPLETED' THEN COALESCE(completed_at, NOW())
+              WHEN $8::text = 'COMPLETED' THEN COALESCE(completed_at, NOW())
               ELSE completed_at
             END,
             cancelled_at = CASE
-              WHEN $6 IN ('CANCELLED', 'REFUNDED') AND $7::text = 'CANCELLED'
+              WHEN $8::text IN ('CANCELLED', 'REFUNDED') AND $7::text = 'CANCELLED'
                 THEN COALESCE(cancelled_at, NOW())
               ELSE cancelled_at
             END,
@@ -324,7 +324,7 @@ export async function GET(
             completed_at AS "completedAt",
             cancelled_at AS "cancelledAt"
         `,
-        [id, user.id, otp, html, emailAddress, statusToSave, newStatus],
+        [id, user.id, otp, html, emailAddress, statusToSave, newStatus, statusToSave],
       );
 
       if (updateResult.rowCount !== 1) {
