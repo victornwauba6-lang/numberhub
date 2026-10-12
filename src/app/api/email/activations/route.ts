@@ -292,6 +292,34 @@ export async function POST(request: Request) {
 
       const walletId = walletResult.rows[0].id;
 
+    // Block new purchases while an earlier email activation is unresolved.
+    // The wallet row lock serializes purchase reservations for this user.
+    const unresolvedResult = await client.query<{ id: string; status: string }>(
+      `
+        SELECT id, status
+        FROM email_activations
+        WHERE user_id = $1
+          AND status IN ('UNKNOWN', 'PROCESSING')
+          AND idempotency_key <> $2
+        ORDER BY created_at DESC
+        LIMIT 1
+        FOR UPDATE
+      `,
+      [user.id, idempotencyKey],
+    );
+
+    if (unresolvedResult.rowCount === 1) {
+      return {
+        blocked: {
+          id: unresolvedResult.rows[0].id,
+          status: unresolvedResult.rows[0].status,
+        },
+        duplicate: null,
+        id: null,
+      };
+    }
+
+
       const inserted = await client.query<{ id: string }>(
         `
           INSERT INTO email_activations (
@@ -345,6 +373,7 @@ export async function POST(request: Request) {
         );
 
         return {
+          blocked: null,
           duplicate: duplicate.rows[0] ?? null,
           id: null,
         };
@@ -366,8 +395,20 @@ export async function POST(request: Request) {
         },
       );
 
-      return { duplicate: null, id };
+      return { blocked: null, duplicate: null, id };
     });
+
+    if (reservation.blocked) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "An email activation is still processing or needs reconciliation. Refresh your activation history or contact support before making another purchase.",
+          activationId: reservation.blocked.id,
+          unresolvedStatus: reservation.blocked.status,
+        },
+        { status: 409 },
+      );
+    }
 
     if (!reservation.id) {
       if (reservation.duplicate) {

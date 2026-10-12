@@ -1,9 +1,336 @@
 "use client";
 
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+
+type EmailDomain = {
+  domain: string;
+  supplierPrice?: number | string;
+  supplierCurrency?: string;
+  customerPriceMinor: number | string;
+  customerPriceNgn: number | string;
+  available: boolean | null;
+  stock?: number | null;
+};
+
+type Activation = {
+  id: string;
+  site: string;
+  domain: string;
+  emailAddress?: string | null;
+  status: string;
+  priceMinor: number | string;
+  currency?: string;
+  otp?: string | null;
+  html?: string | null;
+  errorMessage?: string | null;
+  expiresAt?: string | null;
+  createdAt?: string;
+};
+
+type ApiResponse = {
+  success?: boolean;
+  error?: string;
+  uncertain?: boolean;
+  activationId?: string;
+  activation?: Activation;
+  activations?: Activation[];
+  domains?: EmailDomain[];
+  refreshWarning?: string;
+};
+
+function money(value: number | string | undefined) {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return "Price unavailable";
+
+  return new Intl.NumberFormat("en-NG", {
+    style: "currency",
+    currency: "NGN",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
+function dateLabel(value?: string) {
+  if (!value) return "—";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString();
+}
+
+function statusLabel(status: string) {
+  return status.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (letter) =>
+    letter.toUpperCase(),
+  );
+}
 
 export default function EmailVerificationPage() {
   const router = useRouter();
+
+  const [site, setSite] = useState("");
+  const [domains, setDomains] = useState<EmailDomain[]>([]);
+  const [selectedDomain, setSelectedDomain] = useState("");
+  const [activations, setActivations] = useState<Activation[]>([]);
+  const [selectedId, setSelectedId] = useState("");
+  const [loadingDomains, setLoadingDomains] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(true);
+  const [purchasing, setPurchasing] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [message, setMessage] = useState("");
+  const [warning, setWarning] = useState("");
+  const [uncertainPurchase, setUncertainPurchase] = useState(false);
+  const [historyReady, setHistoryReady] = useState(false);
+
+  const selectedActivation =
+    activations.find((item) => item.id === selectedId) ?? null;
+
+  const loadHistory = useCallback(async () => {
+    setHistoryReady(false);
+    try {
+      const response = await fetch("/api/email/activations", {
+        method: "GET",
+        cache: "no-store",
+      });
+      const data: ApiResponse = await response.json();
+
+      if (response.status === 401) {
+        setMessage("Please sign in to use email verification.");
+        return;
+      }
+
+      if (!response.ok || !data.success) {
+        setMessage(data.error || "Unable to load your email history.");
+        return;
+      }
+
+      setHistoryReady(true);
+
+      const rows = data.activations ?? [];
+
+      const unresolvedPurchase = rows.some((item) =>
+        ["UNKNOWN", "PROCESSING"].includes(item.status),
+      );
+
+      if (unresolvedPurchase) {
+        setUncertainPurchase(true);
+      }
+
+      setActivations(rows);
+
+      setSelectedId((current) => {
+        if (current && rows.some((item) => item.id === current)) return current;
+        return rows[0]?.id ?? "";
+      });
+    } catch {
+      setMessage("Unable to connect to the email service. Please try again.");
+    } finally {
+      setLoadingHistory(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void loadHistory();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [loadHistory]);
+
+  async function loadDomains(event?: FormEvent<HTMLFormElement>) {
+    event?.preventDefault();
+
+    const normalizedSite = site.trim().toLowerCase();
+
+    if (!normalizedSite) {
+      setMessage("Enter the target website first.");
+      return;
+    }
+
+    setLoadingDomains(true);
+    setMessage("");
+    setWarning("");
+    setDomains([]);
+    setSelectedDomain("");
+
+    try {
+      const response = await fetch(
+        `/api/email/domains?site=${encodeURIComponent(normalizedSite)}`,
+        { cache: "no-store" },
+      );
+
+      const data: ApiResponse = await response.json();
+
+      if (response.status === 401) {
+        setMessage("Please sign in to view available domains.");
+        return;
+      }
+
+      if (!response.ok || !data.success) {
+        setMessage(data.error || "Unable to load email domains.");
+        return;
+      }
+
+      setSite(normalizedSite);
+      setDomains(data.domains ?? []);
+
+      if ((data.domains ?? []).length === 0) {
+        setMessage("No email domains were returned for this website.");
+      }
+    } catch {
+      setMessage("Could not connect to the supplier. Please try again.");
+    } finally {
+      setLoadingDomains(false);
+    }
+  }
+
+  async function purchaseEmail() {
+    const domain = domains.find((item) => item.domain === selectedDomain);
+
+    if (!domain || domain.available === false) {
+      setMessage("Choose an available email domain first.");
+      return;
+    }
+
+    if (!historyReady) {
+      setMessage(
+        "Your email activation history could not be verified. Refresh your history before making a purchase.",
+      );
+      return;
+    }
+
+    if (uncertainPurchase) {
+      setMessage(
+        "A previous purchase has an uncertain outcome. Refresh your history or contact support before making another purchase.",
+      );
+      return;
+    }
+
+    const price = Number(domain.customerPriceNgn);
+
+    if (!Number.isFinite(price) || price <= 0) {
+      setMessage("The customer price is invalid. Purchase has been stopped.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Confirm email verification purchase\n\nWebsite: ${site}\nDomain: ${domain.domain}\nPrice: ${money(price)}\n\nYour wallet will be charged if the purchase proceeds. Continue?`,
+    );
+
+    if (!confirmed) return;
+
+    setPurchasing(true);
+    setMessage("");
+    setWarning("");
+
+    const idempotencyKey =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `email-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    try {
+      const response = await fetch("/api/email/activations", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": idempotencyKey,
+        },
+        body: JSON.stringify({ site, domain: domain.domain }),
+      });
+
+      const data: ApiResponse = await response.json();
+
+      if (response.status === 202 || data.uncertain) {
+        setUncertainPurchase(true);
+        setMessage(
+          data.error ||
+            "The purchase outcome is uncertain. Do not purchase again; contact support for reconciliation.",
+        );
+        if (data.activationId) setSelectedId(data.activationId);
+        await loadHistory();
+        return;
+      }
+
+      if (!response.ok || !data.success || !data.activation) {
+        setMessage(data.error || "The email purchase could not be completed.");
+        await loadHistory();
+        return;
+      }
+
+      setUncertainPurchase(false);
+      setSelectedId(data.activation.id);
+      setMessage("Email activation created successfully.");
+      await loadHistory();
+    } catch {
+      setUncertainPurchase(true);
+      setMessage(
+        "We could not confirm the purchase result. Do not purchase again until your history is checked or support reconciles it.",
+      );
+      await loadHistory();
+    } finally {
+      setPurchasing(false);
+    }
+  }
+
+  const refreshActivation = useCallback(async (id: string) => {
+    try {
+      const response = await fetch(
+        `/api/email/activations/${encodeURIComponent(id)}`,
+        { cache: "no-store" },
+      );
+      const data: ApiResponse = await response.json();
+
+      if (response.status === 202 || data.uncertain) {
+        setUncertainPurchase(true);
+        setWarning(data.error || "The purchase needs support reconciliation.");
+        return;
+      }
+
+      if (!response.ok || !data.success || !data.activation) {
+        setWarning(data.error || "Could not refresh this activation.");
+        return;
+      }
+
+      const activation = data.activation;
+
+      setActivations((current) =>
+        current.map((item) => (item.id === activation.id ? activation : item)),
+      );
+
+      setWarning(data.refreshWarning || "");
+    } catch {
+      setWarning("Could not refresh the latest status. Showing saved information.");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!selectedId) return;
+
+    const activeStatuses = ["PENDING", "PROCESSING", "CODE_RECEIVED", "UNKNOWN"];
+    const selected = activations.find((item) => item.id === selectedId);
+
+    if (!selected || !activeStatuses.includes(selected.status)) return;
+
+    const timer = window.setInterval(() => {
+      void refreshActivation(selectedId);
+    }, 15000);
+
+    return () => window.clearInterval(timer);
+  }, [selectedId, activations, refreshActivation]);
+
+  async function refreshNow() {
+    if (!selectedId) {
+      await loadHistory();
+      return;
+    }
+
+    setRefreshing(true);
+    await refreshActivation(selectedId);
+    await loadHistory();
+    setRefreshing(false);
+  }
+
+  const selectedDomainInfo = domains.find(
+    (item) => item.domain === selectedDomain,
+  );
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#060908] text-white">
@@ -14,14 +341,13 @@ export default function EmailVerificationPage() {
       </div>
 
       <div className="relative mx-auto min-h-screen max-w-2xl px-5 pb-16 sm:px-6">
-        <header className="flex items-center justify-between border-b border-white/[0.06] py-5 backdrop-blur-xl">
+        <header className="flex items-center justify-between border-b border-white/[0.06] py-5">
           <button
             type="button"
             onClick={() => router.push("/dashboard")}
-            className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.035] px-3.5 py-2.5 text-xs font-bold text-white/70 transition hover:border-emerald-400/30 hover:text-white"
+            className="rounded-xl border border-white/[0.08] bg-white/[0.035] px-3.5 py-2.5 text-xs font-bold text-white/70 transition hover:text-white"
           >
-            <span className="text-base" aria-hidden="true">←</span>
-            Back
+            ← Back
           </button>
 
           <button
@@ -29,13 +355,11 @@ export default function EmailVerificationPage() {
             onClick={() => router.push("/dashboard")}
             className="flex items-center gap-2.5"
           >
-            <span className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-[14px] border border-emerald-300/20 bg-gradient-to-br from-emerald-400 to-emerald-700 text-sm font-black text-[#04120b] shadow-[0_5px_25px_rgba(16,185,129,0.14)]">
+            <span className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-gradient-to-br from-emerald-400 to-emerald-700 text-sm font-black text-[#04120b]">
               N
             </span>
             <span className="text-left">
-              <span className="block text-sm font-black tracking-tight">
-                NumberHub
-              </span>
+              <span className="block text-sm font-black">NumberHub</span>
               <span className="mt-0.5 block text-[9px] font-bold uppercase tracking-[0.17em] text-white/35">
                 Digital services
               </span>
@@ -44,194 +368,274 @@ export default function EmailVerificationPage() {
         </header>
 
         <section className="pt-9 sm:pt-12">
-          <div className="flex items-center gap-2">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.8)]" />
-            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-emerald-300">
-              Email solutions
-            </p>
-          </div>
-
-          <div className="relative mt-5 flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <h1 className="text-[34px] font-black leading-[1.08] tracking-[-0.045em] sm:text-[42px]">
-                Email
-                <span className="block bg-gradient-to-r from-emerald-300 via-emerald-400 to-teal-200 bg-clip-text text-transparent">
-                  Verification.
-                </span>
-              </h1>
-              <p className="mt-4 max-w-sm text-[13px] leading-6 text-white/50 sm:text-sm">
-                Your next-generation workspace for email verification.
-                A cleaner way to organize requests, inboxes and verification activity.
-              </p>
-            </div>
-
-            <div className="relative mt-1 flex h-[76px] w-[76px] shrink-0 items-center justify-center rounded-[25px] border border-emerald-300/20 bg-gradient-to-br from-emerald-400/[0.16] to-emerald-900/[0.12] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] sm:h-[88px] sm:w-[88px]">
-              <div className="absolute inset-2 rounded-[19px] border border-white/[0.04]" />
-              <svg
-                viewBox="0 0 48 48"
-                className="relative h-10 w-10 text-emerald-300 sm:h-12 sm:w-12"
-                fill="none"
-                aria-hidden="true"
-              >
-                <rect x="7" y="12" width="34" height="25" rx="5" stroke="currentColor" strokeWidth="2" />
-                <path d="m9 16 15 11 15-11" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M17 7h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity=".5" />
-              </svg>
-            </div>
-          </div>
-
-          <div className="relative mt-7 flex items-center gap-3 overflow-hidden rounded-2xl border border-emerald-300/20 bg-gradient-to-r from-emerald-400/[0.09] via-emerald-400/[0.035] to-transparent px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-400/10 text-emerald-300">
-              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-                <path d="M12 3 19 6v5c0 4.5-3 7.5-7 10-4-2.5-7-5.5-7-10V6l7-3Z" strokeLinejoin="round" />
-                <path d="m9 12 2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-emerald-300">
+            Email solutions
+          </p>
+          <h1 className="mt-4 text-[34px] font-black leading-tight tracking-tight sm:text-[42px]">
+            Email{" "}
+            <span className="bg-gradient-to-r from-emerald-300 to-teal-200 bg-clip-text text-transparent">
+              Verification.
             </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-bold text-emerald-100">
-                Your email workspace is taking shape
-              </p>
-              <p className="mt-1 text-[11px] leading-4 text-white/40">
-                A premium experience is in development. Purchases are not available yet.
-              </p>
-            </div>
-            <span className="shrink-0 rounded-full border border-emerald-300/20 bg-emerald-300/10 px-2.5 py-1.5 text-[9px] font-black uppercase tracking-wider text-emerald-300">
-              Preview
-            </span>
-          </div>
+          </h1>
+          <p className="mt-3 max-w-md text-sm leading-6 text-white/50">
+            Choose a supported website, check the available email domains, and
+            track your verification messages.
+          </p>
         </section>
 
-        <section className="relative mt-7 overflow-hidden rounded-[28px] border border-white/[0.09] bg-gradient-to-b from-[#101713] via-[#0b100e] to-[#080b09] shadow-[0_24px_80px_rgba(0,0,0,0.32),inset_0_1px_0_rgba(255,255,255,0.035)] backdrop-blur-xl">
-          <div className="border-b border-white/[0.07] bg-white/[0.012] px-5 py-5 sm:px-6 sm:py-6">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-300/80">
-                  Get started
-                </p>
-                <h2 className="mt-2 text-lg font-black tracking-tight">
-                  Create a verification request
-                </h2>
-                <p className="mt-1.5 text-xs leading-5 text-white/40">
-                  Choose your preferred service and email domain.
-                </p>
-              </div>
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/[0.07] bg-white/[0.035] text-white/50">
-                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
-                  <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v13a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 18.5v-13Z" />
-                  <path d="M8 8h8M8 12h8M8 16h4" strokeLinecap="round" />
-                </svg>
-              </span>
-            </div>
+        {(message || warning) && (
+          <div
+            role="status"
+            className="mt-6 space-y-2 rounded-2xl border border-emerald-300/15 bg-emerald-400/[0.06] p-4 text-sm leading-6 text-emerald-100"
+          >
+            {message && <p>{message}</p>}
+            {warning && <p className="text-amber-200">{warning}</p>}
           </div>
+        )}
 
-          <div className="space-y-5 px-5 py-5 sm:px-6 sm:py-6">
+        <section className="mt-7 rounded-[26px] border border-white/[0.09] bg-gradient-to-b from-[#101713] to-[#080b09] p-5 shadow-2xl sm:p-6">
+          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-300/80">
+            Get started
+          </p>
+          <h2 className="mt-2 text-lg font-black">
+            Create a verification request
+          </h2>
+          <p className="mt-2 text-xs leading-5 text-white/45">
+            Enter the website or service identifier accepted by the supplier.
+            Available domains depend on supplier support and stock.
+          </p>
+
+          <form onSubmit={loadDomains} className="mt-5 space-y-4">
             <div>
-              <label className="mb-2.5 block text-xs font-bold text-white/75">
-                Target website
+              <label
+                htmlFor="email-site"
+                className="mb-2 block text-xs font-bold text-white/75"
+              >
+                Target website / service
               </label>
-              <div className="flex min-h-[58px] items-center gap-3 rounded-2xl border border-white/[0.09] bg-black/25 px-4 transition">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.045] text-white/45">
-                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
-                    <circle cx="12" cy="12" r="9" />
-                    <path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18" />
-                  </svg>
-                </span>
-                <span className="flex-1 text-[13px] text-white/35">
-                  Select a website
-                </span>
-                <svg viewBox="0 0 24 24" className="h-4 w-4 text-white/30" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-                  <path d="m7 10 5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </div>
-            </div>
-
-            <div>
-              <label className="mb-2.5 block text-xs font-bold text-white/75">
-                Email domain
-              </label>
-              <div className="flex min-h-[58px] items-center gap-3 rounded-2xl border border-white/[0.09] bg-black/25 px-4">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.045] text-white/45">
-                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
-                    <rect x="3" y="5" width="18" height="14" rx="3" />
-                    <path d="m4 7 8 6 8-6" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </span>
-                <span className="flex-1 text-[13px] text-white/35">
-                  Available domains will appear here
-                </span>
-                <svg viewBox="0 0 24 24" className="h-4 w-4 text-white/30" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-                  <path d="m7 10 5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.025] p-4">
-              <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-400/[0.08] text-emerald-300">
-                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
-                    <path d="M12 3v18M17 7.5c0-1.7-2-2.5-5-2.5s-5 1-5 3 2 3 5 4 5 2 5 4-2 3-5 3-5-.8-5-2.5" strokeLinecap="round" />
-                  </svg>
-                </span>
-                <div className="flex-1">
-                  <p className="text-xs font-bold text-white/80">
-                    Clear pricing, before purchase
-                  </p>
-                  <p className="mt-1 text-[11px] leading-4 text-white/40">
-                    Pricing and availability will be shown when the supplier is connected.
-                  </p>
-                </div>
-              </div>
+              <input
+                id="email-site"
+                value={site}
+                onChange={(event) => setSite(event.target.value)}
+                placeholder="Enter supported website"
+                autoComplete="off"
+                required
+                maxLength={120}
+                className="min-h-[54px] w-full rounded-2xl border border-white/[0.10] bg-black/30 px-4 text-sm text-white outline-none placeholder:text-white/25 focus:border-emerald-300/40"
+              />
             </div>
 
             <button
-              type="button"
-              disabled
-              className="flex min-h-[58px] w-full cursor-not-allowed items-center justify-center gap-2.5 rounded-2xl border border-emerald-300/15 bg-gradient-to-r from-emerald-400/[0.16] via-emerald-400/[0.10] to-teal-400/[0.07] px-5 py-4 text-sm font-black tracking-tight text-emerald-100/65 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
+              type="submit"
+              disabled={loadingDomains || !site.trim()}
+              className="min-h-[52px] w-full rounded-2xl border border-white/[0.10] bg-white/[0.045] px-4 text-sm font-bold text-white transition hover:border-emerald-300/30 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Email service coming soon
-              <span aria-hidden="true">→</span>
+              {loadingDomains ? "Loading domains…" : "Check available domains"}
             </button>
+          </form>
 
-            <p className="px-2 text-center text-[10px] leading-5 text-white/30">
-              Email purchases and inbox access will be enabled after the supplier integration is tested.
-            </p>
-          </div>
+          {domains.length > 0 && (
+            <div className="mt-6">
+              <label
+                htmlFor="email-domain"
+                className="mb-2 block text-xs font-bold text-white/75"
+              >
+                Email domain
+              </label>
+              <select
+                id="email-domain"
+                value={selectedDomain}
+                onChange={(event) => setSelectedDomain(event.target.value)}
+                className="min-h-[54px] w-full rounded-2xl border border-white/[0.10] bg-[#0b100e] px-4 text-sm text-white outline-none focus:border-emerald-300/40"
+              >
+                <option value="">Select an available domain</option>
+                {domains.map((item) => (
+                  <option
+                    key={item.domain}
+                    value={item.domain}
+                    disabled={item.available === false}
+                  >
+                    {item.domain} —{" "}
+                    {item.available === false
+                      ? "Unavailable"
+                      : money(item.customerPriceNgn)}
+                    {item.stock != null ? ` · Stock: ${item.stock}` : ""}
+                  </option>
+                ))}
+              </select>
+
+              {selectedDomainInfo && (
+                <div className="mt-4 rounded-2xl border border-emerald-300/15 bg-emerald-400/[0.045] p-4">
+                  <p className="text-xs font-bold text-white/75">
+                    Price before purchase
+                  </p>
+                  <p className="mt-2 text-2xl font-black text-emerald-200">
+                    {money(selectedDomainInfo.customerPriceNgn)}
+                  </p>
+                  <p className="mt-2 text-[11px] leading-5 text-white/40">
+                    This is the customer price returned by NumberHub&apos;s
+                    pricing API. Confirm the amount before proceeding.
+                  </p>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => void purchaseEmail()}
+                disabled={
+                  purchasing ||
+                  !selectedDomain ||
+                  selectedDomainInfo?.available === false ||
+                  uncertainPurchase
+                }
+                className="mt-4 min-h-[56px] w-full rounded-2xl border border-emerald-300/20 bg-gradient-to-r from-emerald-400/20 to-teal-400/10 px-5 text-sm font-black text-emerald-100 transition hover:border-emerald-300/40 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {purchasing
+                  ? "Processing purchase…"
+                  : uncertainPurchase
+                    ? "Purchase paused — check with support"
+                    : "Purchase email activation →"}
+              </button>
+
+              <p className="mt-3 text-center text-[10px] leading-5 text-white/35">
+                Your wallet is charged only when you confirm the purchase.
+                Do not repeat a purchase if its outcome is uncertain.
+              </p>
+            </div>
+          )}
         </section>
 
-        <section className="mt-5 grid grid-cols-2 gap-3 sm:gap-4">
-          <div className="group rounded-2xl border border-white/[0.07] bg-gradient-to-br from-white/[0.035] to-white/[0.012] p-4 transition duration-300 hover:border-emerald-300/20 hover:from-emerald-400/[0.045] sm:p-5">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/[0.04] text-white/50">
-              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
-                <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v13a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 18.5v-13Z" />
-                <path d="m8 12 2.5 2.5L16 9" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </span>
-            <h3 className="mt-4 text-xs font-black">Verification inbox</h3>
-            <p className="mt-1.5 text-[11px] leading-5 text-white/40">
-              View received messages when available.
-            </p>
+        <section className="mt-8">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-300/80">
+                Your activity
+              </p>
+              <h2 className="mt-2 text-xl font-black">Email inbox & history</h2>
+            </div>
+            <button
+              type="button"
+              onClick={() => void refreshNow()}
+              disabled={refreshing || loadingHistory}
+              className="rounded-xl border border-white/[0.09] bg-white/[0.035] px-3 py-2.5 text-xs font-bold text-white/70 disabled:opacity-50"
+            >
+              {refreshing ? "Refreshing…" : "Refresh"}
+            </button>
           </div>
 
-          <div className="group rounded-2xl border border-white/[0.07] bg-gradient-to-br from-white/[0.035] to-white/[0.012] p-4 transition duration-300 hover:border-emerald-300/20 hover:from-emerald-400/[0.045] sm:p-5">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/[0.04] text-white/50">
-              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
-                <circle cx="12" cy="12" r="9" />
-                <path d="M12 7v5l3 2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </span>
-            <h3 className="mt-4 text-xs font-black">Request history</h3>
-            <p className="mt-1.5 text-[11px] leading-5 text-white/40">
-              Keep track of your email requests.
+          {loadingHistory ? (
+            <p className="mt-5 rounded-2xl border border-white/[0.07] p-5 text-sm text-white/45">
+              Loading your email history…
             </p>
-          </div>
+          ) : activations.length === 0 ? (
+            <div className="mt-5 rounded-2xl border border-white/[0.07] bg-white/[0.02] p-6 text-center">
+              <p className="text-sm font-bold text-white/75">
+                No email requests yet
+              </p>
+              <p className="mt-2 text-xs leading-5 text-white/40">
+                Your activations and verification messages will appear here.
+              </p>
+            </div>
+          ) : (
+            <div className="mt-5 space-y-3">
+              {activations.map((activation) => (
+                <button
+                  type="button"
+                  key={activation.id}
+                  onClick={() => setSelectedId(activation.id)}
+                  className={`w-full rounded-2xl border p-4 text-left transition ${
+                    selectedId === activation.id
+                      ? "border-emerald-300/30 bg-emerald-400/[0.06]"
+                      : "border-white/[0.07] bg-white/[0.02] hover:border-white/[0.15]"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="break-all text-sm font-bold text-white/90">
+                        {activation.emailAddress || activation.domain}
+                      </p>
+                      <p className="mt-1 text-[11px] text-white/40">
+                        {activation.site} · {activation.domain}
+                      </p>
+                    </div>
+                    <span className="shrink-0 rounded-full border border-emerald-300/15 bg-emerald-300/[0.07] px-2.5 py-1 text-[10px] font-bold text-emerald-200">
+                      {statusLabel(activation.status)}
+                    </span>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between gap-3 text-[11px] text-white/40">
+                    <span>{dateLabel(activation.createdAt)}</span>
+                    <span>{money(Number(activation.priceMinor) / 100)}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {selectedActivation && (
+            <div className="mt-4 rounded-2xl border border-emerald-300/20 bg-gradient-to-b from-emerald-400/[0.07] to-transparent p-5">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-sm font-black">Verification details</h3>
+                <span className="text-[10px] text-white/40">
+                  {statusLabel(selectedActivation.status)}
+                </span>
+              </div>
+
+              <p className="mt-4 text-[10px] font-bold uppercase tracking-wider text-white/40">
+                Email address
+              </p>
+              <p className="mt-1 break-all text-sm font-bold text-white">
+                {selectedActivation.emailAddress || "Waiting for supplier"}
+              </p>
+
+              <p className="mt-4 text-[10px] font-bold uppercase tracking-wider text-white/40">
+                Verification code
+              </p>
+              <p className="mt-1 break-all font-mono text-2xl font-black tracking-wider text-emerald-200">
+                {selectedActivation.otp || "Waiting for code…"}
+              </p>
+
+              {selectedActivation.errorMessage && (
+                <p className="mt-3 text-xs leading-5 text-amber-200">
+                  {selectedActivation.errorMessage}
+                </p>
+              )}
+
+              {selectedActivation.expiresAt && (
+                <p className="mt-3 text-[11px] text-white/40">
+                  Expires: {dateLabel(selectedActivation.expiresAt)}
+                </p>
+              )}
+
+              {selectedActivation.html && (
+                <details className="mt-4">
+                  <summary className="cursor-pointer text-xs font-bold text-emerald-200">
+                    View message content
+                  </summary>
+                  <pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-xl bg-black/30 p-3 text-xs text-white/70">
+                    {selectedActivation.html.replace(/<[^>]*>/g, " ").trim()}
+                  </pre>
+                </details>
+              )}
+
+              <button
+                type="button"
+                onClick={() => void refreshNow()}
+                disabled={refreshing}
+                className="mt-5 min-h-[44px] w-full rounded-xl border border-white/[0.10] bg-white/[0.035] px-4 text-xs font-bold text-white/80 disabled:opacity-50"
+              >
+                {refreshing ? "Checking status…" : "Check latest verification status"}
+              </button>
+            </div>
+          )}
         </section>
 
-        <footer className="mt-9 border-t border-white/[0.06] pt-6 text-center">
+        <footer className="mt-10 border-t border-white/[0.06] pt-6 text-center">
           <p className="text-[10px] font-bold tracking-wide text-white/30">
-            NUMBERHUB <span className="mx-1.5 text-emerald-400/60">·</span> EMAIL VERIFICATION
+            NUMBERHUB <span className="mx-1.5 text-emerald-400/60">·</span>
+            EMAIL VERIFICATION
           </p>
-          <p className="mt-2 text-[10px] text-white/20">
-            A new service experience, coming soon.
+          <p className="mt-2 text-[10px] text-white/25">
+            Check availability and price before confirming a purchase.
           </p>
         </footer>
       </div>
