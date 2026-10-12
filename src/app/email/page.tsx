@@ -37,6 +37,8 @@ type ApiResponse = {
   activations?: Activation[];
   domains?: EmailDomain[];
   refreshWarning?: string;
+  message?: string;
+  retryAfterSec?: number;
 };
 
 function money(value: number | string | undefined) {
@@ -74,7 +76,10 @@ export default function EmailVerificationPage() {
   const [loadingDomains, setLoadingDomains] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
+  const [showPurchaseConfirmation, setShowPurchaseConfirmation] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [showCancelConfirmation, setShowCancelConfirmation] = useState(false);
   const [message, setMessage] = useState("");
   const [warning, setWarning] = useState("");
   const [uncertainPurchase, setUncertainPurchase] = useState(false);
@@ -182,7 +187,7 @@ export default function EmailVerificationPage() {
     }
   }
 
-  async function purchaseEmail() {
+  async function purchaseEmail(confirmed = false) {
     const domain = domains.find((item) => item.domain === selectedDomain);
 
     if (!domain || domain.available === false) {
@@ -211,12 +216,12 @@ export default function EmailVerificationPage() {
       return;
     }
 
-    const confirmed = window.confirm(
-      `Confirm email verification purchase\n\nWebsite: ${site}\nDomain: ${domain.domain}\nPrice: ${money(price)}\n\nYour wallet will be charged if the purchase proceeds. Continue?`,
-    );
+    if (!confirmed) {
+      setShowPurchaseConfirmation(true);
+      return;
+    }
 
-    if (!confirmed) return;
-
+    setShowPurchaseConfirmation(false);
     setPurchasing(true);
     setMessage("");
     setWarning("");
@@ -326,6 +331,57 @@ export default function EmailVerificationPage() {
     await refreshActivation(selectedId);
     await loadHistory();
     setRefreshing(false);
+  }
+
+  async function cancelSelectedActivation() {
+    if (!selectedActivation || cancelling) return;
+
+    setCancelling(true);
+    setMessage("");
+    setWarning("");
+
+    try {
+      const response = await fetch(
+        `/api/email/activations/${encodeURIComponent(selectedActivation.id)}/cancel`,
+        {
+          method: "POST",
+          cache: "no-store",
+        },
+      );
+
+      const data: ApiResponse = await response.json();
+
+      if (!response.ok || !data.success) {
+        let errorMessage = data.error || "The activation could not be cancelled.";
+
+        if (data.retryAfterSec && data.retryAfterSec > 0) {
+          errorMessage += ` Please wait ${data.retryAfterSec} seconds before trying again.`;
+        }
+
+        setWarning(errorMessage);
+
+        if (data.uncertain) {
+          setMessage(
+            "The cancellation result is uncertain. Do not retry until the activation history or support confirms its status.",
+          );
+        }
+      } else {
+        setMessage(
+          data.message || "The activation cancellation was processed.",
+        );
+      }
+
+      setShowCancelConfirmation(false);
+      await loadHistory();
+    } catch {
+      setShowCancelConfirmation(false);
+      setWarning(
+        "We could not confirm the cancellation result. Check your activation history or contact support before retrying.",
+      );
+      await loadHistory();
+    } finally {
+      setCancelling(false);
+    }
   }
 
   const selectedDomainInfo = domains.find(
@@ -644,6 +700,18 @@ export default function EmailVerificationPage() {
               >
                 {refreshing ? "Checking status…" : "Check latest verification status"}
               </button>
+
+              {selectedActivation.status === "PENDING" &&
+                !selectedActivation.otp && (
+                  <button
+                    type="button"
+                    onClick={() => setShowCancelConfirmation(true)}
+                    disabled={cancelling}
+                    className="mt-3 min-h-[44px] w-full rounded-xl border border-red-400/25 bg-red-500/[0.08] px-4 text-xs font-bold text-red-200 transition hover:bg-red-500/[0.14] disabled:opacity-50"
+                  >
+                    Cancel email activation
+                  </button>
+                )}
             </div>
           )}
         </section>
@@ -658,6 +726,153 @@ export default function EmailVerificationPage() {
           </p>
         </footer>
       </div>
+
+      {showCancelConfirmation && selectedActivation && (
+        <div
+          className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 px-5 py-8 backdrop-blur-sm"
+          role="presentation"
+        >
+          <section
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="cancel-email-title"
+            aria-describedby="cancel-email-description"
+            className="w-full max-w-md rounded-3xl border border-white/10 bg-[#101713] p-6 shadow-2xl"
+          >
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-red-400/20 bg-red-500/10 text-xl text-red-200">
+              !
+            </div>
+
+            <h2
+              id="cancel-email-title"
+              className="text-lg font-extrabold text-white"
+            >
+              Cancel this email activation?
+            </h2>
+
+            <p
+              id="cancel-email-description"
+              className="mt-3 text-sm leading-6 text-white/65"
+            >
+              This will ask the supplier to cancel the pending activation.
+              If cancellation succeeds and no verification code has been
+              received, your wallet should be refunded. Do not close this
+              page and purchase again if the result is uncertain.
+            </p>
+
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setShowCancelConfirmation(false)}
+                disabled={cancelling}
+                className="min-h-[46px] rounded-xl border border-white/10 bg-white/[0.04] px-3 text-xs font-bold text-white/75 disabled:opacity-50"
+              >
+                Keep activation
+              </button>
+
+              <button
+                type="button"
+                onClick={() => void cancelSelectedActivation()}
+                disabled={cancelling}
+                className="min-h-[46px] rounded-xl bg-red-500 px-3 text-xs font-extrabold text-white transition hover:bg-red-400 disabled:opacity-50"
+              >
+                {cancelling ? "Cancelling…" : "Confirm cancellation"}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {showPurchaseConfirmation && selectedDomainInfo && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 px-5 py-8 backdrop-blur-sm"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setShowPurchaseConfirmation(false);
+            }
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="email-purchase-dialog-title"
+            className="w-full max-w-md overflow-hidden rounded-3xl border border-emerald-300/20 bg-[#0b110e] shadow-2xl shadow-black/50"
+          >
+            <div className="border-b border-white/[0.07] bg-emerald-400/[0.06] px-6 py-5">
+              <div className="flex items-center gap-3">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-300 to-emerald-700 text-lg font-black text-[#04120b]">
+                  N
+                </span>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-300">
+                    NumberHub
+                  </p>
+                  <h2
+                    id="email-purchase-dialog-title"
+                    className="mt-1 text-lg font-black text-white"
+                  >
+                    Confirm email purchase
+                  </h2>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4 px-6 py-6">
+              <div className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4">
+                <div className="flex items-center justify-between gap-4 py-2">
+                  <span className="text-sm text-white/45">Website</span>
+                  <span className="max-w-[65%] break-all text-right text-sm font-bold text-white">
+                    {site}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-4 border-t border-white/[0.07] py-3">
+                  <span className="text-sm text-white/45">Domain</span>
+                  <span className="max-w-[65%] break-all text-right text-sm font-bold text-white">
+                    {selectedDomainInfo.domain}
+                  </span>
+                </div>
+                <div className="mt-1 border-t border-white/[0.07] pt-4">
+                  <p className="text-xs text-white/45">Total purchase price</p>
+                  <p className="mt-1 text-3xl font-black text-emerald-200">
+                    {money(selectedDomainInfo.customerPriceNgn)}
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-sm leading-6 text-white/55">
+                Your wallet will be charged if you confirm this purchase.
+                Please review the details before continuing.
+              </p>
+
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowPurchaseConfirmation(false)}
+                  className="min-h-[50px] flex-1 rounded-xl border border-white/[0.12] bg-white/[0.04] px-4 text-sm font-bold text-white/75 transition hover:bg-white/[0.08]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void purchaseEmail(true)}
+                  disabled={
+                    purchasing ||
+                    !selectedDomain ||
+                    selectedDomainInfo.available === false ||
+                    uncertainPurchase
+                  }
+                  className="min-h-[50px] flex-1 rounded-xl bg-gradient-to-r from-emerald-400 to-teal-400 px-4 text-sm font-black text-[#04120b] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {purchasing ? "Processing…" : "Confirm Purchase"}
+                </button>
+              </div>
+              <p className="text-center text-[10px] text-white/30">
+                Secure purchase · Review before confirming
+              </p>
+            </div>
+          </section>
+        </div>
+      )}
     </main>
   );
 }

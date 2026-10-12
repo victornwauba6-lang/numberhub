@@ -171,6 +171,7 @@ export async function GET(
 
     const terminalStatuses = [
       "COMPLETED",
+      "CANCEL_PENDING",
       "CANCELLED",
       "EXPIRED",
       "FAILED",
@@ -251,6 +252,7 @@ export async function GET(
       const protectedStatuses = [
         "COMPLETED",
         "REFUNDED",
+        "CANCEL_PENDING",
         "CANCELLED",
         "EXPIRED",
         "FAILED",
