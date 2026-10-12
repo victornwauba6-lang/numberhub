@@ -532,9 +532,9 @@ export default function DashboardPage() {
                   </svg>
                 </span>
 
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300/20 bg-amber-300/[0.07] px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-[0.12em] text-amber-200/90">
-                  <span className="h-1.5 w-1.5 rounded-full bg-amber-300 shadow-[0_0_8px_rgba(252,211,77,0.5)]" />
-                  Coming soon
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/20 bg-emerald-300/[0.07] px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-[0.12em] text-emerald-200/90">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 shadow-[0_0_8px_rgba(52,211,153,0.5)]" />
+                  Available now
                 </span>
               </div>
 
@@ -560,7 +560,7 @@ export default function DashboardPage() {
 
               <div className="relative mt-5 h-px w-full bg-gradient-to-r from-emerald-400/30 via-white/[0.06] to-transparent" />
               <p className="relative mt-3 text-[10px] font-medium tracking-wide text-white/30">
-                Secure · Simple · Coming soon
+                Secure · Simple · Available now
               </p>
             </button>
 

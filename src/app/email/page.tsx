@@ -402,7 +402,7 @@ export default function EmailVerificationPage() {
           </h2>
           <p className="mt-2 text-xs leading-5 text-white/45">
             Enter the website or service identifier accepted by the supplier.
-            Available domains depend on supplier support and stock.
+            Available domains depend on supplier support.
           </p>
 
           <form onSubmit={loadDomains} className="mt-5 space-y-4">
@@ -417,12 +417,31 @@ export default function EmailVerificationPage() {
                 id="email-site"
                 value={site}
                 onChange={(event) => setSite(event.target.value)}
-                placeholder="Enter supported website"
+                placeholder="e.g. facebook.com"
                 autoComplete="off"
                 required
                 maxLength={120}
                 className="min-h-[54px] w-full rounded-2xl border border-white/[0.10] bg-black/30 px-4 text-sm text-white outline-none placeholder:text-white/25 focus:border-emerald-300/40"
               />
+              <p className="mt-3 text-[11px] font-medium text-white/40">
+                Popular suggestions
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {["facebook.com", "instagram.com", "tiktok.com", "gmail.com", "outlook.com", "telegram.org"].map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    type="button"
+                    onClick={() => setSite(suggestion)}
+                    className={`rounded-full border px-3 py-2 text-xs font-semibold transition ${
+                      site === suggestion
+                        ? "border-emerald-300/40 bg-emerald-300/10 text-emerald-200"
+                        : "border-white/10 bg-white/[0.03] text-white/65 hover:border-emerald-300/30 hover:text-emerald-200"
+                    }`}
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <button
@@ -459,7 +478,7 @@ export default function EmailVerificationPage() {
                     {item.available === false
                       ? "Unavailable"
                       : money(item.customerPriceNgn)}
-                    {item.stock != null ? ` · Stock: ${item.stock}` : ""}
+
                   </option>
                 ))}
               </select>
