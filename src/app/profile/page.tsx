@@ -439,10 +439,11 @@ export default function ProfilePage() {
       </div>
 
       <nav className="nh-bottom-nav fixed inset-x-0 bottom-0 z-30 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2">
-        <div className="mx-auto grid max-w-4xl grid-cols-5 gap-1">
+        <div className="mx-auto grid max-w-4xl grid-cols-6 gap-1">
           {[
             ["⌂", "Home", "/dashboard"],
             ["◈", "Market", "/market"],
+            ["✉", "Email", "/email"],
             ["▣", "Orders", "/orders"],
             ["⇄", "Transaction", "/transactions"],
             ["●", "Me", "/profile"],

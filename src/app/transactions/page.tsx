@@ -452,10 +452,11 @@ export default function TransactionsPage() {
       </section>
 
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 px-2 py-2 backdrop-blur">
-        <div className="mx-auto grid max-w-2xl grid-cols-5">
+        <div className="mx-auto grid max-w-2xl grid-cols-6">
           {[
             ["⌂", "Home", "/dashboard"],
             ["◈", "Market", "/market"],
+            ["✉", "Email", "/email"],
             ["□", "Orders", "/orders"],
             ["↔", "Transactions", "/transactions"],
             ["●", "Me", "/profile"],

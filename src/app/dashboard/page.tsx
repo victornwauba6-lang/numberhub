@@ -506,63 +506,28 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            {/* Premium Email Verification */}
+            {/* Email Verification */}
             <button
               type="button"
               onClick={() => router.push("/email")}
-              className="group relative overflow-hidden rounded-2xl border border-emerald-400/15 bg-gradient-to-br from-[#10251c] via-[#0b1410] to-[#080b0a] p-5 text-left shadow-[0_0_30px_rgba(16,185,129,0.04)] transition duration-300 hover:-translate-y-1 hover:border-emerald-400/40 hover:shadow-[0_8px_35px_rgba(16,185,129,0.10)] active:scale-[0.99]"
+              className="group nh-premium-card p-5 text-left transition hover:-translate-y-0.5 hover:border-emerald-400/25 active:scale-[0.99]"
             >
-              <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-emerald-400/[0.07] blur-3xl transition duration-300 group-hover:bg-emerald-400/[0.14]" />
-
-              <div className="relative flex items-start justify-between gap-3">
-                <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-emerald-400/20 bg-emerald-400/[0.09] text-emerald-300 shadow-inner shadow-emerald-400/[0.05]">
-                  <svg
-                    viewBox="0 0 24 24"
-                    className="h-6 w-6"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <rect x="3" y="5" width="18" height="14" rx="3" />
-                    <path d="m4 7 8 6 8-6" />
-                    <path d="M16.5 3.5h3" />
-                  </svg>
+              <div className="flex items-center justify-between">
+                <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-400/10 text-xl text-emerald-300">
+                  ✉
                 </span>
-
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/20 bg-emerald-300/[0.07] px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-[0.12em] text-emerald-200/90">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 shadow-[0_0_8px_rgba(52,211,153,0.5)]" />
-                  Available now
+                <span className="text-xl text-white/20 transition group-hover:translate-x-1 group-hover:text-emerald-400">
+                  →
                 </span>
               </div>
-
-              <div className="relative mt-5 flex items-end justify-between gap-3">
-                <div>
-                  <p className="mb-1 text-[9px] font-bold uppercase tracking-[0.2em] text-emerald-300/70">
-                    New service
-                  </p>
-
-                  <h3 className="text-base font-black tracking-tight text-white transition group-hover:text-emerald-100">
-                    Email Verification
-                  </h3>
-
-                  <p className="mt-2 max-w-[240px] text-xs leading-5 text-white/45">
-                    A dedicated space for email verification requests and inbox management.
-                  </p>
-                </div>
-
-                <span className="mb-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.03] text-lg text-white/40 transition group-hover:border-emerald-400/30 group-hover:bg-emerald-400/10 group-hover:text-emerald-300">
-                  ↗
-                </span>
-              </div>
-
-              <div className="relative mt-5 h-px w-full bg-gradient-to-r from-emerald-400/30 via-white/[0.06] to-transparent" />
-              <p className="relative mt-3 text-[10px] font-medium tracking-wide text-white/30">
-                Secure · Simple · Available now
+              <h3 className="mt-5 text-base font-black tracking-tight">
+                Email Verification
+              </h3>
+              <p className="mt-1.5 text-xs leading-5 text-white/40">
+                Manage email verification requests and inboxes.
               </p>
             </button>
+
 
             <button
               type="button"
@@ -773,10 +738,11 @@ export default function DashboardPage() {
 
       {/* Bottom navigation */}
       <nav className="nh-bottom-nav fixed bottom-0 left-0 right-0 z-30 px-2 py-2">
-        <div className="mx-auto flex max-w-2xl items-center justify-around">
+        <div className="mx-auto grid max-w-2xl grid-cols-6 gap-1">
           {[
             { label: "Home", icon: "⌂", path: "/dashboard", active: true },
             { label: "Market", icon: "◈", path: "/market", active: false },
+            { label: "Email", icon: "✉", path: "/email", active: false },
             { label: "Orders", icon: "□", path: "/orders", active: false },
             { label: "Transaction", icon: "₦", path: "/transactions", active: false },
             { label: "Me", icon: "●", path: "/profile", active: false },
@@ -785,7 +751,7 @@ export default function DashboardPage() {
               key={item.label}
               type="button"
               onClick={() => router.push(item.path)}
-              className={`flex min-w-[58px] flex-col items-center gap-1 rounded-2xl px-3 py-2 text-[10px] font-bold transition active:scale-95 ${
+              className={`flex min-w-0 flex-col items-center gap-1 rounded-xl px-1 py-2 text-[9px] font-bold transition active:scale-95 ${
                 item.active
                   ? "bg-emerald-400/10 text-emerald-400"
                   : "text-white/35 hover:text-white/60"

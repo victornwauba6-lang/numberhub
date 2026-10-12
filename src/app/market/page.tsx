@@ -436,7 +436,7 @@ export default function MarketPage() {
         {/* BOTTOM NAVIGATION */}
         <nav className="fixed bottom-0 left-1/2 z-40 w-full max-w-2xl -translate-x-1/2 border-t border-slate-200/80 bg-white/95 px-3 pb-[calc(env(safe-area-inset-bottom)+8px)] pt-2 backdrop-blur-2xl dark:border-white/[0.07] dark:bg-[#050807]/95">
 
-          <div className="grid grid-cols-5 gap-1">
+          <div className="grid grid-cols-6 gap-1">
 
             {[
               {
@@ -449,6 +449,7 @@ export default function MarketPage() {
                 path: "/market",
                 icon: "◈",
               },
+              { label: "Email", path: "/email", icon: "✉" },
               {
                 label: "Orders",
                 path: "/orders",

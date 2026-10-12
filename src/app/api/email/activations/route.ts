@@ -3,7 +3,6 @@ import { getCurrentUser } from "@/lib/auth/current-user";
 import { withTransaction } from "@/lib/db-transaction";
 import { debitWallet } from "@/lib/wallet/wallet-debit";
 import { creditWallet } from "@/lib/wallet/wallet-credit";
-import { calculateCustomerPrice } from "@/lib/pricing/pricing-engine";
 import {
   smsbulkEmailRequest,
   SmsbulkEmailError,
@@ -251,29 +250,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const pricing = await calculateCustomerPrice({
-      supplier: "smsbulk",
-      supplierOption: `${site}:${domain}`,
-      cost: supplierPrice,
-      currency: supplierCurrency,
-      service: site,
-    });
-
-    if (
-      pricing.customerPriceMinor === null ||
-      !Number.isSafeInteger(pricing.customerPriceMinor) ||
-      pricing.customerPriceMinor <= 0
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Pricing is not configured for this email option.",
-        },
-        { status: 409 },
-      );
-    }
-
-    const priceMinor = BigInt(pricing.customerPriceMinor);
+    const priceMinor = BigInt(45000);
 
     const reservation = await withTransaction(async (client) => {
       const walletResult = await client.query<{ id: string }>(

@@ -670,10 +670,11 @@ export default function MarketCountryPage() {
 
       {/* BOTTOM NAV */}
       <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-white/[0.07] bg-[#050706]/95 px-3 pb-[max(12px,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-2xl items-center justify-between">
+        <div className="mx-auto grid max-w-2xl grid-cols-6 gap-1">
           {[
             ["Home", "/dashboard", "⌂"],
             ["Market", "/market", "◈"],
+            ["Email", "/email", "✉"],
             ["Orders", "/orders", "□"],
             ["Transaction History", "/transactions", "↕"],
             ["Me", "/profile", "○"],
@@ -684,7 +685,7 @@ export default function MarketCountryPage() {
               <Link
                 key={label}
                 href={href}
-                className={`flex min-w-[58px] flex-col items-center gap-1 rounded-xl px-3 py-2 ${
+                className={`flex min-w-0 flex-col items-center gap-1 rounded-xl px-1 py-2 ${
                   active ? "text-emerald-300" : "text-white/35"
                 }`}
               >

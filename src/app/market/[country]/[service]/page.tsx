@@ -845,6 +845,7 @@ function BottomNav() {
   const items = [
     { href: "/dashboard", label: "Home", icon: "⌂" },
     { href: "/market", label: "Market", icon: "◈" },
+    { href: "/email", label: "Email", icon: "✉" },
     { href: "/orders", label: "Orders", icon: "▣" },
     { href: "/transactions", label: "Wallet", icon: "₦" },
     { href: "/profile", label: "Me", icon: "●" },
@@ -852,12 +853,12 @@ function BottomNav() {
 
   return (
     <nav className="nh-bottom-nav fixed inset-x-0 bottom-0 z-40 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2">
-      <div className="mx-auto flex max-w-2xl items-center justify-around">
+      <div className="mx-auto grid max-w-2xl grid-cols-6 gap-1">
         {items.map((item) => (
           <Link
             key={item.href}
             href={item.href}
-            className={`flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl px-2 py-2 text-center transition ${
+            className={`flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl px-1 py-2 text-center transition ${
               item.label === "Market"
                 ? "text-emerald-400"
                 : "text-white/30 hover:text-white/70"

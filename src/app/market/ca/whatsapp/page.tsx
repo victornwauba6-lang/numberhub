@@ -158,7 +158,7 @@ export default function CanadaWhatsAppPage() {
       </div>
 
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200/80 bg-white/90 px-4 py-3 backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/90">
-        <div className="mx-auto grid max-w-3xl grid-cols-4 gap-2">
+        <div className="mx-auto grid max-w-3xl grid-cols-5 gap-1">
           <Link
             href="/dashboard"
             className="flex flex-col items-center gap-1 rounded-xl py-2 text-[11px] font-bold text-slate-500 dark:text-slate-400"
@@ -173,6 +173,13 @@ export default function CanadaWhatsAppPage() {
           >
             <span className="text-base">◈</span>
             Market
+          </Link>
+          <Link
+            href="/email"
+            className="flex flex-col items-center gap-1 rounded-xl py-2 text-[11px] font-bold text-slate-500 dark:text-slate-400"
+          >
+            <span className="text-base">✉</span>
+            Email
           </Link>
 
           <Link

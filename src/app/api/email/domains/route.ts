@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/current-user";
-import { calculateCustomerPrice } from "@/lib/pricing/pricing-engine";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -166,21 +165,13 @@ export async function GET(request: Request) {
 
       if (!name || cost === null) continue;
 
-      const pricing = await calculateCustomerPrice({
-        supplier: "smsbulk",
-        supplierOption: `${site}:${name}`,
-        cost,
-        currency,
-        service: site,
-      });
-
       results.push({
         domain: name,
         supplierPrice: cost,
         supplierCurrency: currency,
-        customerPriceMinor: pricing.customerPriceMinor,
-        customerPriceNgn: pricing.customerPriceNgn,
-        pricingSource: pricing.pricingSource,
+        customerPriceMinor: 45000,
+        customerPriceNgn: 450,
+        pricingSource: "fixed_email_price",
         available:
           domain.disabled !== true &&
           numericValue(domain.count ?? domain.stock) !== 0,
