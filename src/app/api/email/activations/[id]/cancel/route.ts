@@ -233,6 +233,13 @@ export async function POST(
         }
 
         if (error.status >= 400 && error.status < 500) {
+          console.warn("SMSBulk rejected email cancellation:", {
+            activationId: id,
+            providerStatus: error.status,
+            providerMessage: error.message.slice(0, 300),
+            providerCode: findValue(error.details, ["code"]),
+          });
+
           await restorePending(
             id,
             user.id,
