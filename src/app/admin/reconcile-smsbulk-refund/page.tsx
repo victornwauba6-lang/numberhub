@@ -7,16 +7,25 @@ const orders = [
     id: "e23b54cc-4ffb-46ab-a5e3-4e502faf835f",
     country: "Austria",
     code: "AT",
+    service: "Facebook",
   },
   {
     id: "d0dbcba2-b917-46d8-9570-d294b5e2cf8f",
     country: "Canada",
     code: "CA",
+    service: "Facebook",
   },
   {
     id: "88c0043b-5795-467b-9ae8-4de67f28ef30",
     country: "Philippines",
     code: "PH",
+    service: "Facebook",
+  },
+  {
+    id: "84bd38ba-cfb0-4c22-8230-5fc75fc2a64c",
+    country: "Affected customer order",
+    code: "wa",
+    service: "SMSBulk",
   },
 ];
 
@@ -43,8 +52,9 @@ export default function SmsbulkRefundReconciliationPage() {
     if (busy) return;
 
     const confirmed = window.confirm(
-      `Process the NumberHub customer refund for ${order.country}?\n\n` +
-        `Only continue if you have confirmed that SMSBulk returned the supplier funds.`
+      order.id === "84bd38ba-cfb0-4c22-8230-5fc75fc2a64c"
+        ? `SMSBulk reported: "No numbers available right now."\n\nConfirm you have reviewed this supplier response. The server will check the order and refund records before proceeding.`
+        : `Process the NumberHub customer refund for ${order.country}?\n\nOnly continue if you have confirmed that SMSBulk returned the supplier funds.`
     );
 
     if (!confirmed) return;
@@ -147,7 +157,7 @@ export default function SmsbulkRefundReconciliationPage() {
                 <div>
                   <h2 className="text-lg font-bold">{order.country}</h2>
                   <p className="mt-1 text-xs text-slate-500">
-                    Facebook · {order.code}
+                    {order.service} · {order.code}
                   </p>
                   <p className="mt-2 break-all font-mono text-xs text-slate-500">
                     Order: {order.id}
