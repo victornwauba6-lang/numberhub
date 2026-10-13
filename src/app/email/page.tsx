@@ -666,7 +666,9 @@ export default function EmailVerificationPage() {
                 Verification code
               </p>
               <p className="mt-1 break-all font-mono text-2xl font-black tracking-wider text-emerald-200">
-                {selectedActivation.otp || "Waiting for code…"}
+                {selectedActivation.status === "REFUNDED"
+                  ? "Activation refunded — no OTP expected"
+                  : selectedActivation.otp || "Waiting for code…"}
               </p>
 
               {selectedActivation.errorMessage && (
