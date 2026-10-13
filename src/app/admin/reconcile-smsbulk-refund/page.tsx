@@ -4,6 +4,12 @@ import { useState } from "react";
 
 const orders = [
   {
+    id: "bfe677cb-3706-4a6e-a47b-23ad9c604029",
+    country: "Ghana",
+    code: "GT",
+    service: "WhatsApp",
+  },
+  {
     id: "e23b54cc-4ffb-46ab-a5e3-4e502faf835f",
     country: "Austria",
     code: "AT",
