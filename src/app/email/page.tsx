@@ -65,6 +65,60 @@ function statusLabel(status: string) {
   );
 }
 
+function serviceLabel(value?: string | null) {
+  const hostname = (value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    .split(/[/?#]/)[0];
+
+  const labels: Record<string, string> = {
+    "facebook.com": "Facebook",
+    "facebook": "Facebook",
+    "instagram.com": "Instagram",
+    "instagram": "Instagram",
+    "tiktok.com": "TikTok",
+    "tiktok": "TikTok",
+    "gmail.com": "Gmail",
+    "gmail": "Gmail",
+    "outlook.com": "Outlook",
+    "outlook": "Outlook",
+    "telegram.org": "Telegram",
+    "telegram": "Telegram",
+    "whatsapp.com": "WhatsApp",
+    "whatsapp": "WhatsApp",
+    "discord.com": "Discord",
+    "discord": "Discord",
+    "twitter.com": "X",
+    "x.com": "X",
+    "snapchat.com": "Snapchat",
+    "snapchat": "Snapchat",
+    "linkedin.com": "LinkedIn",
+    "linkedin": "LinkedIn",
+    "reddit.com": "Reddit",
+    "reddit": "Reddit",
+  };
+
+  if (labels[hostname]) return labels[hostname];
+
+  const firstPart = hostname.split(".")[0] || "Email service";
+  return firstPart.charAt(0).toUpperCase() + firstPart.slice(1);
+}
+
+function safeActivationNotice(activation: Activation) {
+  switch (activation.status.toUpperCase()) {
+    case "REFUNDED":
+      return "Your refund has been confirmed and credited to your NumberHub wallet.";
+    case "CANCELLED":
+      return "This activation is cancelled. If you expected a refund, check your wallet transactions or contact support.";
+    case "CANCEL_PENDING":
+      return "Your cancellation is being checked. Refresh the activation status before trying again.";
+    default:
+      return "We couldn't complete the last update. Refresh the status or contact support.";
+  }
+}
+
 export default function EmailVerificationPage() {
   const router = useRouter();
 
@@ -103,7 +157,7 @@ export default function EmailVerificationPage() {
       }
 
       if (!response.ok || !data.success) {
-        setMessage(data.error || "Unable to load your email history.");
+        setMessage("Unable to load your email history. Please refresh and try again.");
         return;
       }
 
@@ -170,7 +224,7 @@ export default function EmailVerificationPage() {
       }
 
       if (!response.ok || !data.success) {
-        setMessage(data.error || "Unable to load email domains.");
+        setMessage("Unable to load available email domains. Check the website and try again.");
         return;
       }
 
@@ -181,7 +235,7 @@ export default function EmailVerificationPage() {
         setMessage("No email domains were returned for this website.");
       }
     } catch {
-      setMessage("Could not connect to the supplier. Please try again.");
+      setMessage("Could not connect to the email service. Please try again.");
     } finally {
       setLoadingDomains(false);
     }
@@ -246,8 +300,7 @@ export default function EmailVerificationPage() {
       if (response.status === 202 || data.uncertain) {
         setUncertainPurchase(true);
         setMessage(
-          data.error ||
-            "The purchase outcome is uncertain. Do not purchase again; contact support for reconciliation.",
+          "The purchase outcome is still being checked. Do not purchase again yet; refresh your history or contact support.",
         );
         if (data.activationId) setSelectedId(data.activationId);
         await loadHistory();
@@ -255,7 +308,7 @@ export default function EmailVerificationPage() {
       }
 
       if (!response.ok || !data.success || !data.activation) {
-        setMessage(data.error || "The email purchase could not be completed.");
+        setMessage("The email purchase could not be completed. Check your activation history before trying again.");
         await loadHistory();
         return;
       }
@@ -285,12 +338,12 @@ export default function EmailVerificationPage() {
 
       if (response.status === 202 || data.uncertain) {
         setUncertainPurchase(true);
-        setWarning(data.error || "The purchase needs support reconciliation.");
+        setWarning("This purchase needs to be checked. Refresh your activation history or contact support before purchasing again.");
         return;
       }
 
       if (!response.ok || !data.success || !data.activation) {
-        setWarning(data.error || "Could not refresh this activation.");
+        setWarning("Could not refresh this activation. Please try again.");
         return;
       }
 
@@ -300,7 +353,7 @@ export default function EmailVerificationPage() {
         current.map((item) => (item.id === activation.id ? activation : item)),
       );
 
-      setWarning(data.refreshWarning || "");
+      setWarning(data.refreshWarning ? "The latest status could not be fully refreshed. Showing the saved activation information." : "");
     } catch {
       setWarning("Could not refresh the latest status. Showing saved information.");
     }
@@ -352,22 +405,22 @@ export default function EmailVerificationPage() {
       const data: ApiResponse = await response.json();
 
       if (!response.ok || !data.success) {
-        let errorMessage = data.error || "The activation could not be cancelled.";
-
-        if (data.retryAfterSec && data.retryAfterSec > 0) {
-          errorMessage += ` Please wait ${data.retryAfterSec} seconds before trying again.`;
-        }
-
-        setWarning(errorMessage);
-
         if (data.uncertain) {
           setMessage(
-            "The cancellation result is uncertain. Do not retry until the activation history or support confirms its status.",
+            "We couldn't confirm the cancellation result yet. Check your activation history before trying again.",
+          );
+        } else {
+          const retryMessage =
+            data.retryAfterSec && data.retryAfterSec > 0
+              ? ` Please wait ${data.retryAfterSec} seconds before trying again.`
+              : "";
+          setWarning(
+            `Cancellation was not confirmed. No refund has been confirmed. Refresh your activation history.${retryMessage}`,
           );
         }
       } else {
         setMessage(
-          data.message || "The activation cancellation was processed.",
+          "Your cancellation request has been processed. Refresh your activation history to confirm the final status.",
         );
       }
 
@@ -376,7 +429,7 @@ export default function EmailVerificationPage() {
     } catch {
       setShowCancelConfirmation(false);
       setWarning(
-        "We could not confirm the cancellation result. Check your activation history or contact support before retrying.",
+        "We couldn't confirm the cancellation result. Check your activation history or contact support before retrying.",
       );
       await loadHistory();
     } finally {
@@ -457,8 +510,7 @@ export default function EmailVerificationPage() {
             Create a verification request
           </h2>
           <p className="mt-2 text-xs leading-5 text-white/45">
-            Enter the website or service identifier accepted by the supplier.
-            Available domains depend on supplier support.
+            Choose the website you want to verify. Available email domains and prices are shown before you purchase.
           </p>
 
           <form onSubmit={loadDomains} className="mt-5 space-y-4">
@@ -580,13 +632,14 @@ export default function EmailVerificationPage() {
           )}
         </section>
 
-        <section className="mt-8">
+        <section className="mt-12 rounded-[26px] border border-white/[0.07] bg-white/[0.015] p-4 sm:p-5">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-300/80">
-                Your activity
+                YOUR ACTIVATIONS
               </p>
-              <h2 className="mt-2 text-xl font-black">Email inbox & history</h2>
+              <h2 className="mt-2 text-xl font-black tracking-tight">Email history</h2>
+              <p className="mt-1 text-xs text-white/40">Your requests, status and verification details</p>
             </div>
             <button
               type="button"
@@ -630,7 +683,7 @@ export default function EmailVerificationPage() {
                         {activation.emailAddress || activation.domain}
                       </p>
                       <p className="mt-1 text-[11px] text-white/40">
-                        {activation.site} · {activation.domain}
+                        {serviceLabel(activation.site)}
                       </p>
                     </div>
                     <span className="shrink-0 rounded-full border border-emerald-300/15 bg-emerald-300/[0.07] px-2.5 py-1 text-[10px] font-bold text-emerald-200">
@@ -659,7 +712,7 @@ export default function EmailVerificationPage() {
                 Email address
               </p>
               <p className="mt-1 break-all text-sm font-bold text-white">
-                {selectedActivation.emailAddress || "Waiting for supplier"}
+                {selectedActivation.emailAddress || "Preparing your email address…"}
               </p>
 
               <p className="mt-4 text-[10px] font-bold uppercase tracking-wider text-white/40">
@@ -673,7 +726,7 @@ export default function EmailVerificationPage() {
 
               {selectedActivation.errorMessage && (
                 <p className="mt-3 text-xs leading-5 text-amber-200">
-                  {selectedActivation.errorMessage}
+                  {safeActivationNotice(selectedActivation)}
                 </p>
               )}
 
@@ -756,10 +809,7 @@ export default function EmailVerificationPage() {
               id="cancel-email-description"
               className="mt-3 text-sm leading-6 text-white/65"
             >
-              This will ask the supplier to cancel the pending activation.
-              If cancellation succeeds and no verification code has been
-              received, your wallet should be refunded. Do not close this
-              page and purchase again if the result is uncertain.
+              This requests cancellation of your pending activation. If cancellation is confirmed and no verification code has been received, your wallet will be refunded. If the result is uncertain, check your activation history before trying again.
             </p>
 
             <div className="mt-6 grid grid-cols-2 gap-3">

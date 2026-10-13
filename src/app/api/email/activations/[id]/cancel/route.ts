@@ -282,7 +282,7 @@ export async function POST(
                 `UPDATE email_activations
                  SET status = 'CANCELLED',
                      cancelled_at = COALESCE(cancelled_at, NOW()),
-                     error_message = 'SMSBulk reports the activation was refunded, but no wallet refund was issued because a verification code had been received.',
+                     error_message = 'Activation was cancelled; no wallet refund was issued because a verification code had been received.',
                      updated_at = NOW()
                  WHERE id = $1 AND user_id = $2`,
                 [id, user.id],
@@ -321,7 +321,7 @@ export async function POST(
               `UPDATE email_activations
                SET status = 'REFUNDED',
                    cancelled_at = COALESCE(cancelled_at, NOW()),
-                   error_message = 'SMSBulk confirmed the activation was already refunded; NumberHub wallet refund reconciled.',
+                   error_message = 'Your refund has been confirmed and credited to your NumberHub wallet.',
                    updated_at = NOW()
                WHERE id = $1 AND user_id = $2`,
               [id, user.id],
@@ -334,8 +334,8 @@ export async function POST(
             success: true,
             message:
               outcome === "refunded"
-                ? "Supplier refund confirmed and NumberHub wallet refund reconciled."
-                : "The supplier reports the activation was refunded, but no wallet refund was issued because a verification code had already been received. Contact support.",
+                ? "Your refund has been confirmed and credited to your NumberHub wallet."
+                : "The activation was already refunded, but no additional wallet refund was issued because a verification code had already been received. Contact support if you need help.",
           });
         }
 
