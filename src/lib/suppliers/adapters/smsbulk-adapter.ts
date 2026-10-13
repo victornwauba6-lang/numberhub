@@ -126,6 +126,23 @@ export function createSmsBulkAdapter(apiKey: string): SupplierAdapter {
           };
         }
 
+        // A specific stock-shortage response is a definite rejection.
+        // Other HTTP 503 responses remain uncertain to prevent unsafe refunds.
+        if (
+          result.status === 503 &&
+          /no numbers available right now/i.test(errorText(result.data))
+        ) {
+          return {
+            success: false,
+            supplierOrderReference: null,
+            supplierNumberReference: null,
+            phoneNumber: null,
+            rawResponse,
+            errorCode: "NO_NUMBERS_AVAILABLE",
+            errorMessage: "No numbers are currently available for this option.",
+          };
+        }
+
         // These response codes are documented by SMSBulk as request
         // rejections. Unexpected HTTP failures remain uncertain.
         const definitiveRejections = new Set([
