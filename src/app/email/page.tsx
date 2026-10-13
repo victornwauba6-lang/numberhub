@@ -632,73 +632,6 @@ export default function EmailVerificationPage() {
           )}
         </section>
 
-        <section className="mt-12 rounded-[26px] border border-white/[0.07] bg-white/[0.015] p-4 sm:p-5">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-300/80">
-                YOUR ACTIVATIONS
-              </p>
-              <h2 className="mt-2 text-xl font-black tracking-tight">Email history</h2>
-              <p className="mt-1 text-xs text-white/40">Your requests, status and verification details</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => void refreshNow()}
-              disabled={refreshing || loadingHistory}
-              className="rounded-xl border border-white/[0.09] bg-white/[0.035] px-3 py-2.5 text-xs font-bold text-white/70 disabled:opacity-50"
-            >
-              {refreshing ? "Refreshing…" : "Refresh"}
-            </button>
-          </div>
-
-          {loadingHistory ? (
-            <p className="mt-5 rounded-2xl border border-white/[0.07] p-5 text-sm text-white/45">
-              Loading your email history…
-            </p>
-          ) : activations.length === 0 ? (
-            <div className="mt-5 rounded-2xl border border-white/[0.07] bg-white/[0.02] p-6 text-center">
-              <p className="text-sm font-bold text-white/75">
-                No email requests yet
-              </p>
-              <p className="mt-2 text-xs leading-5 text-white/40">
-                Your activations and verification messages will appear here.
-              </p>
-            </div>
-          ) : (
-            <div className="mt-5 space-y-3">
-              {activations.map((activation) => (
-                <button
-                  type="button"
-                  key={activation.id}
-                  onClick={() => setSelectedId(activation.id)}
-                  className={`w-full rounded-2xl border p-4 text-left transition ${
-                    selectedId === activation.id
-                      ? "border-emerald-300/30 bg-emerald-400/[0.06]"
-                      : "border-white/[0.07] bg-white/[0.02] hover:border-white/[0.15]"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="break-all text-sm font-bold text-white/90">
-                        {activation.emailAddress || activation.domain}
-                      </p>
-                      <p className="mt-1 text-[11px] text-white/40">
-                        {serviceLabel(activation.site)}
-                      </p>
-                    </div>
-                    <span className="shrink-0 rounded-full border border-emerald-300/15 bg-emerald-300/[0.07] px-2.5 py-1 text-[10px] font-bold text-emerald-200">
-                      {statusLabel(activation.status)}
-                    </span>
-                  </div>
-                  <div className="mt-3 flex items-center justify-between gap-3 text-[11px] text-white/40">
-                    <span>{dateLabel(activation.createdAt)}</span>
-                    <span>{money(Number(activation.priceMinor) / 100)}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-
           {selectedActivation && (
             <div className="mt-4 rounded-2xl border border-emerald-300/20 bg-gradient-to-b from-emerald-400/[0.07] to-transparent p-5">
               <div className="flex items-center justify-between gap-3">
@@ -769,6 +702,75 @@ export default function EmailVerificationPage() {
                 )}
             </div>
           )}
+
+                <section className="mt-12 rounded-[26px] border border-white/[0.07] bg-white/[0.015] p-4 sm:p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-300/80">
+                YOUR ACTIVATIONS
+              </p>
+              <h2 className="mt-2 text-xl font-black tracking-tight">Email history</h2>
+              <p className="mt-1 text-xs text-white/40">Your requests, status and verification details</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void refreshNow()}
+              disabled={refreshing || loadingHistory}
+              className="rounded-xl border border-white/[0.09] bg-white/[0.035] px-3 py-2.5 text-xs font-bold text-white/70 disabled:opacity-50"
+            >
+              {refreshing ? "Refreshing…" : "Refresh"}
+            </button>
+          </div>
+
+          {loadingHistory ? (
+            <p className="mt-5 rounded-2xl border border-white/[0.07] p-5 text-sm text-white/45">
+              Loading your email history…
+            </p>
+          ) : activations.length === 0 ? (
+            <div className="mt-5 rounded-2xl border border-white/[0.07] bg-white/[0.02] p-6 text-center">
+              <p className="text-sm font-bold text-white/75">
+                No email requests yet
+              </p>
+              <p className="mt-2 text-xs leading-5 text-white/40">
+                Your activations and verification messages will appear here.
+              </p>
+            </div>
+          ) : (
+            <div className="mt-5 space-y-3">
+              {activations.map((activation) => (
+                <button
+                  type="button"
+                  key={activation.id}
+                  onClick={() => setSelectedId(activation.id)}
+                  className={`w-full rounded-2xl border p-4 text-left transition ${
+                    selectedId === activation.id
+                      ? "border-emerald-300/30 bg-emerald-400/[0.06]"
+                      : "border-white/[0.07] bg-white/[0.02] hover:border-white/[0.15]"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="break-all text-sm font-bold text-white/90">
+                        {activation.emailAddress || activation.domain}
+                      </p>
+                      <p className="mt-1 text-[11px] text-white/40">
+                        {serviceLabel(activation.site)}
+                      </p>
+                    </div>
+                    <span className="shrink-0 rounded-full border border-emerald-300/15 bg-emerald-300/[0.07] px-2.5 py-1 text-[10px] font-bold text-emerald-200">
+                      {statusLabel(activation.status)}
+                    </span>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between gap-3 text-[11px] text-white/40">
+                    <span>{dateLabel(activation.createdAt)}</span>
+                    <span>{money(Number(activation.priceMinor) / 100)}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+
+
         </section>
 
         <footer className="mt-10 border-t border-white/[0.06] pt-6 text-center">
