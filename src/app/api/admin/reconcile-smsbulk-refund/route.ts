@@ -6,10 +6,14 @@ import { automaticallyRefundFailedOrder } from "@/lib/order-processing/auto-refu
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const AFFECTED_ORDERS: Record<string, string> = {
-  "e23b54cc-4ffb-46ab-a5e3-4e502faf835f": "AT",
-  "d0dbcba2-b917-46d8-9570-d294b5e2cf8f": "CA",
-  "88c0043b-5795-467b-9ae8-4de67f28ef30": "PH",
+const AFFECTED_ORDERS: Record<
+  string,
+  { countryCode: string | null; serviceSlug: string | null }
+> = {
+  "e23b54cc-4ffb-46ab-a5e3-4e502faf835f": { countryCode: "AT", serviceSlug: "facebook" },
+  "d0dbcba2-b917-46d8-9570-d294b5e2cf8f": { countryCode: "CA", serviceSlug: "facebook" },
+  "88c0043b-5795-467b-9ae8-4de67f28ef30": { countryCode: "PH", serviceSlug: "facebook" },
+  "84bd38ba-cfb0-4c22-8230-5fc75fc2a64c": { countryCode: null, serviceSlug: null },
 };
 
 export async function POST(request: Request) {
@@ -20,9 +24,9 @@ export async function POST(request: Request) {
     const orderId =
       typeof body.orderId === "string" ? body.orderId.trim() : "";
 
-    const expectedCountry = AFFECTED_ORDERS[orderId];
+    const approvedOrder = AFFECTED_ORDERS[orderId];
 
-    if (!expectedCountry) {
+    if (!approvedOrder) {
       return NextResponse.json(
         {
           success: false,
@@ -75,8 +79,10 @@ export async function POST(request: Request) {
       const order = orderResult.rows[0];
 
       if (
-        order.countryCode !== expectedCountry ||
-        order.serviceSlug.toLowerCase() !== "facebook"
+        (approvedOrder.countryCode !== null &&
+          order.countryCode !== approvedOrder.countryCode) ||
+        (approvedOrder.serviceSlug !== null &&
+          order.serviceSlug.toLowerCase() !== approvedOrder.serviceSlug)
       ) {
         throw new Error(
           "The order country or service does not match the approved order.",
