@@ -632,7 +632,7 @@ export default function EmailVerificationPage() {
           )}
         </section>
 
-          {selectedActivation && (
+          {selectedActivation && selectedActivation.status.toUpperCase() !== "REFUNDED" && (
             <div className="mt-4 rounded-2xl border border-emerald-300/20 bg-gradient-to-b from-emerald-400/[0.07] to-transparent p-5">
               <div className="flex items-center justify-between gap-3">
                 <h3 className="text-sm font-black">Verification details</h3>
