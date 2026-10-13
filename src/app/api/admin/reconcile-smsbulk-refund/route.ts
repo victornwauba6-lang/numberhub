@@ -14,6 +14,7 @@ const AFFECTED_ORDERS: Record<
   "d0dbcba2-b917-46d8-9570-d294b5e2cf8f": { countryCode: "CA", serviceSlug: "facebook" },
   "88c0043b-5795-467b-9ae8-4de67f28ef30": { countryCode: "PH", serviceSlug: "facebook" },
   "84bd38ba-cfb0-4c22-8230-5fc75fc2a64c": { countryCode: null, serviceSlug: null },
+  "bfe677cb-3706-4a6e-a47b-23ad9c604029": { countryCode: null, serviceSlug: null },
 };
 
 export async function POST(request: Request) {

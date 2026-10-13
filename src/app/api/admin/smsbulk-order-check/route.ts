@@ -5,7 +5,7 @@ import { withTransaction } from "@/lib/db-transaction";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const TARGET_ORDER_ID = "84bd38ba-cfb0-4c22-8230-5fc75fc2a64c";
+const TARGET_ORDER_ID = "bfe677cb-3706-4a6e-a47b-23ad9c604029";
 
 export async function GET(request: Request) {
   try {
