@@ -232,6 +232,113 @@ export async function POST(
           );
         }
 
+        if (
+          error.status === 409 &&
+          code === "EMAIL_NOT_CANCELLABLE" &&
+          /email already refunded;\s*cannot cancel/i.test(error.message)
+        ) {
+          console.warn("Reconciling SMSBulk-confirmed email refund:", {
+            activationId: id,
+            providerStatus: error.status,
+            providerCode: code,
+          });
+
+          const outcome = await withTransaction(async (client) => {
+            const result = await client.query<{
+              walletId: string;
+              priceMinor: string;
+              status: string;
+              otp: string | null;
+            }>(
+              `SELECT
+                 wallet_id AS "walletId",
+                 price_minor::text AS "priceMinor",
+                 status,
+                 otp
+               FROM email_activations
+               WHERE id = $1 AND user_id = $2
+               FOR UPDATE`,
+              [id, user.id],
+            );
+
+            const activation = result.rows[0];
+
+            if (!activation) {
+              throw new Error("Activation disappeared during refund reconciliation.");
+            }
+
+            if (activation.status === "REFUNDED") {
+              return "refunded" as const;
+            }
+
+            if (activation.status !== "CANCEL_PENDING") {
+              throw new Error(
+                "Activation status changed before supplier refund reconciliation.",
+              );
+            }
+
+            if (activation.otp) {
+              await client.query(
+                `UPDATE email_activations
+                 SET status = 'CANCELLED',
+                     cancelled_at = COALESCE(cancelled_at, NOW()),
+                     error_message = 'SMSBulk reports the activation was refunded, but no wallet refund was issued because a verification code had been received.',
+                     updated_at = NOW()
+                 WHERE id = $1 AND user_id = $2`,
+                [id, user.id],
+              );
+
+              return "cancelled_without_refund" as const;
+            }
+
+            const reference = `email-refund:${id}`;
+
+            const existingRefund = await client.query(
+              `SELECT id
+               FROM wallet_transactions
+               WHERE reference = $1
+               LIMIT 1`,
+              [reference],
+            );
+
+            if (existingRefund.rowCount === 0) {
+              await creditWallet({
+                client,
+                walletId: activation.walletId,
+                amountMinor: BigInt(activation.priceMinor),
+                reference,
+                description: "Refund for cancelled email activation",
+                transactionType: "REFUND",
+                metadata: {
+                  activationId: id,
+                  reason: "CANCELLED",
+                  supplierReportedAlreadyRefunded: true,
+                },
+              });
+            }
+
+            await client.query(
+              `UPDATE email_activations
+               SET status = 'REFUNDED',
+                   cancelled_at = COALESCE(cancelled_at, NOW()),
+                   error_message = 'SMSBulk confirmed the activation was already refunded; NumberHub wallet refund reconciled.',
+                   updated_at = NOW()
+               WHERE id = $1 AND user_id = $2`,
+              [id, user.id],
+            );
+
+            return "refunded" as const;
+          });
+
+          return NextResponse.json({
+            success: true,
+            message:
+              outcome === "refunded"
+                ? "Supplier refund confirmed and NumberHub wallet refund reconciled."
+                : "The supplier reports the activation was refunded, but no wallet refund was issued because a verification code had already been received. Contact support.",
+          });
+        }
+
         if (error.status >= 400 && error.status < 500) {
           console.warn("SMSBulk rejected email cancellation:", {
             activationId: id,
