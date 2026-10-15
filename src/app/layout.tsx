@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import PostHogProvider from "@/components/PostHogProvider";
+import StartupExperience from "@/components/StartupExperience";
 import type { ReactNode } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -59,7 +60,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <PostHogProvider>
-          <body className="min-h-full flex flex-col">{children}</body>
+          <body className="min-h-full flex flex-col"><StartupExperience>{children}</StartupExperience></body>
         </PostHogProvider>
     </html>
   );
